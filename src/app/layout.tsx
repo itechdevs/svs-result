@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "@/styles/globals.css";
 import { ThemeProvider } from "@/components/common/theme-provider";
 import { QueryProvider } from "@/components/common/query-provider";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { Toaster } from "@/components/ui/toaster";
 import { APP_NAME, APP_DESCRIPTION } from "@/lib/constants";
 
@@ -49,8 +50,10 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <QueryProvider>
-            {children}
-            <Toaster />
+            <NuqsAdapter>
+              {children}
+              <Toaster />
+            </NuqsAdapter>
           </QueryProvider>
         </ThemeProvider>
       </body>
