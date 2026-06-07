@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { sql } from "drizzle-orm";
 
 /**
  * GET /api/health
@@ -9,7 +8,7 @@ import { sql } from "drizzle-orm";
  */
 export async function GET() {
   try {
-    await db.execute(sql`SELECT 1`);
+    await db.$queryRaw`SELECT 1`;
     return NextResponse.json(
       { status: "ok", db: "connected", timestamp: new Date().toISOString() },
       { status: 200 }
