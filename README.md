@@ -7,17 +7,17 @@
 
 ## Stack
 
-| Layer        | Technology                                      |
-| ------------ | ----------------------------------------------- |
-| Framework    | Next.js 15 (App Router, Turbopack)              |
-| Language     | TypeScript 5 (strict mode)                      |
-| Styling      | Tailwind CSS v4 + shadcn/ui                     |
-| Database     | PostgreSQL via Prisma ORM                       |
-| Auth         | NextAuth v5 (JWT + Prisma adapter)              |
-| Forms        | React Hook Form + Zod                           |
-| Data Fetching | TanStack React Query v5                        |
-| State        | nuqs (URL state) + React built-ins             |
-| Theming      | next-themes (light/dark/system)                 |
+| Layer         | Technology                         |
+| ------------- | ---------------------------------- |
+| Framework     | Next.js 15 (App Router, Turbopack) |
+| Language      | TypeScript 5 (strict mode)         |
+| Styling       | Tailwind CSS v4 + shadcn/ui        |
+| Database      | PostgreSQL via Prisma ORM          |
+| Auth          | NextAuth v5 (JWT + Prisma adapter) |
+| Forms         | React Hook Form + Zod              |
+| Data Fetching | TanStack React Query v5            |
+| State         | nuqs (URL state) + React built-ins |
+| Theming       | next-themes (light/dark/system)    |
 
 ---
 
@@ -39,6 +39,7 @@ cp .env.example .env.local
 ```
 
 Generate a secret:
+
 ```bash
 openssl rand -base64 32
 ```
@@ -69,12 +70,12 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Project Memory Files
 
-| File            | Purpose                                    |
-| --------------- | ------------------------------------------ |
-| `project.md`    | Project Constitution — schema, rules, env  |
-| `task_plan.md`  | B.L.A.S.T. phase checklist                 |
-| `findings.md`   | Research discoveries and API gotchas       |
-| `progress.md`   | Build log — what was built and what failed |
+| File           | Purpose                                    |
+| -------------- | ------------------------------------------ |
+| `project.md`   | Project Constitution — schema, rules, env  |
+| `task_plan.md` | B.L.A.S.T. phase checklist                 |
+| `findings.md`  | Research discoveries and API gotchas       |
+| `progress.md`  | Build log — what was built and what failed |
 
 > **Before writing any feature code**: answer the 5 Discovery Questions in `project.md`.
 
