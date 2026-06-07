@@ -52,12 +52,16 @@ export default function AcademicDashboardCanvas({ role }: AcademicDashboardCanva
   const [newOutcomes, setNewOutcomes] = useState([
     {
       taskType: 'Written Examination',
+      max: 60,
+      pass: 24,
       outcomes: [
         { name: 'Theory & Principles', date: '2024-05-20', max: 30, pass: 12 },
       ]
     },
     {
       taskType: 'Practical Assessment',
+      max: 40,
+      pass: 16,
       outcomes: [
         { name: 'Laboratory Safety & Setup', date: '2024-05-22', max: 25, pass: 10 }
       ]

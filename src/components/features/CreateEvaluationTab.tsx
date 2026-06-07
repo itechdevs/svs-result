@@ -13,6 +13,8 @@ interface OutcomeRow {
 
 interface TaskGroup {
   taskType: string;
+  max: number;
+  pass: number;
   outcomes: OutcomeRow[];
 }
 
@@ -44,9 +46,29 @@ export default function CreateEvaluationTab({
 
   const addNewTaskGroup = () => {
     setNewOutcomes([
-      ...newOutcomes, 
-      { taskType: 'New Task Type', outcomes: [{ name: 'New Specific Area', date: '2024-05-25', max: 20, pass: 8 }] }
+      ...newOutcomes,
+      {
+        taskType: 'New Task Type',
+        max: 50,
+        pass: 20,
+        outcomes: [{ name: 'New Specific Area', date: '2024-05-25', max: 20, pass: 8 }]
+      }
     ]);
+  };
+
+  const duplicateTaskGroup = (groupIndex: number) => {
+    const groupToClone = newOutcomes[groupIndex];
+    // Deep clone outcomes so they don't share reference
+    const clonedOutcomes = groupToClone.outcomes.map(out => ({ ...out }));
+    const clonedGroup = {
+      ...groupToClone,
+      taskType: `${groupToClone.taskType} (Copy)`,
+      outcomes: clonedOutcomes,
+    };
+
+    const copy = [...newOutcomes];
+    copy.splice(groupIndex + 1, 0, clonedGroup);
+    setNewOutcomes(copy);
   };
 
   const deleteTaskGroup = (groupIndex: number) => {
@@ -65,9 +87,9 @@ export default function CreateEvaluationTab({
     setNewOutcomes(copy);
   };
 
-  const calculatedSum = newOutcomes.reduce((acc, currGroup) => 
+  const calculatedSum = newOutcomes.reduce((acc, currGroup) =>
     acc + currGroup.outcomes.reduce((sum, curr) => sum + Number(curr.max), 0)
-  , 0);
+    , 0);
 
   return (
     <motion.div
@@ -105,20 +127,15 @@ export default function CreateEvaluationTab({
 
         {/* Basic Metadata Info */}
         <div className="lg:col-span-2 bg-white dark:bg-card border border-slate-200 dark:border-border p-6 rounded-xl space-y-4 shadow-sm">
-          <h3 className="font-bold text-xs text-[#002045] dark:text-white tracking-wider uppercase border-b dark:border-border pb-2">Rubric Definition</h3>
+          <h3 className="font-bold text-xs text-[#002045] dark:text-white tracking-wider uppercase border-b dark:border-border pb-2">
+            Rubric Definition
+          </h3>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <label className="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">Evaluation Title</label>
-              <input
-                type="text"
-                value={newEvalTitle}
-                onChange={e => setNewEvalTitle(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-border rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-[#002045] focus:outline-none text-slate-900 dark:text-white"
-              />
-            </div>
-            <div className="">
-              <label className="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">Subject Title</label>
+          <div className="space-y-4">
+            <div>
+              <label className="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">
+                Evaluation Title
+              </label>
               <input
                 type="text"
                 value={newEvalTitle}
@@ -127,6 +144,17 @@ export default function CreateEvaluationTab({
               />
             </div>
 
+            <div>
+              <label className="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">
+                Subject Title
+              </label>
+              <input
+                type="text"
+                value={newEvalSubject}
+                onChange={e => setNewEvalSubject(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-border rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-[#002045] focus:outline-none text-slate-900 dark:text-white"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -148,19 +176,27 @@ export default function CreateEvaluationTab({
             <div key={groupIndex} className="space-y-4 border border-slate-200 dark:border-border rounded-xl p-4 bg-slate-50/50 dark:bg-slate-900/10 relative">
               <div className="flex items-center justify-between border-b border-slate-200 dark:border-border pb-3">
                 <div className="flex items-center gap-3">
-                  <label className="text-[10px] font-extrabold text-slate-500 uppercase">Task Type Name</label>
-                  <input
-                    type="text"
-                    value={group.taskType}
-                    onChange={e => {
-                      const copy = [...newOutcomes];
-                      copy[groupIndex].taskType = e.target.value;
-                      setNewOutcomes(copy);
-                    }}
-                    className="w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-border rounded px-2.5 py-1.5 text-xs font-bold text-[#002045] dark:text-white focus:ring-1 focus:ring-[#002045]"
-                  />
+                  <div className="flex items-center gap-2">
+                    <label className="text-[10px] font-extrabold text-slate-500 uppercase">Task Type Name</label>
+                    <input
+                      type="text"
+                      value={group.taskType}
+                      onChange={e => {
+                        const copy = [...newOutcomes];
+                        copy[groupIndex].taskType = e.target.value;
+                        setNewOutcomes(copy);
+                      }}
+                      className="w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-border rounded px-2.5 py-1.5 text-xs font-bold text-[#002045] dark:text-white focus:ring-1 focus:ring-[#002045]"
+                    />
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => duplicateTaskGroup(groupIndex)}
+                    className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded"
+                  >
+                    <span>Duplicate</span>
+                  </button>
                   <button
                     onClick={() => addNewOutcomeRow(groupIndex)}
                     className="text-[10px] font-bold text-[#0b6c44] dark:text-[#9ff5c1] hover:underline flex items-center gap-1 cursor-pointer bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded"
