@@ -1,30 +1,27 @@
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
+import AcademicDashboardCanvas from "@/components/features/AcademicDashboardCanvas";
 
 export const metadata: Metadata = {
-  title: "Dashboard",
+  title: "Dashboard - School Result Management System",
+  description: "Teacher and administrator marks entry and result generation portal.",
 };
 
 export default async function DashboardPage() {
   const session = await auth();
+  const role = session?.user?.role || "teacher";
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome back, {session?.user?.name ?? "there"}!
-        </p>
-      </div>
-
-      {/* Add your dashboard widgets here */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
-          <p className="text-sm font-medium text-muted-foreground">
-            Add metric cards here
+      <div className="flex items-center justify-between pb-2 border-b dark:border-border">
+        <div>
+          <h1 className="text-3xl font-extrabold text-[#002045] dark:text-white tracking-tight">EduGrade Control Panel</h1>
+          <p className="text-xs text-slate-500 font-medium mt-1">
+            Active User: <span className="font-bold text-indigo-700 dark:text-[#9ff5c1]">{session?.user?.name} ({role.toUpperCase()})</span>
           </p>
         </div>
       </div>
+      <AcademicDashboardCanvas role={role} />
     </div>
   );
 }

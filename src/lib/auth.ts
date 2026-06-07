@@ -2,8 +2,7 @@ import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { db } from "@/db";
 import type { UserRole } from "@/types";
-// import GitHub from "next-auth/providers/github";
-// import Google from "next-auth/providers/google";
+import Credentials from "next-auth/providers/credentials";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(db),
@@ -11,22 +10,53 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
 
   providers: [
-    // Add OAuth providers here:
-    // GitHub({ clientId: process.env.GITHUB_CLIENT_ID!, clientSecret: process.env.GITHUB_CLIENT_SECRET! }),
-    // Google({ clientId: process.env.GOOGLE_CLIENT_ID!, clientSecret: process.env.GOOGLE_CLIENT_SECRET! }),
+    Credentials({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "text" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
+        const email = credentials.email as string;
+        const password = credentials.password as string;
+
+        if (email === "teacher@school.com" && password === "password") {
+          return {
+            id: "teacher-1",
+            name: "Prof. Henderson",
+            email: "teacher@school.com",
+            role: "teacher" as UserRole,
+          };
+        }
+
+        if (email === "admin@school.com" && password === "password") {
+          return {
+            id: "admin-1",
+            name: "A. Portal Executive",
+            email: "admin@school.com",
+            role: "admin" as UserRole,
+          };
+        }
+
+        return null;
+      },
+    }),
   ],
 
   callbacks: {
     jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = (user as typeof user & { role: UserRole }).role ?? "user";
+        token.role = (user as typeof user & { role: UserRole }).role ?? "teacher";
       }
       return token;
     },
     session({ session, token }) {
       if (token.sub) session.user.id = token.sub;
-      session.user.role = ((token.role as UserRole | undefined) ?? "user");
+      session.user.role = ((token.role as UserRole | undefined) ?? "teacher");
       return session;
     },
   },
@@ -36,3 +66,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     error: "/login",
   },
 });
+

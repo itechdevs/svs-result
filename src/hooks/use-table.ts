@@ -85,11 +85,11 @@ export function useTable<TData>({
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
-    onGlobalFilterChange: (v) => {
+    onGlobalFilterChange: (v: any) => {
       setGlobalFilter(v ?? "");
       setPage(1);
     },
-    onPaginationChange: (updater) => {
+    onPaginationChange: (updater: any) => {
       const next =
         typeof updater === "function"
           ? updater({ pageIndex: page - 1, pageSize })
