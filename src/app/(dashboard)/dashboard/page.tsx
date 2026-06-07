@@ -15,7 +15,7 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between pb-2 border-b dark:border-border">
         <div>
-          <h1 className="text-3xl font-extrabold text-[#002045] dark:text-white tracking-tight">EduGrade Control Panel</h1>
+          <h1 className="text-3xl font-extrabold text-[#002045] dark:text-white tracking-tight">Result</h1>
           <p className="text-xs text-slate-500 font-medium mt-1">
             Active User: <span className="font-bold text-indigo-700 dark:text-[#9ff5c1]">{session?.user?.name} ({role.toUpperCase()})</span>
           </p>
