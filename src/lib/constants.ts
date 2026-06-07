@@ -6,7 +6,7 @@
 
 // ── App ──────────────────────────────────────────────────────
 export const APP_NAME = "SVS Result Management" as const;
-export const APP_DESCRIPTION = "Production-grade Next.js application" as const;
+export const APP_DESCRIPTION = "Result Management System" as const;
 
 // ── Auth ─────────────────────────────────────────────────────
 export const ROLES = {
