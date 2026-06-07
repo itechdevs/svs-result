@@ -5,7 +5,7 @@
 // ─────────────────────────────────────────────────────────────
 
 // ── App ──────────────────────────────────────────────────────
-export const APP_NAME = "B.L.A.S.T. App" as const;
+export const APP_NAME = "SVS Result Management" as const;
 export const APP_DESCRIPTION = "Production-grade Next.js application" as const;
 
 // ── Auth ─────────────────────────────────────────────────────

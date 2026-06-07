@@ -24,7 +24,7 @@ export default function DashboardTab({
   setIsLockedSchedule,
 }: DashboardTabProps) {
   return (
-    <motion.div 
+    <motion.div
       key="dashboard-view"
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
@@ -34,13 +34,12 @@ export default function DashboardTab({
       <div className="flex justify-between items-end">
         <div>
           <h1 className="text-2xl font-bold text-[#002045]">Dashboard Overview</h1>
-          <p className="text-xs text-slate-500 mt-1">Fall Semester 2023 - Department of Computer Science</p>
         </div>
       </div>
 
       {/* Bento Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
+
         {/* Stats card */}
         <div className="bg-white dark:bg-card border border-slate-200 dark:border-border p-5 rounded-2xl shadow-sm flex flex-col justify-between hover:border-[#002045]/40 transition-colors">
           <div className="flex items-start justify-between">
@@ -70,29 +69,16 @@ export default function DashboardTab({
           </div>
         </div>
 
-        {/* Class GPA */}
-        <div className="bg-[#9ff5c1]/20 dark:bg-emerald-950/20 border border-[#0a6c44]/20 p-5 rounded-2xl shadow-sm flex flex-col justify-between hover:border-[#0a6c44]/40 transition-colors">
-          <div className="flex items-start justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Average Class GPA</span>
-            <div className="p-2 bg-green-50 dark:bg-slate-800 text-[#0a6c44] dark:text-emerald-400 rounded-xl">
-              <TrendingUp className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-4">
-            <span className="text-3xl font-extrabold text-[#0a6c44] dark:text-emerald-400 tracking-tight">3.82</span>
-            <span className="text-xs font-medium text-slate-500 ml-2">A+ Academic Standing</span>
-          </div>
-        </div>
       </div>
 
       {/* Dashboard Main Grid Split */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
+
         {/* Recent Evaluations Table */}
         <div className="lg:col-span-2 bg-white dark:bg-card border border-slate-200 dark:border-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
           <div className="p-5 border-b border-slate-100 dark:border-border flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
             <h2 className="font-bold text-[#002045] dark:text-white text-sm">Recent Evaluations Plans</h2>
-            <button 
+            <button
               onClick={() => setCurrentTab('evaluations')}
               className="text-xs font-bold text-[#002045] dark:text-blue-400 hover:underline cursor-pointer"
             >
@@ -127,7 +113,7 @@ export default function DashboardTab({
                     <td className="px-6 py-4 font-mono text-center">{evalPlan.fullMarks} Marks</td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
-                        <button 
+                        <button
                           onClick={() => {
                             setSelectedEvaluationId(evalPlan.id);
                             setCurrentTab('mark-entry');
@@ -155,10 +141,10 @@ export default function DashboardTab({
           </div>
           <div className="p-5 flex-1 space-y-4">
             <p className="text-xs text-slate-500">Students requiring scheduling for recent fail indicators:</p>
-            
+
             <div className="space-y-3">
               {reExams.map((candidate) => (
-                <div 
+                <div
                   key={candidate.id}
                   className="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 dark:border-border bg-slate-50 dark:bg-slate-900/50 hover:border-[#ba1a1a]/30 transition-colors"
                 >
@@ -169,7 +155,7 @@ export default function DashboardTab({
                       <span className="font-mono text-xs">{candidate.prevMarks}</span> ({candidate.subject})
                     </div>
                   </div>
-                  <button 
+                  <button
                     onClick={() => {
                       setSchedulingReExam(candidate);
                       setIsLockedSchedule(candidate.status === 'SCHEDULED');
@@ -177,7 +163,7 @@ export default function DashboardTab({
                     }}
                     className={cn(
                       "text-[10px] font-bold py-1.5 px-3 rounded transition-colors cursor-pointer",
-                      candidate.status === 'SCHEDULED' 
+                      candidate.status === 'SCHEDULED'
                         ? "bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-350 hover:bg-slate-300"
                         : "bg-[#0b6c44] text-white hover:bg-opacity-95"
                     )}
@@ -189,7 +175,7 @@ export default function DashboardTab({
             </div>
           </div>
           <div className="p-3 border-t border-slate-100 dark:border-border bg-slate-50/50 dark:bg-slate-900/50 text-center">
-            <button 
+            <button
               onClick={() => setCurrentTab('re-exam-portal')}
               className="text-xs font-bold text-[#002045] dark:text-blue-400 hover:underline cursor-pointer"
             >
