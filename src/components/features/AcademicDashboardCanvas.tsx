@@ -50,8 +50,18 @@ export default function AcademicDashboardCanvas({ role }: AcademicDashboardCanva
   const [newEvalSubject, setNewEvalSubject] = useState('Science');
   const [targetMarks, setTargetMarks] = useState(55);
   const [newOutcomes, setNewOutcomes] = useState([
-    { name: 'Theory & Principles', date: '2024-05-20', max: 30, pass: 12 },
-    { name: 'Laboratory Safety & Setup', date: '2024-05-22', max: 25, pass: 10 }
+    {
+      taskType: 'Written Examination',
+      outcomes: [
+        { name: 'Theory & Principles', date: '2024-05-20', max: 30, pass: 12 },
+      ]
+    },
+    {
+      taskType: 'Practical Assessment',
+      outcomes: [
+        { name: 'Laboratory Safety & Setup', date: '2024-05-22', max: 25, pass: 10 }
+      ]
+    }
   ]);
 
   // Re-Exam Wizard Detail
@@ -66,22 +76,25 @@ export default function AcademicDashboardCanvas({ role }: AcademicDashboardCanva
   const [showTranscriptModal, setShowTranscriptModal] = useState<Student | null>(null);
 
   const handleCreateEvaluation = () => {
-    const totalMax = newOutcomes.reduce((acc, curr) => acc + Number(curr.max), 0);
-    const totalPass = newOutcomes.reduce((acc, curr) => acc + Number(curr.pass), 0);
+    const flatOutcomes = newOutcomes.flatMap(group => 
+      group.outcomes.map(out => ({ ...out, taskType: group.taskType }))
+    );
+    const totalMax = flatOutcomes.reduce((acc, curr) => acc + Number(curr.max), 0);
+    const totalPass = flatOutcomes.reduce((acc, curr) => acc + Number(curr.pass), 0);
     const newId = `eval-${evaluations.length + 1}`;
     const formatted: EvaluationPlan = {
       id: newId,
       title: newEvalTitle,
       subject: newEvalSubject,
       status: 'Active',
-      testTypes: `${newOutcomes.length} Areas`,
-      outcomes: `${newOutcomes.length + 2} Outcomes`,
+      testTypes: `${newOutcomes.length} Types`,
+      outcomes: `${flatOutcomes.length} Outcomes`,
       fullMarks: totalMax,
       passMarks: totalPass,
       date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
       unit: 'Dynamic Plan Unit',
-      learningOutcomes: newOutcomes.map(item => ({
-        name: item.name,
+      learningOutcomes: flatOutcomes.map(item => ({
+        name: `[${item.taskType}] ${item.name}`,
         text: `Evaluate competency and rigorous practical applications for ${item.name}.`,
         regularRating: 3,
         afterSupportRating: null,
