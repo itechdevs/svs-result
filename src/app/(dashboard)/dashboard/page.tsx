@@ -8,7 +8,12 @@ export const metadata: Metadata = {
 };
 
 export default async function DashboardPage() {
-  const session = await auth();
+  let session;
+  try {
+    session = await auth();
+  } catch (e) {
+    // Let layout handle the redirect
+  }
   const role = session?.user?.role || "teacher";
 
   return (

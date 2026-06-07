@@ -10,7 +10,12 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
+  let session;
+  try {
+    session = await auth();
+  } catch (error) {
+    console.error("Auth decryption failed:", error);
+  }
 
   // Belt-and-suspenders auth guard (middleware handles the primary guard)
   if (!session?.user) {

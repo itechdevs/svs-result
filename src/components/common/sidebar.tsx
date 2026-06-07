@@ -138,21 +138,6 @@ export function Sidebar({ role = "teacher" }: SidebarProps) {
           </div>
         </div>
 
-        {/* New Evaluation Button */}
-        <Link
-          href="/dashboard?tab=create-evaluation"
-          className="flex items-center justify-center gap-1.5 w-full py-2.5 px-3 rounded-[9px]
-            bg-gradient-to-r from-[#0a6c44] to-[#0d8a56]
-            border border-[#9ff5c1]/20
-            text-[#9ff5c1] text-[12.5px] font-semibold
-            shadow-[0_2px_12px_rgba(10,108,68,0.4)]
-            hover:shadow-[0_4px_18px_rgba(10,108,68,0.55)]
-            hover:from-[#0d8a56] hover:to-[#10a866]
-            transition-all duration-200"
-        >
-          <Plus size={14} strokeWidth={2.5} />
-          New Evaluation
-        </Link>
       </div>
     </aside>
   );
