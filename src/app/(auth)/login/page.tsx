@@ -1,24 +1,40 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, Suspense, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { GraduationCap, Mail, Lock, ArrowRight, ShieldCheck, UserCheck } from "lucide-react";
+import Link from "next/link";
+import { ROUTES } from "@/lib/constants";
+import { GraduationCap, Mail, Lock, ArrowRight, ShieldCheck, UserCheck, CheckCircle2 } from "lucide-react";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  
+  const registered = searchParams.get("registered");
+  const queryEmail = searchParams.get("email");
+  const queryRole = searchParams.get("role");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+
+  // Pre-fill email and show success message if returning from registration
+  useEffect(() => {
+    if (registered === "success" && queryEmail) {
+      setEmail(decodeURIComponent(queryEmail));
+      setSuccessMessage(`Registration complete! Account created for role: ${queryRole?.toUpperCase()}. Please sign in below.`);
+    }
+  }, [registered, queryEmail, queryRole]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setSuccessMessage("");
 
     try {
       const result = await signIn("credentials", {
@@ -43,6 +59,7 @@ function LoginForm() {
   const handleQuickLogin = async (role: "teacher" | "admin") => {
     setLoading(true);
     setError("");
+    setSuccessMessage("");
     const credentials = {
       teacher: { email: "teacher@school.com", password: "password" },
       admin: { email: "admin@school.com", password: "password" },
@@ -73,6 +90,13 @@ function LoginForm() {
         <h2 className="text-lg font-semibold text-white">Sign In to Dashboard</h2>
         <p className="text-xs text-slate-400 mt-1">Enter your school credentials or select Quick Login below</p>
       </div>
+
+      {successMessage && (
+        <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-250 text-xs py-3 px-4 rounded-xl text-center font-medium flex items-start gap-2">
+          <CheckCircle2 className="w-4 h-4 shrink-0 text-[#9ff5c1] mt-0.5" />
+          <span className="text-left">{successMessage}</span>
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-500/10 border border-red-500/20 text-red-200 text-xs py-3 px-4 rounded-xl text-center font-medium">
@@ -163,7 +187,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gradient-to-tr from-[#020b18] via-[#091b36] to-[#040f21] px-4 py-12 relative overflow-hidden font-sans animate-fade-in">
+    <main className="min-h-screen flex items-center justify-center bg-gradient-to-tr from-[#020b18] via-[#091b36] to-[#040f21] px-4 py-12 relative overflow-hidden font-sans">
       
       {/* Dynamic Background Blurs */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-[100px] pointer-events-none"></div>
@@ -191,6 +215,13 @@ export default function LoginPage() {
         }>
           <LoginForm />
         </Suspense>
+
+        <div className="text-center">
+          <span className="text-xs text-slate-400">Need a staff account? </span>
+          <Link href={ROUTES.REGISTER} className="text-xs font-bold text-[#9ff5c1] hover:underline cursor-pointer">
+            Create Account
+          </Link>
+        </div>
 
       </div>
     </main>
