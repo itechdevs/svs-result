@@ -5,7 +5,7 @@ export type User = PrismaUser;
 export type NewUser = Omit<PrismaUser, "id" | "createdAt" | "updatedAt">;
 
 // ── Auth Types ─────────────────────────────────────────────────
-export type UserRole = "admin" | "user";
+export type UserRole = "admin" | "teacher" | "user";
 
 // Extend next-auth session types
 declare module "next-auth" {
