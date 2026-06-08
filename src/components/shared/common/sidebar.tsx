@@ -31,7 +31,10 @@ const NAV_ITEMS = [
 
 export function Sidebar({ role = "teacher" }: SidebarProps) {
   const pathname = usePathname();
-  const currentTab = pathname === "/dashboard" ? "dashboard" : pathname.split('/').pop() || "dashboard";
+  // Extract current tab from pathname
+  // "/" -> dashboard, "/evaluations" -> evaluations
+  const pathParts = pathname.split('/dashboard').filter(Boolean);
+  const currentTab = pathParts.length === 0 ? "dashboard" : pathParts[0];
   const isAdmin = role === "admin";
   const { state, isMobile, openMobile, setOpenMobile } = useSidebar();
   const isCollapsed = state === "collapsed" && !isMobile;
@@ -76,9 +79,9 @@ export function Sidebar({ role = "teacher" }: SidebarProps) {
                 <div className="h-px bg-sidebar-border mx-1 my-2" />
               )}
               <Link
-                href={item.tab === "dashboard" 
-                  ? (isAdmin ? "/admin/dashboard" : "/") 
-                  : (isAdmin ? `/admin/dashboard?tab=${item.tab}` : `/?tab=${item.tab}`)
+                href={item.tab === "dashboard"
+                  ? "/"
+                  : `/${item.tab}`
                 }
                 className={cn(
                   "group relative flex items-center gap-3 py-2.5 rounded-lg border transition-all duration-200 overflow-hidden",

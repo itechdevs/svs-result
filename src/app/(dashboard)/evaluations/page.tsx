@@ -17,8 +17,8 @@ export default function EvaluationsPage() {
   } = useAcademicContext();
 
   const setCurrentTab = (tab: string) => {
-    if (tab === 'dashboard') router.push('/dashboard');
-    else router.push(`/dashboard/${tab}`);
+    if (tab === 'dashboard') router.push('/');
+    else router.push(`/${tab}`);
   };
 
   return (
