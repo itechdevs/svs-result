@@ -5,6 +5,7 @@ import type { UserRole } from "@/types";
 import Credentials from "next-auth/providers/credentials";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  secret: process.env.AUTH_SECRET,
   adapter: PrismaAdapter(db),
 
   session: { strategy: "jwt" },
