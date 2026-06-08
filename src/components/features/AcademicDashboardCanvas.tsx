@@ -6,11 +6,11 @@ import { AnimatePresence } from 'motion/react';
 
 // Types & Mock Data
 import { EvaluationPlan, Student, ReExam, Allocation } from '@/types/academic';
-import { 
-  INITIAL_STUDENTS, 
-  INITIAL_EVALUATIONS, 
-  INITIAL_RE_EXAMS, 
-  INITIAL_ALLOCATIONS 
+import {
+  INITIAL_STUDENTS,
+  INITIAL_EVALUATIONS,
+  INITIAL_RE_EXAMS,
+  INITIAL_ALLOCATIONS
 } from '@/lib/mockData';
 
 // Tab components
@@ -30,7 +30,7 @@ interface AcademicDashboardCanvasProps {
 
 export default function AcademicDashboardCanvas({ role }: AcademicDashboardCanvasProps) {
   // Use nuqs URL query state for tracking the active tab
-  const [currentTab, setCurrentTab] = useQueryState('tab', { 
+  const [currentTab, setCurrentTab] = useQueryState('tab', {
     defaultValue: 'dashboard',
     parse: (value) => value as any
   });
@@ -50,8 +50,22 @@ export default function AcademicDashboardCanvas({ role }: AcademicDashboardCanva
   const [newEvalSubject, setNewEvalSubject] = useState('Science');
   const [targetMarks, setTargetMarks] = useState(55);
   const [newOutcomes, setNewOutcomes] = useState([
-    { name: 'Theory & Principles', date: '2024-05-20', max: 30, pass: 12 },
-    { name: 'Laboratory Safety & Setup', date: '2024-05-22', max: 25, pass: 10 }
+    {
+      taskType: 'Written Examination',
+      max: 60,
+      pass: 24,
+      outcomes: [
+        { name: 'Theory & Principles', date: '2024-05-20', max: 30, pass: 12 },
+      ]
+    },
+    {
+      taskType: 'Practical Assessment',
+      max: 40,
+      pass: 16,
+      outcomes: [
+        { name: 'Laboratory Safety & Setup', date: '2024-05-22', max: 25, pass: 10 }
+      ]
+    }
   ]);
 
   // Re-Exam Wizard Detail
@@ -66,22 +80,25 @@ export default function AcademicDashboardCanvas({ role }: AcademicDashboardCanva
   const [showTranscriptModal, setShowTranscriptModal] = useState<Student | null>(null);
 
   const handleCreateEvaluation = () => {
-    const totalMax = newOutcomes.reduce((acc, curr) => acc + Number(curr.max), 0);
-    const totalPass = newOutcomes.reduce((acc, curr) => acc + Number(curr.pass), 0);
+    const flatOutcomes = newOutcomes.flatMap(group =>
+      group.outcomes.map(out => ({ ...out, taskType: group.taskType }))
+    );
+    const totalMax = flatOutcomes.reduce((acc, curr) => acc + Number(curr.max), 0);
+    const totalPass = flatOutcomes.reduce((acc, curr) => acc + Number(curr.pass), 0);
     const newId = `eval-${evaluations.length + 1}`;
     const formatted: EvaluationPlan = {
       id: newId,
       title: newEvalTitle,
       subject: newEvalSubject,
       status: 'Active',
-      testTypes: `${newOutcomes.length} Areas`,
-      outcomes: `${newOutcomes.length + 2} Outcomes`,
+      testTypes: `${newOutcomes.length} Types`,
+      outcomes: `${flatOutcomes.length} Outcomes`,
       fullMarks: totalMax,
       passMarks: totalPass,
       date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-      unit: 'Dynamic Plan Unit',
-      learningOutcomes: newOutcomes.map(item => ({
-        name: item.name,
+      unit: '',
+      learningOutcomes: flatOutcomes.map(item => ({
+        name: `[${item.taskType}] ${item.name}`,
         text: `Evaluate competency and rigorous practical applications for ${item.name}.`,
         regularRating: 3,
         afterSupportRating: null,
@@ -152,7 +169,7 @@ export default function AcademicDashboardCanvas({ role }: AcademicDashboardCanva
   return (
     <div className="w-full">
       <AnimatePresence mode="wait">
-        
+
         {/* 1. DASHBOARD OVERVIEW */}
         {currentTab === 'dashboard' && (
           <DashboardTab
@@ -173,6 +190,7 @@ export default function AcademicDashboardCanvas({ role }: AcademicDashboardCanva
             setCurrentTab={setCurrentTab}
             setNewEvalTitle={setNewEvalTitle}
             setNewEvalSubject={setNewEvalSubject}
+            newEvalSubject={newEvalSubject}
           />
         )}
 
@@ -237,7 +255,7 @@ export default function AcademicDashboardCanvas({ role }: AcademicDashboardCanva
 
         {/* 7. RESULT COMPILATION (ADMIN ONLY) */}
         {currentTab === 'result-compilation' && role === 'admin' && (
-          <ResultCompilationTab 
+          <ResultCompilationTab
             onCompilationComplete={handleCompilationComplete}
           />
         )}
