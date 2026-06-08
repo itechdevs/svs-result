@@ -11,9 +11,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "../ui/table";
 import { DataTablePagination } from "./data-table-pagination";
-import { EmptyState } from "@/components/common/empty-state";
+import { EmptyState } from "./empty-state";
 
 interface DataTableProps<TData> {
   table: TanstackTable<TData>;

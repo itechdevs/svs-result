@@ -153,15 +153,7 @@ export default function EvaluationsTab({
               >
                 Enter Marks
               </button>
-              <button
-                onClick={() => {
-                  setSelectedEvaluationId(evalPlan.id);
-                  setCurrentTab('mark-entry'); // Redirects to grading for detail view
-                }}
-                className="px-3 border border-slate-200 dark:border-border text-slate-600 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold py-2 rounded text-xs transition-all text-center cursor-pointer"
-              >
-                Details
-              </button>
+
             </div>
           </div>
         ))}

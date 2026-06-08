@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { LayoutGrid, ClipboardList, PenLine, ClipboardX, ChevronDown } from "lucide-react";
 import { ROUTES } from "@/lib/constants";
-import { useSidebar } from "@/components/ui/sidebar";
-import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { useSidebar } from "@/components/shared/ui/sidebar";
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/shared/ui/sheet";
 import { useState } from "react";
 
 const NAV_ITEMS = [
