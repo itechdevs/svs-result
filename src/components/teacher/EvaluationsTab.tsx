@@ -59,10 +59,6 @@ export default function EvaluationsTab({
             {evaluations.length < 10 ? `0${evaluations.length}` : evaluations.length} Evaluations
           </span>
         </div>
-        <div className="border-l border-slate-200 dark:border-border pl-6">
-          <p className="text-[10px] font-bold text-slate-400 uppercase">Academic Average GPA</p>
-          <span className="text-2xl font-bold text-[#0a6c44] dark:text-emerald-400 mt-1 block">3.82 / 4.0</span>
-        </div>
       </div>
 
       {/* Evaluations Plan Cards Directory */}

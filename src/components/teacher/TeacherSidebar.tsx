@@ -3,22 +3,31 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutGrid, ClipboardList, PenLine, ClipboardX } from "lucide-react";
+import { LayoutGrid, ClipboardList, PenLine, ClipboardX, ChevronDown } from "lucide-react";
 import { ROUTES } from "@/lib/constants";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { useState } from "react";
 
 const NAV_ITEMS = [
   { label: "Teacher Dashboard", href: ROUTES.TEACHER_DASHBOARD, icon: LayoutGrid },
-  { label: "Evaluation Plan", href: ROUTES.TEACHER_EVALUATIONS, icon: ClipboardList },
+  { label: "Evaluation Plan", href: ROUTES.TEACHER_EVALUATIONS, icon: ClipboardList, hasSubMenu: true },
   { label: "Marking Center", href: ROUTES.TEACHER_MARK_ENTRY, icon: PenLine },
   { label: "Re-Exam Panel", href: ROUTES.TEACHER_RE_EXAM, icon: ClipboardX },
 ] as const;
+
+// Mock assigned classes - replace with actual data from context/API
+const ASSIGNED_CLASSES = [
+  { id: 1, class: "Grade 10-A", subject: "Mathematics" },
+  { id: 2, class: "Grade 10-B", subject: "Mathematics" },
+  { id: 3, class: "Grade 11-A", subject: "Physics" },
+];
 
 export function TeacherSidebar() {
   const pathname = usePathname();
   const { state, isMobile, openMobile, setOpenMobile } = useSidebar();
   const isCollapsed = state === "collapsed" && !isMobile;
+  const [evaluationsExpanded, setEvaluationsExpanded] = useState(true);
 
   const SidebarContent = (
     <aside
@@ -42,37 +51,64 @@ export function TeacherSidebar() {
             (item.href === ROUTES.TEACHER_EVALUATIONS && pathname === "/teacher/create-evaluation");
 
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "group relative flex items-center gap-3 py-2.5 rounded-lg border transition-all duration-200 overflow-hidden",
-                isActive
-                  ? "bg-sidebar-accent border-sidebar-border text-sidebar-accent-foreground"
-                  : "border-transparent hover:bg-sidebar-accent/60 hover:border-sidebar-border/50 text-sidebar-foreground/70 hover:text-sidebar-foreground",
-                isCollapsed ? "px-2 justify-center" : "px-3"
+            <div key={item.href}>
+              <Link
+                href={item.href}
+                onClick={(e) => {
+                  if (item.hasSubMenu && !isCollapsed) {
+                    e.preventDefault();
+                    setEvaluationsExpanded(!evaluationsExpanded);
+                  }
+                  if (isMobile && !item.hasSubMenu) setOpenMobile(false);
+                }}
+                className={cn(
+                  "group relative flex items-center gap-3 py-2.5 rounded-lg border transition-all duration-200 overflow-hidden",
+                  isActive
+                    ? "bg-sidebar-accent border-sidebar-border text-sidebar-accent-foreground"
+                    : "border-transparent hover:bg-sidebar-accent/60 hover:border-sidebar-border/50 text-sidebar-foreground/70 hover:text-sidebar-foreground",
+                  isCollapsed ? "px-2 justify-center" : "px-3"
+                )}
+                title={item.label}
+              >
+                <div className={cn(
+                  "w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-all duration-200",
+                  isActive ? "bg-sidebar-primary/20" : "bg-sidebar-foreground/5 group-hover:bg-sidebar-primary/10"
+                )}>
+                  <Icon size={16} strokeWidth={1.8} className={cn(
+                    "transition-colors duration-200",
+                    isActive ? "text-sidebar-primary" : "text-sidebar-foreground/50 group-hover:text-sidebar-primary/80"
+                  )} />
+                </div>
+                {!isCollapsed && (
+                  <span className={cn("text-[13px] transition-colors duration-200 whitespace-nowrap", isActive ? "font-semibold" : "font-medium")}>
+                    {item.label}
+                  </span>
+                )}
+                {item.hasSubMenu && !isCollapsed && (
+                  <ChevronDown size={14} className={cn("ml-auto transition-transform", evaluationsExpanded && "rotate-180")} />
+                )}
+                {isActive && !isCollapsed && !item.hasSubMenu && (
+                  <span className="absolute right-3 w-1.5 h-1.5 rounded-full bg-sidebar-primary" />
+                )}
+              </Link>
+
+              {/* Submenu for Evaluations */}
+              {item.hasSubMenu && !isCollapsed && evaluationsExpanded && (
+                <div className="mt-1 ml-11 space-y-1">
+                  {ASSIGNED_CLASSES.map((assignment) => (
+                    <Link
+                      key={assignment.id}
+                      href={ROUTES.TEACHER_EVALUATIONS}
+                      onClick={() => isMobile && setOpenMobile(false)}
+                      className="block py-1.5 px-3 text-[11px] text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40 rounded transition-colors"
+                    >
+                      <div className="font-medium">{assignment.class}</div>
+                      <div className="text-[10px] text-sidebar-foreground/40">{assignment.subject}</div>
+                    </Link>
+                  ))}
+                </div>
               )}
-              title={item.label}
-              onClick={() => isMobile && setOpenMobile(false)}
-            >
-              <div className={cn(
-                "w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-all duration-200",
-                isActive ? "bg-sidebar-primary/20" : "bg-sidebar-foreground/5 group-hover:bg-sidebar-primary/10"
-              )}>
-                <Icon size={16} strokeWidth={1.8} className={cn(
-                  "transition-colors duration-200",
-                  isActive ? "text-sidebar-primary" : "text-sidebar-foreground/50 group-hover:text-sidebar-primary/80"
-                )} />
-              </div>
-              {!isCollapsed && (
-                <span className={cn("text-[13px] transition-colors duration-200 whitespace-nowrap", isActive ? "font-semibold" : "font-medium")}>
-                  {item.label}
-                </span>
-              )}
-              {isActive && !isCollapsed && (
-                <span className="absolute right-3 w-1.5 h-1.5 rounded-full bg-sidebar-primary" />
-              )}
-            </Link>
+            </div>
           );
         })}
       </nav>
