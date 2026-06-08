@@ -15,13 +15,13 @@ import {
 
 // Tab components
 import DashboardTab from './DashboardTab';
-import EvaluationsTab from './EvaluationsTab';
-import CreateEvaluationTab from './CreateEvaluationTab';
-import MarkEntryTab from './MarkEntryTab';
-import ReExamPortalTab from './ReExamPortalTab';
-import AllocationsTab from './AllocationsTab';
-import ResultCompilationTab from './ResultCompilationTab';
-import StudentRecordsTab from './StudentRecordsTab';
+import EvaluationsTab from '../teacher/EvaluationsTab';
+import CreateEvaluationTab from '../teacher/CreateEvaluationTab';
+import MarkEntryTab from '../teacher/MarkEntryTab';
+import ReExamPortalTab from '../admin/ReExamPortalTab';
+import AllocationsTab from '../admin/AllocationsTab';
+import ResultCompilationTab from '../admin/ResultCompilationTab';
+import StudentRecordsTab from '../admin/StudentRecordsTab';
 import TranscriptModal from './TranscriptModal';
 
 interface AcademicDashboardCanvasProps {
