@@ -6,11 +6,11 @@ import { AnimatePresence } from 'motion/react';
 
 // Types & Mock Data
 import { EvaluationPlan, Student, ReExam, Allocation } from '@/types/academic';
-import { 
-  INITIAL_STUDENTS, 
-  INITIAL_EVALUATIONS, 
-  INITIAL_RE_EXAMS, 
-  INITIAL_ALLOCATIONS 
+import {
+  INITIAL_STUDENTS,
+  INITIAL_EVALUATIONS,
+  INITIAL_RE_EXAMS,
+  INITIAL_ALLOCATIONS
 } from '@/lib/mockData';
 
 // Tab components
@@ -30,7 +30,7 @@ interface AcademicDashboardCanvasProps {
 
 export default function AcademicDashboardCanvas({ role }: AcademicDashboardCanvasProps) {
   // Use nuqs URL query state for tracking the active tab
-  const [currentTab, setCurrentTab] = useQueryState('tab', { 
+  const [currentTab, setCurrentTab] = useQueryState('tab', {
     defaultValue: 'dashboard',
     parse: (value) => value as any
   });
@@ -80,7 +80,7 @@ export default function AcademicDashboardCanvas({ role }: AcademicDashboardCanva
   const [showTranscriptModal, setShowTranscriptModal] = useState<Student | null>(null);
 
   const handleCreateEvaluation = () => {
-    const flatOutcomes = newOutcomes.flatMap(group => 
+    const flatOutcomes = newOutcomes.flatMap(group =>
       group.outcomes.map(out => ({ ...out, taskType: group.taskType }))
     );
     const totalMax = flatOutcomes.reduce((acc, curr) => acc + Number(curr.max), 0);
@@ -96,7 +96,7 @@ export default function AcademicDashboardCanvas({ role }: AcademicDashboardCanva
       fullMarks: totalMax,
       passMarks: totalPass,
       date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-      unit: 'Dynamic Plan Unit',
+      unit: '',
       learningOutcomes: flatOutcomes.map(item => ({
         name: `[${item.taskType}] ${item.name}`,
         text: `Evaluate competency and rigorous practical applications for ${item.name}.`,
@@ -169,7 +169,7 @@ export default function AcademicDashboardCanvas({ role }: AcademicDashboardCanva
   return (
     <div className="w-full">
       <AnimatePresence mode="wait">
-        
+
         {/* 1. DASHBOARD OVERVIEW */}
         {currentTab === 'dashboard' && (
           <DashboardTab
@@ -190,6 +190,7 @@ export default function AcademicDashboardCanvas({ role }: AcademicDashboardCanva
             setCurrentTab={setCurrentTab}
             setNewEvalTitle={setNewEvalTitle}
             setNewEvalSubject={setNewEvalSubject}
+            newEvalSubject={newEvalSubject}
           />
         )}
 
@@ -254,7 +255,7 @@ export default function AcademicDashboardCanvas({ role }: AcademicDashboardCanva
 
         {/* 7. RESULT COMPILATION (ADMIN ONLY) */}
         {currentTab === 'result-compilation' && role === 'admin' && (
-          <ResultCompilationTab 
+          <ResultCompilationTab
             onCompilationComplete={handleCompilationComplete}
           />
         )}

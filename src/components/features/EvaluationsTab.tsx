@@ -12,6 +12,7 @@ interface EvaluationsTabProps {
   setCurrentTab: (tab: 'dashboard' | 'evaluations' | 'mark-entry' | 'student-records' | 'allocations' | 'result-compilation' | 're-exam-portal' | 'create-evaluation') => void;
   setNewEvalTitle: (title: string) => void;
   setNewEvalSubject: (subject: string) => void;
+  newEvalSubject: string;
 }
 
 export default function EvaluationsTab({
@@ -20,9 +21,10 @@ export default function EvaluationsTab({
   setCurrentTab,
   setNewEvalTitle,
   setNewEvalSubject,
+  newEvalSubject,
 }: EvaluationsTabProps) {
   return (
-    <motion.div 
+    <motion.div
       key="evaluations-view"
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
@@ -32,9 +34,8 @@ export default function EvaluationsTab({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-[#002045] dark:text-white">Academic Evaluations Plan</h2>
-          <p className="text-xs text-slate-500">Formulate, catalog, and grade dynamic assessment rubrics across classes.</p>
         </div>
-        <button 
+        <button
           onClick={() => {
             setNewEvalTitle('Sub-Evaluation Written Project Term 3');
             setNewEvalSubject('Mathematics');
@@ -56,23 +57,21 @@ export default function EvaluationsTab({
           </div>
         </div>
         <div className="border-l border-slate-200 dark:border-border pl-6">
-          <p className="text-[10px] font-bold text-slate-400 uppercase">Pending Graded Plans</p>
-          <span className="text-2xl font-bold text-[#ba1a1a] dark:text-red-400 mt-1 block">08 Evaluations</span>
+          <p className="text-[10px] font-bold text-slate-400 uppercase">Total Evaluations</p>
+          <span className="text-2xl font-bold text-[#ba1a1a] dark:text-red-400 mt-1 block">
+            {evaluations.length < 10 ? `0${evaluations.length}` : evaluations.length} Evaluations
+          </span>
         </div>
         <div className="border-l border-slate-200 dark:border-border pl-6">
           <p className="text-[10px] font-bold text-slate-400 uppercase">Academic Average GPA</p>
           <span className="text-2xl font-bold text-[#0a6c44] dark:text-emerald-400 mt-1 block">3.82 / 4.0</span>
-        </div>
-        <div className="border-l border-slate-200 dark:border-border pl-6">
-          <p className="text-[10px] font-bold text-slate-400 uppercase">Passing Compliance Rate</p>
-          <span className="text-2xl font-bold text-blue-700 dark:text-blue-400 mt-1 block">92.2%</span>
         </div>
       </div>
 
       {/* Evaluations Plan Cards Directory */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {evaluations.map((evalPlan) => (
-          <div 
+          <div
             key={evalPlan.id}
             className="bg-white dark:bg-card border border-slate-200 dark:border-border rounded-xl overflow-hidden hover:shadow-md transition-all flex flex-col"
           >
@@ -87,7 +86,7 @@ export default function EvaluationsTab({
                   </span>
                   <span className="text-slate-400 text-[10px] font-mono block">Created: {evalPlan.date}</span>
                 </div>
-                
+
                 {/* Subject badge */}
                 <span className="text-[10px] font-bold px-2.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-[#002045] dark:text-blue-300 rounded-full uppercase tracking-wider border dark:border-border">
                   {evalPlan.subject}
@@ -98,23 +97,61 @@ export default function EvaluationsTab({
                 <h3 className="font-bold text-sm text-[#002045] dark:text-white leading-snug line-clamp-1">{evalPlan.title}</h3>
                 <p className="text-[11px] text-slate-400 mt-1">Assessment Unit: {evalPlan.unit || "Core Modules"}</p>
               </div>
+              
+              <div>
+                <label className="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">
+                  Subject Title
+                </label>
+                <input
+                  type="text"
+                  value={newEvalSubject}
+                  onChange={e => setNewEvalSubject(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-border rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-[#002045] focus:outline-none text-slate-900 dark:text-white"
+                />
+              </div>
 
-              <div className="grid grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-900/40 p-3 rounded-lg border border-slate-100 dark:border-border">
+              <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-900/40 p-3 rounded-lg border border-slate-100 dark:border-border">
                 <div>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase block">Total Criteria</span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase block">Task Types</span>
                   <span className="font-bold text-xs text-[#002045] dark:text-blue-300 font-mono">{evalPlan.testTypes}</span>
                 </div>
                 <div>
                   <span className="text-[9px] font-bold text-slate-400 uppercase block">Outcomes tracked</span>
                   <span className="font-bold text-xs text-[#002045] dark:text-blue-300 font-mono">{evalPlan.outcomes}</span>
                 </div>
-                <div className="mt-2 text-[10px] text-slate-500 dark:text-slate-450 font-semibold">Max: {evalPlan.fullMarks} Marks</div>
-                <div className="mt-2 text-[10px] text-slate-500 dark:text-slate-450 font-semibold">Pass: {evalPlan.passMarks} Marks</div>
+                <div>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase block">Max Marks</span>
+                  <span className="font-bold text-xs text-slate-700 dark:text-slate-300 font-mono">{evalPlan.fullMarks}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase block">Pass Marks</span>
+                  <span className="font-bold text-xs text-slate-700 dark:text-slate-300 font-mono">{evalPlan.passMarks}</span>
+                </div>
               </div>
+
+              {/* Preview of what is inside */}
+              {evalPlan.learningOutcomes && evalPlan.learningOutcomes.length > 0 && (
+                <div className="pt-2">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase block mb-1.5">Criteria Preview</span>
+                  <ul className="text-[10px] text-slate-600 dark:text-slate-400 space-y-1">
+                    {evalPlan.learningOutcomes.slice(0, 3).map((lo, idx) => (
+                      <li key={idx} className="truncate flex items-center gap-1.5">
+                        <span className="w-1 h-1 rounded-full bg-[#002045] dark:bg-blue-400 shrink-0" />
+                        {lo.name}
+                      </li>
+                    ))}
+                    {evalPlan.learningOutcomes.length > 3 && (
+                      <li className="text-[9px] text-slate-400 italic mt-1 pl-2.5">
+                        + {evalPlan.learningOutcomes.length - 3} more criteria
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
             </div>
 
             <div className="px-5 pb-5 pt-2 border-t border-slate-50 dark:border-border/50 flex items-center gap-3">
-              <button 
+              <button
                 onClick={() => {
                   setSelectedEvaluationId(evalPlan.id);
                   setCurrentTab('mark-entry');
@@ -123,7 +160,7 @@ export default function EvaluationsTab({
               >
                 Enter Marks
               </button>
-              <button 
+              <button
                 onClick={() => {
                   setSelectedEvaluationId(evalPlan.id);
                   setCurrentTab('mark-entry'); // Redirects to grading for detail view
@@ -137,7 +174,7 @@ export default function EvaluationsTab({
         ))}
 
         {/* Block Empty State Dashboard Placeholder */}
-        <button 
+        <button
           onClick={() => setCurrentTab('create-evaluation')}
           className="border-2 border-dashed border-slate-300 dark:border-border rounded-xl flex flex-col items-center justify-center p-8 hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors text-center group min-h-[300px] cursor-pointer"
         >
