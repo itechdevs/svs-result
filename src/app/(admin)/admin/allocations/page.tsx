@@ -1,11 +1,10 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { useAcademicContext } from '@/contexts/AcademicContext';
-import AllocationsTab from '@/components/admin/AllocationsTab';
-import { AnimatePresence } from 'motion/react';
+import { useAcademicContext } from "@/contexts/AcademicContext";
+import AllocationsTab from "@/components/admin/AllocationsTab";
+import { AnimatePresence } from "motion/react";
 
-export default function AllocationsPage() {
+export default function AdminAllocationsPage() {
   const { allocations, toggleTeacherStatus, handleImportSuccess } = useAcademicContext();
 
   return (

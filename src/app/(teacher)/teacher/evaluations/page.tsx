@@ -1,12 +1,11 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { useRouter } from 'next/navigation';
-import { useAcademicContext } from '@/contexts/AcademicContext';
-import EvaluationsTab from '@/components/teacher/EvaluationsTab';
-import { motion, AnimatePresence } from 'motion/react';
+import { useRouter } from "next/navigation";
+import { useAcademicContext } from "@/contexts/AcademicContext";
+import EvaluationsTab from "@/components/teacher/EvaluationsTab";
+import { AnimatePresence } from "motion/react";
 
-export default function EvaluationsPage() {
+export default function TeacherEvaluationsPage() {
   const router = useRouter();
   const {
     evaluations,
@@ -17,8 +16,9 @@ export default function EvaluationsPage() {
   } = useAcademicContext();
 
   const setCurrentTab = (tab: string) => {
-    if (tab === 'dashboard') router.push('/');
-    else router.push(`/${tab}`);
+    if (tab === "create-evaluation") router.push("/teacher/create-evaluation");
+    else if (tab === "mark-entry") router.push("/teacher/mark-entry");
+    else router.push("/teacher/dashboard");
   };
 
   return (

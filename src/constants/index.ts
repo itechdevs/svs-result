@@ -11,8 +11,7 @@ export const APP_DESCRIPTION = "Result Management System" as const;
 // ── Auth ─────────────────────────────────────────────────────
 export const ROLES = {
   ADMIN: "admin",
-  USER: "user",
-  GUEST: "guest",
+  TEACHER: "teacher",
 } as const;
 export type Role = (typeof ROLES)[keyof typeof ROLES];
 
@@ -20,9 +19,17 @@ export type Role = (typeof ROLES)[keyof typeof ROLES];
 export const ROUTES = {
   HOME: "/",
   LOGIN: "/login",
-  REGISTER: "/register",
-  DASHBOARD: "/dashboard",
-  SETTINGS: "/dashboard/settings",
+  // Admin routes
+  ADMIN_DASHBOARD: "/admin/dashboard",
+  ADMIN_ALLOCATIONS: "/admin/allocations",
+  ADMIN_RE_EXAM: "/admin/re-exam-portal",
+  ADMIN_MARK_ENTRY: "/admin/mark-entry",
+  ADMIN_RESULT_COMPILATION: "/admin/result-compilation",
+  // Teacher routes
+  TEACHER_DASHBOARD: "/teacher/dashboard",
+  TEACHER_EVALUATIONS: "/teacher/evaluations",
+  TEACHER_MARK_ENTRY: "/teacher/mark-entry",
+  TEACHER_RE_EXAM: "/teacher/re-exam-portal",
 } as const;
 
 // ── Pagination ───────────────────────────────────────────────
