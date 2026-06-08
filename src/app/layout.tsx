@@ -1,10 +1,5 @@
 import type { Metadata } from "next";
-import {
-  Inter,
-  Geist,
-  Source_Serif_4,
-  Source_Code_Pro,
-} from "next/font/google";
+import { Inter, Lora, Source_Code_Pro } from "next/font/google";
 import "@/styles/globals.css";
 import { ThemeProvider } from "@/components/common/theme-provider";
 import { QueryProvider } from "@/components/common/query-provider";
@@ -14,37 +9,22 @@ import { APP_NAME, APP_DESCRIPTION } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-const geist = Geist({
-  subsets: ["cyrillic", "latin", "latin-ext"],
-  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
-  variable: "--font-geist",
+const inter = Inter({
+  subsets: ["latin", "latin-ext"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-heading",
 });
 
-const sourceSerif4 = Source_Serif_4({
-  subsets: [
-    "latin",
-    "latin-ext",
-    "cyrillic",
-    "cyrillic-ext",
-    "greek",
-    "vietnamese",
-  ],
-  weight: ["200", "300", "400", "500", "600", "700", "800", "900"],
-  variable: "--font-source-serif-4",
+const lora = Lora({
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-body",
 });
 
 const sourceCodePro = Source_Code_Pro({
-  subsets: [
-    "latin",
-    "latin-ext",
-    "cyrillic",
-    "cyrillic-ext",
-    "greek",
-    "greek-ext",
-    "vietnamese",
-  ],
-  weight: ["200", "300", "400", "500", "600", "700", "800", "900"],
-  variable: "--font-source-code-pro",
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500", "700"],
+  variable: "--font-mono",
 });
 
 export const metadata: Metadata = {
@@ -77,8 +57,8 @@ export default function RootLayout({
       suppressHydrationWarning
       className={cn(
         "antialiased",
-        geist.variable,
-        sourceSerif4.variable,
+        inter.variable,
+        lora.variable,
         sourceCodePro.variable,
       )}
     >
@@ -88,7 +68,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className={`${geist.variable} font-sans antialiased`}>
+      <body className={cn(inter.variable, lora.variable, sourceCodePro.variable, "font-sans antialiased")}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

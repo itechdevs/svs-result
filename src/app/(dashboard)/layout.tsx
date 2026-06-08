@@ -24,9 +24,9 @@ export default async function DashboardLayout({
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen flex-col w-full">
+      <div className="flex h-screen flex-col w-full overflow-hidden">
         <Navbar user={session.user} />
-        <div className="flex flex-1">
+        <div className="flex flex-1 overflow-hidden">
           <AppSidebar role={session.user.role} />
           <SidebarInset className="flex-1 overflow-y-auto p-6 bg-transparent">
             {children}

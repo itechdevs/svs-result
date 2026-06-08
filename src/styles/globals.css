@@ -99,11 +99,11 @@
 }
 
 @theme inline {
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-heading);
   --font-sans: var(--font-heading);
-  --font-geist: var(--font-geist);
-  --font-source-serif-4: var(--font-source-serif-4);
-  --font-source-code-pro: var(--font-source-code-pro);
+  --font-geist: var(--font-heading);
+  --font-source-serif-4: var(--font-body);
+  --font-source-code-pro: var(--font-mono);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -165,9 +165,9 @@
     @apply font-sans;
   }
   :root {
-    --font-heading: var(--font-geist);
-    --font-body: var(--font-source-serif-4);
-    --font-mono: var(--font-source-code-pro);
+    --font-heading: var(--font-heading);
+    --font-body: var(--font-body);
+    --font-mono: var(--font-mono);
   }
 
   h1 {

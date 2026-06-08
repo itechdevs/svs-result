@@ -5,7 +5,7 @@
 // ─────────────────────────────────────────────────────────────
 
 // ── App ──────────────────────────────────────────────────────
-export const APP_NAME = "SVS Result Management" as const;
+export const APP_NAME = "SVS Result" as const;
 export const APP_DESCRIPTION = "Result Management System" as const;
 
 // ── Auth ─────────────────────────────────────────────────────
@@ -34,14 +34,14 @@ export const API_PREFIX = "/api" as const;
 
 // ── Cache / Revalidation (seconds) ───────────────────────────
 export const CACHE_TTL = {
-  SHORT: 60,        // 1 minute
-  MEDIUM: 300,      // 5 minutes
-  LONG: 3600,       // 1 hour
-  DAY: 86400,       // 24 hours
+  SHORT: 60, // 1 minute
+  MEDIUM: 300, // 5 minutes
+  LONG: 3600, // 1 hour
+  DAY: 86400, // 24 hours
 } as const;
 
 // ── Rate Limiting ─────────────────────────────────────────────
 export const RATE_LIMIT = {
-  PUBLIC_API_REQUESTS: 60,   // requests
-  PUBLIC_API_WINDOW: 60,     // seconds
+  PUBLIC_API_REQUESTS: 60, // requests
+  PUBLIC_API_WINDOW: 60, // seconds
 } as const;
