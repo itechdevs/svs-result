@@ -17,13 +17,13 @@ export default function CreateEvaluationPage() {
   } = useAcademicContext();
 
   const setCurrentTab = (tab: string) => {
-    if (tab === 'dashboard') router.push('/dashboard');
-    else router.push(`/dashboard/${tab}`);
+    if (tab === 'dashboard') router.push('/');
+    else router.push(`/${tab}`);
   };
 
   const onHandleCreate = () => {
     handleCreateEvaluation();
-    router.push('/dashboard/evaluations');
+    router.push('/evaluations');
   };
 
   return (

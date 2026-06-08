@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { auth } from "@/services/auth";
-import AcademicDashboardCanvas from "@/components/shared/AcademicDashboardCanvas";
 import { redirect } from "next/navigation";
 import { ROUTES } from "@/lib/constants";
+import AdminDashboardClient from "@/components/admin/AdminDashboardClient";
+
 
 export const metadata: Metadata = {
   title: "Admin Dashboard",
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
 
 export default async function AdminDashboardPage() {
   const session = await auth();
-  
+
   // Admin-only guard
   if (session?.user?.role !== "admin") {
     redirect(ROUTES.LOGIN);
@@ -19,7 +20,7 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <AcademicDashboardCanvas role="admin" />
+      <AdminDashboardClient />
     </div>
   );
 }
