@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   LayoutGrid,
@@ -21,8 +21,8 @@ interface SidebarProps {
 }
 
 export function Sidebar({ role = "teacher" }: SidebarProps) {
-  const searchParams = useSearchParams();
-  const currentTab = searchParams.get("tab") || "dashboard";
+  const pathname = usePathname();
+  const currentTab = pathname === "/dashboard" ? "dashboard" : pathname.split('/').pop() || "dashboard";
   const isAdmin = role === "admin";
   const { state, isMobile, openMobile, setOpenMobile } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -69,7 +69,10 @@ export function Sidebar({ role = "teacher" }: SidebarProps) {
                 <div className="h-px bg-[#63a0ff]/[0.07] mx-1 my-2" />
               )}
               <Link
-                href={`/dashboard?tab=${item.tab}`}
+                href={item.tab === "dashboard" 
+                  ? (isAdmin ? "/admin/dashboard" : "/") 
+                  : (isAdmin ? `/admin/dashboard?tab=${item.tab}` : `/?tab=${item.tab}`)
+                }
                 className={cn(
                   "group relative flex items-center gap-3 py-2.5 rounded-[10px] border transition-all duration-200 overflow-hidden",
                   isActive
