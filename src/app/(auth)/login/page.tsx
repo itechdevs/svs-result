@@ -1,56 +1,39 @@
 "use client";
 
-import React, { useState, Suspense, useEffect } from "react";
+import React, { useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ROUTES } from "@/lib/constants";
-import { GraduationCap, Mail, Lock, ArrowRight, ShieldCheck, UserCheck, CheckCircle2 } from "lucide-react";
+import { GraduationCap, Mail, Lock, ArrowRight, ShieldCheck, UserCheck } from "lucide-react";
 
 function LoginForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
-  
-  const registered = searchParams.get("registered");
-  const queryEmail = searchParams.get("email");
-  const queryRole = searchParams.get("role");
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
 
-  // Pre-fill email and show success message if returning from registration
-  useEffect(() => {
-    if (registered === "success" && queryEmail) {
-      setEmail(decodeURIComponent(queryEmail));
-      setSuccessMessage(`Registration complete! Account created for role: ${queryRole?.toUpperCase()}. Please sign in below.`);
-    }
-  }, [registered, queryEmail, queryRole]);
+  const redirectForRole = (role?: string | null) => {
+    router.push(role === "admin" ? ROUTES.ADMIN_DASHBOARD : ROUTES.TEACHER_DASHBOARD);
+    router.refresh();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
-    setSuccessMessage("");
 
     try {
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      });
-
+      const result = await signIn("credentials", { email, password, redirect: false });
       if (result?.error) {
         setError("Invalid email or password. Please try again.");
         setLoading(false);
       } else {
-        router.push(callbackUrl);
-        router.refresh();
+        // Determine role from email since we have hardcoded credentials
+        const role = email === "admin@school.com" ? "admin" : "teacher";
+        redirectForRole(role);
       }
-    } catch (err) {
+    } catch {
       setError("An unexpected error occurred. Please try again.");
       setLoading(false);
     }
@@ -59,26 +42,20 @@ function LoginForm() {
   const handleQuickLogin = async (role: "teacher" | "admin") => {
     setLoading(true);
     setError("");
-    setSuccessMessage("");
     const credentials = {
       teacher: { email: "teacher@school.com", password: "password" },
       admin: { email: "admin@school.com", password: "password" },
     }[role];
 
     try {
-      const result = await signIn("credentials", {
-        ...credentials,
-        redirect: false,
-      });
-
+      const result = await signIn("credentials", { ...credentials, redirect: false });
       if (result?.error) {
         setError("Quick login failed.");
         setLoading(false);
       } else {
-        router.push(callbackUrl);
-        router.refresh();
+        redirectForRole(role);
       }
-    } catch (err) {
+    } catch {
       setError("An unexpected error occurred during quick login.");
       setLoading(false);
     }
@@ -90,13 +67,6 @@ function LoginForm() {
         <h2 className="text-lg font-semibold text-white">Sign In to Dashboard</h2>
         <p className="text-xs text-slate-400 mt-1">Enter your school credentials or select Quick Login below</p>
       </div>
-
-      {successMessage && (
-        <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-250 text-xs py-3 px-4 rounded-xl text-center font-medium flex items-start gap-2">
-          <CheckCircle2 className="w-4 h-4 shrink-0 text-[#9ff5c1] mt-0.5" />
-          <span className="text-left">{successMessage}</span>
-        </div>
-      )}
 
       {error && (
         <div className="bg-red-500/10 border border-red-500/20 text-red-200 text-xs py-3 px-4 rounded-xl text-center font-medium">
@@ -147,7 +117,7 @@ function LoginForm() {
           className="w-full py-3 bg-gradient-to-r from-[#0a6c44] to-[#0d7c4f] text-white hover:from-[#0d7c4f] hover:to-[#0f8c5a] font-bold text-xs rounded-xl flex items-center justify-center gap-2 transform active:scale-95 transition-all shadow-md shadow-emerald-950/20 cursor-pointer"
         >
           {loading ? (
-            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
           ) : (
             <>
               <span>Sign In</span>
@@ -157,7 +127,6 @@ function LoginForm() {
         </button>
       </form>
 
-      {/* Quick Login Section */}
       <div className="space-y-3 pt-4 border-t border-white/10">
         <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest text-center">Quick Portal Sign-In</p>
         <div className="grid grid-cols-2 gap-3">
@@ -188,14 +157,10 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-tr from-[#020b18] via-[#091b36] to-[#040f21] px-4 py-12 relative overflow-hidden font-sans">
-      
-      {/* Dynamic Background Blurs */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-[100px] pointer-events-none"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-600/10 rounded-full blur-[100px] pointer-events-none"></div>
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-600/10 rounded-full blur-[100px] pointer-events-none" />
 
       <div className="w-full max-w-md z-10 space-y-8">
-        
-        {/* Logo and Intro */}
         <div className="text-center space-y-3">
           <div className="mx-auto w-14 h-14 rounded-2xl bg-[#9ff5c1] flex items-center justify-center text-[#002045] font-black shadow-[0_0_20px_rgba(159,245,193,0.3)] transform transition-transform hover:scale-105 duration-300">
             <GraduationCap className="w-8 h-8" />
@@ -206,23 +171,14 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Suspense Wrapped Login Form */}
         <Suspense fallback={
           <div className="bg-white/5 border border-white/10 p-8 rounded-3xl text-center text-slate-400 text-xs py-12">
-            <span className="w-6 h-6 border-2 border-[#9ff5c1] border-t-transparent rounded-full animate-spin inline-block mb-3"></span>
-            <p>Loading EduGrade portal components...</p>
+            <span className="w-6 h-6 border-2 border-[#9ff5c1] border-t-transparent rounded-full animate-spin inline-block mb-3" />
+            <p>Loading portal...</p>
           </div>
         }>
           <LoginForm />
         </Suspense>
-
-        <div className="text-center">
-          <span className="text-xs text-slate-400">Need a staff account? </span>
-          <Link href={ROUTES.REGISTER} className="text-xs font-bold text-[#9ff5c1] hover:underline cursor-pointer">
-            Create Account
-          </Link>
-        </div>
-
       </div>
     </main>
   );

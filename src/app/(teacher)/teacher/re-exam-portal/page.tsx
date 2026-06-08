@@ -1,11 +1,10 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { useAcademicContext } from '@/contexts/AcademicContext';
-import ReExamPortalTab from '@/components/admin/ReExamPortalTab';
-import { AnimatePresence } from 'motion/react';
+import { useAcademicContext } from "@/contexts/AcademicContext";
+import ReExamPortalTab from "@/components/admin/ReExamPortalTab";
+import { AnimatePresence } from "motion/react";
 
-export default function ReExamPortalPage() {
+export default function TeacherReExamPage() {
   const {
     reExams,
     schedulingReExam, setSchedulingReExam,
@@ -13,7 +12,7 @@ export default function ReExamPortalPage() {
     reExamTime, setReExamTime,
     isLockedSchedule, setIsLockedSchedule,
     saveSuccessMessage, setSaveSuccessMessage,
-    isSavingReExam, setIsSavingReExam
+    isSavingReExam, setIsSavingReExam,
   } = useAcademicContext();
 
   return (

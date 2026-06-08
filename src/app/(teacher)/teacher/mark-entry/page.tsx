@@ -1,18 +1,17 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { useAcademicContext } from '@/contexts/AcademicContext';
-import MarkEntryTab from '@/components/teacher/MarkEntryTab';
-import { AnimatePresence } from 'motion/react';
+import { useAcademicContext } from "@/contexts/AcademicContext";
+import MarkEntryTab from "@/components/teacher/MarkEntryTab";
+import { AnimatePresence } from "motion/react";
 
-export default function MarkEntryPage() {
+export default function TeacherMarkEntryPage() {
   const {
     evaluations,
     students,
     selectedEvaluationId, setSelectedEvaluationId,
     gradingStudentId, setGradingStudentId,
     saveSuccessMessage, setSaveSuccessMessage,
-    updateIndividualRating
+    updateIndividualRating,
   } = useAcademicContext();
 
   return (
