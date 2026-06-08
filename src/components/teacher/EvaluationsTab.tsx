@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EvaluationPlan } from '@/types/academic';
+import Link from 'next/link';
 
 interface EvaluationsTabProps {
   evaluations: EvaluationPlan[];
@@ -35,17 +36,13 @@ export default function EvaluationsTab({
         <div>
           <h2 className="text-2xl font-bold text-[#002045] dark:text-white">Academic Evaluations Plan</h2>
         </div>
-        <button
-          onClick={() => {
-            setNewEvalTitle('Sub-Evaluation Written Project Term 3');
-            setNewEvalSubject('Mathematics');
-            setCurrentTab('create-evaluation');
-          }}
+        <Link
+          href="/teacher/create-evaluation"
           className="bg-[#002045] text-white hover:bg-opacity-90 font-bold py-2 px-5 rounded-lg flex items-center gap-2 transform active:scale-95 transition-all text-xs shadow-sm cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Create Evaluation Plan</span>
-        </button>
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 bg-white dark:bg-card p-5 rounded-2xl border border-slate-200 dark:border-border shadow-sm">
@@ -97,7 +94,7 @@ export default function EvaluationsTab({
                 <h3 className="font-bold text-sm text-[#002045] dark:text-white leading-snug line-clamp-1">{evalPlan.title}</h3>
                 <p className="text-[11px] text-slate-400 mt-1">Assessment Unit: {evalPlan.unit || "Core Modules"}</p>
               </div>
-              
+
               <div>
                 <label className="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">
                   Subject Title

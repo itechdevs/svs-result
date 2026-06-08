@@ -108,7 +108,6 @@ export default function CreateEvaluationTab({
             <ArrowLeft className="w-4 h-4 text-[#002045] dark:text-blue-300" />
           </button>
           <div>
-            <span className="text-[10px] font-bold text-[#ba1a1a] dark:text-red-400 uppercase bg-[#ffdad6] dark:bg-red-950/40 px-2 py-0.5 rounded">Setup Mode</span>
             <h2 className="font-bold text-sm text-[#002045] dark:text-white mt-0.5">Create New Evaluation Rubric</h2>
           </div>
         </div>
