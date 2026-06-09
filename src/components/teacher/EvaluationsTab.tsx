@@ -14,6 +14,8 @@ interface EvaluationsTabProps {
   setNewEvalTitle: (title: string) => void;
   setNewEvalSubject: (subject: string) => void;
   newEvalSubject: string;
+  selectedClass?: string;
+  selectedSubject?: string;
 }
 
 export default function EvaluationsTab({
@@ -23,6 +25,8 @@ export default function EvaluationsTab({
   setNewEvalTitle,
   setNewEvalSubject,
   newEvalSubject,
+  selectedClass = '',
+  selectedSubject = '',
 }: EvaluationsTabProps) {
   return (
     <motion.div
@@ -35,14 +39,20 @@ export default function EvaluationsTab({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-[#002045] dark:text-white">Academic Evaluations Plan</h2>
+          {(selectedClass || selectedSubject) && (
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              Showing: <span className="font-semibold text-[#002045] dark:text-blue-300">{selectedClass}</span>
+              {selectedSubject && <> · <span className="font-semibold text-[#002045] dark:text-blue-300">{selectedSubject}</span></>}
+            </p>
+          )}
         </div>
-        <Link
-          href="/teacher/create-evaluation"
+        <button
+          onClick={() => setCurrentTab('create-evaluation')}
           className="bg-[#002045] text-white hover:bg-opacity-90 font-bold py-2 px-5 rounded-lg flex items-center gap-2 transform active:scale-95 transition-all text-xs shadow-sm cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Create Evaluation Plan</span>
-        </Link>
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 bg-white dark:bg-card p-5 rounded-2xl border border-slate-200 dark:border-border shadow-sm">

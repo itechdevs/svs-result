@@ -7,6 +7,7 @@ import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { useAcademicContext, calcObtainedMarks, calcFullMarks, calcPassFail } from '@/contexts/AcademicContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/shared/ui/select';
+import { useSearchParams } from 'next/navigation';
 
 export default function MarkEntryOverviewTable() {
   const {
@@ -19,8 +20,9 @@ export default function MarkEntryOverviewTable() {
     updateOutcomeMark,
   } = useAcademicContext();
 
-  const [selectedClass, setSelectedClass] = useState('');
-  const [selectedSubject, setSelectedSubject] = useState('');
+  const searchParams = useSearchParams();
+  const [selectedClass, setSelectedClass] = useState(searchParams.get('class') ?? '');
+  const [selectedSubject, setSelectedSubject] = useState(searchParams.get('subject') ?? '');
   const [saved, setSaved] = useState(false);
 
   const subjects = useMemo(
