@@ -40,6 +40,8 @@ export interface OutcomeMark {
   regularDate: string;
   supportMark: number | null;
   supportDate: string;
+  reExamMark: number | null;
+  reExamDate: string;
   remarks: string;
 }
 

@@ -38,7 +38,8 @@ export function calcFullMarks(outcomes: { fullMarks?: number }[]): number {
 }
 
 /**
- * Pass/fail: FAIL if ANY outcome regularMark < its passMarks.
+ * Pass/fail: considers reExamMark if available, otherwise regularMark.
+ * FAIL if ANY outcome's final mark < its passMarks.
  * Returns 'Pass' | 'Fail' | 'Pending' (no marks entered yet).
  */
 export function calcPassFail(
@@ -53,9 +54,42 @@ export function calcPassFail(
   if (!allEntered) return 'Pending';
   const anyFail = outcomes.some(lo => {
     const m = studentMarks.outcomeMarks[lo.name];
-    return (m?.regularMark ?? 0) < (lo.passMarks ?? 0);
+    const finalMark = m?.reExamMark ?? m?.regularMark ?? 0;
+    return finalMark < (lo.passMarks ?? 0);
   });
   return anyFail ? 'Fail' : 'Pass';
+}
+
+/**
+ * Returns students who have failed at least one outcome (based on regularMark).
+ */
+export function getFailedStudents(
+  students: Student[],
+  studentMarks: StudentOutcomeMark[],
+  evaluations: EvaluationPlan[]
+): Array<{ student: Student; evaluation: EvaluationPlan; failedOutcomes: string[] }> {
+  const failed: Array<{ student: Student; evaluation: EvaluationPlan; failedOutcomes: string[] }> = [];
+  
+  students.forEach(student => {
+    evaluations.forEach(evaluation => {
+      const marks = studentMarks.find(m => m.studentId === student.id && m.evaluationId === evaluation.id);
+      if (!marks) return;
+      
+      const failedOutcomes = evaluation.learningOutcomes
+        .filter(lo => {
+          const m = marks.outcomeMarks[lo.name];
+          const regularMark = m?.regularMark ?? 0;
+          return regularMark < (lo.passMarks ?? 0) && m?.regularMark !== null && m?.regularMark !== undefined;
+        })
+        .map(lo => lo.name);
+      
+      if (failedOutcomes.length > 0) {
+        failed.push({ student, evaluation, failedOutcomes });
+      }
+    });
+  });
+  
+  return failed;
 }
 
 interface AcademicContextType {
@@ -77,6 +111,7 @@ interface AcademicContextType {
     outcomeName: string,
     patch: Partial<OutcomeMark>
   ) => void;
+  getFailedStudents: () => Array<{ student: Student; evaluation: EvaluationPlan; failedOutcomes: string[] }>;
 
   // ── Teacher assignments ───────────────────────────────────
   teacherAssignments: TeacherAssignment[];
@@ -187,6 +222,8 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
                 regularDate: '',
                 supportMark: null,
                 supportDate: '',
+                reExamMark: null,
+                reExamDate: '',
                 remarks: '',
                 ...patch,
               },
@@ -200,6 +237,8 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
           regularDate: '',
           supportMark: null,
           supportDate: '',
+          reExamMark: null,
+          reExamDate: '',
           remarks: '',
         };
         updated[idx] = {
@@ -213,6 +252,11 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
       });
     },
     []
+  );
+
+  const getFailedStudentsCallback = useCallback(
+    () => getFailedStudents(students, studentMarks, evaluations),
+    [students, studentMarks, evaluations]
   );
 
   // ── Teacher assignment helpers ──────────────────────────────
@@ -385,6 +429,7 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
       studentMarks,
       getStudentMark,
       updateOutcomeMark,
+      getFailedStudents: getFailedStudentsCallback,
       teacherAssignments,
       assignedClasses,
       subjectsForClass,
