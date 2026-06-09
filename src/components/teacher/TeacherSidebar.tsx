@@ -7,7 +7,8 @@ import { LayoutGrid, ClipboardList, PenLine, ClipboardX, ChevronDown } from "luc
 import { ROUTES } from "@/lib/constants";
 import { useSidebar } from "@/components/shared/ui/sidebar";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/shared/ui/sheet";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useAcademicContext } from "@/contexts/AcademicContext";
 
 const NAV_ITEMS = [
   { label: "Teacher Dashboard", href: ROUTES.TEACHER_DASHBOARD, icon: LayoutGrid },
@@ -16,18 +17,21 @@ const NAV_ITEMS = [
   { label: "Re-Exam Panel", href: ROUTES.TEACHER_RE_EXAM, icon: ClipboardX },
 ] as const;
 
-// Mock assigned classes - replace with actual data from context/API
-const ASSIGNED_CLASSES = [
-  { id: 1, class: "Grade 10-A", subject: "Mathematics" },
-  { id: 2, class: "Grade 10-B", subject: "Mathematics" },
-  { id: 3, class: "Grade 11-A", subject: "Physics" },
-];
-
 export function TeacherSidebar() {
   const pathname = usePathname();
   const { state, isMobile, openMobile, setOpenMobile } = useSidebar();
   const isCollapsed = state === "collapsed" && !isMobile;
   const [evaluationsExpanded, setEvaluationsExpanded] = useState(true);
+
+  const { assignedClasses, subjectsForClass } = useAcademicContext();
+
+  // Flatten assignments: [{className, subject}]
+  const assignedPairs = useMemo(() =>
+    assignedClasses.flatMap(cls =>
+      subjectsForClass(cls).map(subject => ({ className: cls, subject }))
+    ),
+    [assignedClasses, subjectsForClass]
+  );
 
   const SidebarContent = (
     <aside
@@ -95,17 +99,30 @@ export function TeacherSidebar() {
               {/* Submenu for Evaluations */}
               {item.hasSubMenu && !isCollapsed && evaluationsExpanded && (
                 <div className="mt-1 ml-11 space-y-1">
-                  {ASSIGNED_CLASSES.map((assignment) => (
-                    <Link
-                      key={assignment.id}
-                      href={ROUTES.TEACHER_EVALUATIONS}
-                      onClick={() => isMobile && setOpenMobile(false)}
-                      className="block py-1.5 px-3 text-[11px] text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40 rounded transition-colors"
-                    >
-                      <div className="font-medium">{assignment.class}</div>
-                      <div className="text-[10px] text-sidebar-foreground/40">{assignment.subject}</div>
-                    </Link>
-                  ))}
+                  {assignedPairs.map(({ className, subject }) => {
+                    const params = new URLSearchParams({ class: className, subject });
+                    const href = `${ROUTES.TEACHER_EVALUATIONS}?${params}`;
+                    const isSubActive = pathname === ROUTES.TEACHER_EVALUATIONS &&
+                      typeof window !== 'undefined' &&
+                      new URLSearchParams(window.location.search).get('class') === className &&
+                      new URLSearchParams(window.location.search).get('subject') === subject;
+                    return (
+                      <Link
+                        key={`${className}-${subject}`}
+                        href={href}
+                        onClick={() => isMobile && setOpenMobile(false)}
+                        className={cn(
+                          "block py-1.5 px-3 text-[11px] rounded transition-colors",
+                          isSubActive
+                            ? "bg-sidebar-accent/60 text-sidebar-foreground"
+                            : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40"
+                        )}
+                      >
+                        <div className="font-medium">{className}</div>
+                        <div className="text-[10px] text-sidebar-foreground/40">{subject}</div>
+                      </Link>
+                    );
+                  })}
                 </div>
               )}
             </div>

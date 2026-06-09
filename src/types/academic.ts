@@ -5,6 +5,12 @@ export interface LearningOutcome {
   afterSupportRating: number | null;
   regularDate: string;
   supportDate: string;
+  /** Full marks for this specific outcome */
+  fullMarks?: number;
+  /** Pass marks for this specific outcome */
+  passMarks?: number;
+  /** Task type group this outcome belongs to */
+  taskType?: string;
 }
 
 export interface EvaluationPlan {
@@ -19,6 +25,31 @@ export interface EvaluationPlan {
   date: string;
   unit: string;
   learningOutcomes: LearningOutcome[];
+}
+
+/** Per-student, per-outcome mark record */
+export interface StudentOutcomeMark {
+  studentId: string;
+  evaluationId: string;
+  /** Key: LearningOutcome.name */
+  outcomeMarks: Record<string, OutcomeMark>;
+}
+
+export interface OutcomeMark {
+  regularMark: number | null;
+  regularDate: string;
+  supportMark: number | null;
+  supportDate: string;
+  remarks: string;
+}
+
+/** Teacher assignment record linking a teacher to class+subject combos */
+export interface TeacherAssignment {
+  teacherId: string;
+  /** e.g. "Grade 10 - Section A" */
+  className: string;
+  subject: string;
+  evaluationId: string;
 }
 
 export interface StudentScore {
