@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { motion } from 'motion/react';
 import { GraduationCap, Library, Layers, Upload, CheckCircle2, Search, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -277,10 +278,13 @@ export default function AllocationsTab({
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center gap-2">
                         {/* Details */}
-                        <button className="inline-flex items-center gap-1.5 text-[10px] font-bold py-1.5 px-3 rounded border border-slate-200 dark:border-border text-[#002045] dark:text-blue-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer">
+                        <Link
+                          href={`/admin/allocations/${item.id}`}
+                          className="inline-flex items-center gap-1.5 text-[10px] font-bold py-1.5 px-3 rounded border border-slate-200 dark:border-border text-[#002045] dark:text-blue-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                        >
                           <Eye className="w-3 h-3" />
                           Details
-                        </button>
+                        </Link>
 
                         {/* ✅ Activate / Deactivate — status updates immediately */}
                         {/* <button
