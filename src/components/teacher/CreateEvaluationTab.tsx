@@ -29,6 +29,7 @@ interface CreateEvaluationTabProps {
   setNewOutcomes: React.Dispatch<React.SetStateAction<TaskGroup[]>>;
   handleCreateEvaluation: () => void;
   setCurrentTab: (tab: 'dashboard' | 'evaluations' | 'mark-entry' | 'student-records' | 'allocations' | 'result-compilation' | 're-exam-portal' | 'create-evaluation') => void;
+  isEditMode?: boolean;
 }
 
 export default function CreateEvaluationTab({
@@ -42,6 +43,7 @@ export default function CreateEvaluationTab({
   setNewOutcomes,
   handleCreateEvaluation,
   setCurrentTab,
+  isEditMode = false,
 }: CreateEvaluationTabProps) {
 
   const addNewTaskGroup = () => {
@@ -108,7 +110,9 @@ export default function CreateEvaluationTab({
             <ArrowLeft className="w-4 h-4 text-[#002045] dark:text-blue-300" />
           </button>
           <div>
-            <h2 className="font-bold text-sm text-[#002045] dark:text-white mt-0.5">Create New Evaluation Rubric</h2>
+            <h2 className="font-bold text-sm text-[#002045] dark:text-white mt-0.5">
+              {isEditMode ? 'Edit Evaluation Rubric' : 'Create New Evaluation Rubric'}
+            </h2>
           </div>
         </div>
 
@@ -117,7 +121,7 @@ export default function CreateEvaluationTab({
             onClick={handleCreateEvaluation}
             className="bg-[#0b6c44] text-white hover:bg-opacity-95 text-xs font-bold py-2 px-5 rounded-lg active:scale-95 transition-all cursor-pointer"
           >
-            Save Evaluation Plan
+            {isEditMode ? 'Update Evaluation' : 'Save Evaluation Plan'}
           </button>
         </div>
       </div>

@@ -144,16 +144,21 @@ export default function EvaluationsTab({
             </div>
 
             <div className="px-5 pb-5 pt-2 border-t border-slate-50 dark:border-border/50 flex items-center gap-3">
+              <Link
+                href={`/teacher/edit-evaluation/${evalPlan.id}`}
+                className="flex-1 bg-slate-100 dark:bg-slate-800 text-[#002045] dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 font-bold py-2 rounded text-xs transition-all text-center"
+              >
+                Edit
+              </Link>
               <button
                 onClick={() => {
                   setSelectedEvaluationId(evalPlan.id);
                   setCurrentTab('mark-entry');
                 }}
-                className="flex-grow bg-[#002045] text-white hover:bg-opacity-95 font-bold py-2 rounded text-xs transition-all text-center cursor-pointer"
+                className="flex-1 bg-[#002045] text-white hover:bg-opacity-95 font-bold py-2 rounded text-xs transition-all text-center cursor-pointer"
               >
                 Enter Marks
               </button>
-
             </div>
           </div>
         ))}
