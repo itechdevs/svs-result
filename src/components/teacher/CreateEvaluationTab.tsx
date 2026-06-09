@@ -118,7 +118,10 @@ export default function CreateEvaluationTab({
 
         <div className="flex gap-2">
           <button
-            onClick={handleCreateEvaluation}
+            onClick={() => {
+              handleCreateEvaluation();
+              setCurrentTab('evaluations');
+            }}
             className="bg-[#0b6c44] text-white hover:bg-opacity-95 text-xs font-bold py-2 px-5 rounded-lg active:scale-95 transition-all cursor-pointer"
           >
             {isEditMode ? 'Update Evaluation' : 'Save Evaluation Plan'}
