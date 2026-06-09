@@ -112,7 +112,7 @@ export default function AllocationsTab({
       </div>
 
       {/* Import Module */}
-      <div className="bg-white dark:bg-card border border-slate-200 dark:border-border p-6 rounded-2xl shadow-sm space-y-4">
+      {/* <div className="bg-white dark:bg-card border border-slate-200 dark:border-border p-6 rounded-2xl shadow-sm space-y-4">
         <h3 className="font-bold text-sm text-[#002045] dark:text-white">Teacher Import Management</h3>
         <p className="text-xs text-slate-500">
           Upload an Excel staff sheet to validate credentials, configure default passwords, and map assigned classes.
@@ -154,7 +154,7 @@ export default function AllocationsTab({
             </div>
           </div>
         )}
-      </div>
+      </div> */}
 
       {/* Allocations Table */}
       <div className="bg-white dark:bg-card border border-slate-200 dark:border-border rounded-xl overflow-hidden shadow-sm">
@@ -200,7 +200,7 @@ export default function AllocationsTab({
             </div>
 
             {/* Status */}
-            <select
+            {/* <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as 'all' | 'Active' | 'Inactive')}
               className="px-4 py-2 text-xs border border-slate-200 dark:border-border rounded-lg bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#002045] dark:focus:ring-[#9ff5c1] cursor-pointer"
@@ -208,7 +208,7 @@ export default function AllocationsTab({
               <option value="all">All Status</option>
               <option value="Active">Active Only</option>
               <option value="Inactive">Inactive Only</option>
-            </select>
+            </select> */}
           </div>
         </div>
 
@@ -219,7 +219,6 @@ export default function AllocationsTab({
                 <th className="px-6 py-4">Teacher Name</th>
                 <th className="px-6 py-4">Assigned Class &amp; Section</th>
                 <th className="px-6 py-4">Subjects</th>
-                <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4 text-center">Actions</th>
               </tr>
             </thead>
@@ -274,22 +273,6 @@ export default function AllocationsTab({
                       </div>
                     </td>
 
-                    {/* Status Badge */}
-                    <td className="px-6 py-4">
-                      <span className={cn(
-                        "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold",
-                        item.status === 'Active'
-                          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
-                          : "bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300"
-                      )}>
-                        <span className={cn(
-                          "w-1.5 h-1.5 rounded-full",
-                          item.status === 'Active' ? "bg-emerald-500" : "bg-rose-500"
-                        )} />
-                        {item.status}
-                      </span>
-                    </td>
-
                     {/* Actions */}
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center gap-2">
@@ -300,7 +283,7 @@ export default function AllocationsTab({
                         </button>
 
                         {/* ✅ Activate / Deactivate — status updates immediately */}
-                        <button
+                        {/* <button
                           onClick={() => toggleTeacherStatus(item.id)}
                           className={cn(
                             "text-[10px] font-bold py-1.5 px-3 rounded border border-slate-200 dark:border-border hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer",
@@ -310,7 +293,7 @@ export default function AllocationsTab({
                           )}
                         >
                           {item.status === 'Active' ? 'Deactivate' : 'Activate'}
-                        </button>
+                        </button> */}
                       </div>
                     </td>
                   </tr>
