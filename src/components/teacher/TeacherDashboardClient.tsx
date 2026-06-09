@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { useAcademicContext } from "@/contexts/AcademicContext";
 
 export default function DashboardPage() {
   const { evaluations, reExams } = useAcademicContext();
-  const [scheduled, setScheduled] = useState<number[]>([]);
 
   const reExamStats = useMemo(() => {
     const scheduled = reExams.filter(r => r.status === 'SCHEDULED').length;
@@ -22,10 +21,6 @@ export default function DashboardPage() {
     { label: "Pending re-exams", value: String(reExamStats.pending), sub: "Require action", icon: "⚠️", danger: true, href: "/teacher/re-exam-portal" },
     { label: "Re-exams scheduled", value: String(reExamStats.scheduled), sub: "Upcoming this week", icon: "📅", danger: false, href: "/teacher/re-exam-portal" },
   ];
-
-  const handleSchedule = (id: number) => {
-    setScheduled((prev) => [...prev, id]);
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -120,18 +115,12 @@ export default function DashboardPage() {
                   <span className="text-sm font-medium text-gray-800">
                     {s.name}
                   </span>
-                  {scheduled.includes(Number(s.id.split('-')[1])) ? (
-                    <span className="text-xs bg-green-100 text-green-700 rounded px-2 py-1">
-                      Scheduled ✓
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => handleSchedule(Number(s.id.split('-')[1]))}
-                      className="text-xs bg-white border border-gray-300 rounded px-3 py-1 hover:bg-gray-100 transition-colors"
-                    >
-                      Schedule
-                    </button>
-                  )}
+                  <Link
+                    href="/teacher/re-exam-portal"
+                    className="text-xs bg-white border border-gray-300 rounded px-3 py-1 hover:bg-gray-100 transition-colors"
+                  >
+                    Schedule
+                  </Link>
                 </div>
                 <div className="flex items-center gap-1.5 text-xs text-gray-400">
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span>
