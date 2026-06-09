@@ -28,6 +28,11 @@ export default function EvaluationsTab({
   selectedClass = '',
   selectedSubject = '',
 }: EvaluationsTabProps) {
+  const qs = new URLSearchParams();
+  if (selectedClass) qs.set('class', selectedClass);
+  if (selectedSubject) qs.set('subject', selectedSubject);
+  const suffix = qs.toString() ? `?${qs.toString()}` : '';
+
   return (
     <motion.div
       key="evaluations-view"
@@ -105,12 +110,9 @@ export default function EvaluationsTab({
                 <label className="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">
                   Subject Title
                 </label>
-                <input
-                  type="text"
-                  value={newEvalSubject}
-                  onChange={e => setNewEvalSubject(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-border rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-[#002045] focus:outline-none text-slate-900 dark:text-white"
-                />
+                <div className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-border rounded-lg p-2.5 text-xs text-slate-900 dark:text-white font-medium">
+                  {evalPlan.subject}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-900/40 p-3 rounded-lg border border-slate-100 dark:border-border">
@@ -155,7 +157,7 @@ export default function EvaluationsTab({
 
             <div className="px-5 pb-5 pt-2 border-t border-slate-50 dark:border-border/50 flex items-center gap-3">
               <Link
-                href={`/teacher/edit-evaluation/${evalPlan.id}`}
+                href={`/teacher/edit-evaluation/${evalPlan.id}${suffix}`}
                 className="flex-1 bg-slate-100 dark:bg-slate-800 text-[#002045] dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 font-bold py-2 rounded text-xs transition-all text-center"
               >
                 Edit

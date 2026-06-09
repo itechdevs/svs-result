@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAcademicContext } from '@/contexts/AcademicContext';
 import CreateEvaluationTab from '@/components/teacher/CreateEvaluationTab';
@@ -18,9 +18,12 @@ export default function CreateEvaluationPage() {
     targetMarks, setTargetMarks,
     newOutcomes, setNewOutcomes,
     handleCreateEvaluation,
+    setEditingEvaluationId,
   } = useAcademicContext();
 
-  // Build query string to carry context forward
+  // Reset editing state so this is always a fresh create, not an edit
+  useEffect(() => { setEditingEvaluationId(null); }, []);
+
   const qs = new URLSearchParams();
   if (selectedClass) qs.set('class', selectedClass);
   if (selectedSubject) qs.set('subject', selectedSubject);
@@ -34,7 +37,6 @@ export default function CreateEvaluationPage() {
 
   const onHandleCreate = () => {
     handleCreateEvaluation();
-    // After creating, go to mark-entry pre-filtered to this class/subject
     const markParams = new URLSearchParams();
     if (selectedClass) markParams.set('class', selectedClass);
     if (selectedSubject) markParams.set('subject', selectedSubject);

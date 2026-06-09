@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useAcademicContext } from '@/contexts/AcademicContext';
 import CreateEvaluationTab from '@/components/teacher/CreateEvaluationTab';
 import { AnimatePresence } from 'motion/react';
@@ -9,7 +9,17 @@ import { AnimatePresence } from 'motion/react';
 export default function EditEvaluationPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const [showSuccess, setShowSuccess] = useState(false);
+
+  const selectedClass = searchParams.get('class') ?? '';
+  const selectedSubject = searchParams.get('subject') ?? '';
+
+  const qs = new URLSearchParams();
+  if (selectedClass) qs.set('class', selectedClass);
+  if (selectedSubject) qs.set('subject', selectedSubject);
+  const backUrl = `/teacher/evaluations${qs.toString() ? `?${qs}` : ''}`;
+
   const {
     newEvalTitle, setNewEvalTitle,
     newEvalSubject, setNewEvalSubject,
@@ -20,22 +30,19 @@ export default function EditEvaluationPage() {
   } = useAcademicContext();
 
   useEffect(() => {
-    if (params.id) {
-      loadEvaluationForEdit(params.id as string);
-    }
+    if (params.id) loadEvaluationForEdit(params.id as string);
   }, [params.id]);
 
   const setCurrentTab = (tab: string) => {
-    if (tab === 'dashboard') router.push('/teacher/dashboard');
+    if (tab === 'evaluations') router.push(backUrl);
+    else if (tab === 'dashboard') router.push('/teacher/dashboard');
     else router.push(`/teacher/${tab}`);
   };
 
   const onHandleUpdate = () => {
     handleUpdateEvaluation();
     setShowSuccess(true);
-    setTimeout(() => {
-      router.push('/teacher/evaluations');
-    }, 1500);
+    setTimeout(() => router.push(backUrl), 1500);
   };
 
   return (
