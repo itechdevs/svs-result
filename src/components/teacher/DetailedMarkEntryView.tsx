@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -15,10 +15,30 @@ interface Props {
 
 export default function DetailedMarkEntryView({ student, evaluation }: Props) {
   const { getStudentMark, updateOutcomeMark } = useAcademicContext();
-  const [saved, setSaved] = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const marks = getStudentMark(student.id, evaluation.id);
   const outcomes = evaluation.learningOutcomes;
+
+  const triggerAutoSave = useCallback(() => {
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+    setAutoSaveStatus('saving');
+    autoSaveTimerRef.current = setTimeout(() => {
+      setAutoSaveStatus('saved');
+      setTimeout(() => setAutoSaveStatus('idle'), 2000);
+    }, 700);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, []);
 
   // Group outcomes by taskType for the SN column
   const grouped = outcomes.reduce<Record<string, typeof outcomes>>((acc, lo) => {
@@ -35,6 +55,7 @@ export default function DetailedMarkEntryView({ student, evaluation }: Props) {
     } else {
       updateOutcomeMark(student.id, evaluation.id, outcomeName, { regularDate: value });
     }
+    triggerAutoSave();
   };
 
   const handleSupport = (outcomeName: string, field: 'supportMark' | 'supportDate', value: string, max: number) => {
@@ -44,15 +65,12 @@ export default function DetailedMarkEntryView({ student, evaluation }: Props) {
     } else {
       updateOutcomeMark(student.id, evaluation.id, outcomeName, { supportDate: value });
     }
+    triggerAutoSave();
   };
 
   const handleRemarks = (outcomeName: string, value: string) => {
     updateOutcomeMark(student.id, evaluation.id, outcomeName, { remarks: value });
-  };
-
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    triggerAutoSave();
   };
 
   const obtained = calcObtainedMarks(marks, outcomes);
@@ -88,12 +106,15 @@ export default function DetailedMarkEntryView({ student, evaluation }: Props) {
             {status}
           </span>
           <span className="font-bold text-sm text-[#002045] dark:text-white">{obtained} / {fullTotal}</span>
-          <button
-            onClick={handleSave}
-            className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm"
-          >
-            Save
-          </button>
+          {autoSaveStatus === 'saving' && (
+            <span className="text-xs text-slate-500 dark:text-slate-400 animate-pulse">Saving...</span>
+          )}
+          {autoSaveStatus === 'saved' && (
+            <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+              <CheckCircle className="w-3 h-3" />
+              Saved
+            </span>
+          )}
         </div>
       </div>
 
@@ -112,8 +133,7 @@ export default function DetailedMarkEntryView({ student, evaluation }: Props) {
                 <th className="px-4 py-3 text-[10px] font-bold text-purple-700 dark:text-purple-400 uppercase tracking-wider text-center border-r border-slate-200 dark:border-border bg-purple-50 dark:bg-purple-950/20" colSpan={2}>
                   Assessment After Support
                 </th>
-                <th className="px-4 py-3 text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider border-r border-slate-200 dark:border-border">Remarks</th>
-                <th className="px-3 py-3 text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider text-center">Save</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Remarks</th>
               </tr>
               <tr className="bg-slate-100 dark:bg-slate-900 border-t border-slate-200 dark:border-border text-[9px] font-semibold text-slate-500 uppercase">
                 <th className="px-3 py-2 border-r border-slate-200 dark:border-border"></th>
@@ -123,8 +143,7 @@ export default function DetailedMarkEntryView({ student, evaluation }: Props) {
                 <th className="px-3 py-2 text-center border-r border-slate-200 dark:border-border">Marks</th>
                 <th className="px-3 py-2 text-center border-r border-slate-200 dark:border-border">Date</th>
                 <th className="px-3 py-2 text-center border-r border-slate-200 dark:border-border">Marks</th>
-                <th className="px-4 py-2 border-r border-slate-200 dark:border-border"></th>
-                <th className="px-3 py-2"></th>
+                <th className="px-4 py-2"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-border">
@@ -212,7 +231,7 @@ export default function DetailedMarkEntryView({ student, evaluation }: Props) {
                       </td>
 
                       {/* Remarks */}
-                      <td className="px-4 py-4 border-r border-slate-200 dark:border-border">
+                      <td className="px-4 py-4">
                         <input
                           type="text"
                           value={m?.remarks ?? ''}
@@ -220,16 +239,6 @@ export default function DetailedMarkEntryView({ student, evaluation }: Props) {
                           onChange={e => handleRemarks(lo.name, e.target.value)}
                           className="w-full px-3 py-1.5 text-xs border border-slate-200 dark:border-border rounded bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 placeholder:text-slate-400"
                         />
-                      </td>
-
-                      {/* Per-row save */}
-                      <td className="px-3 py-4 text-center">
-                        <button
-                          onClick={handleSave}
-                          className="px-3 py-1.5 text-[10px] font-bold text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors"
-                        >
-                          Save
-                        </button>
                       </td>
                     </tr>
                   );
@@ -259,27 +268,7 @@ export default function DetailedMarkEntryView({ student, evaluation }: Props) {
             {status}
           </span>
         </div>
-        <div className="ml-auto">
-          <button
-            onClick={handleSave}
-            className="px-6 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm"
-          >
-            Save All
-          </button>
-        </div>
       </div>
-
-      {/* Toast */}
-      {saved && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="fixed top-4 right-4 p-4 bg-emerald-500 text-white font-semibold text-sm rounded-lg shadow-lg flex items-center gap-2 z-50"
-        >
-          <CheckCircle className="w-5 h-5" />
-          Marks saved successfully!
-        </motion.div>
-      )}
     </motion.div>
   );
 }
