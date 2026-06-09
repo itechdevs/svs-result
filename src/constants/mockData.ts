@@ -1,4 +1,4 @@
-import { Student, EvaluationPlan, ReExam, Allocation } from '@/types/academic';
+import { Student, EvaluationPlan, ReExam, Allocation, StudentOutcomeMark, TeacherAssignment } from '@/types/academic';
 
 export const INITIAL_STUDENTS: Student[] = [
   {
@@ -111,11 +111,11 @@ export const INITIAL_EVALUATIONS: EvaluationPlan[] = [
     date: 'Oct 12, 2023',
     unit: 'Unit 2: Language Possession',
     learningOutcomes: [
-      { name: 'Listening', text: 'Respond to rhymes and songs having simple structures and rhyming patterns.', regularRating: 4, afterSupportRating: null, regularDate: '2024-05-10', supportDate: '' },
-      { name: 'Speaking (Ex-1)', text: 'Participate in a short and simple conversation for expressing possession.', regularRating: 3, afterSupportRating: null, regularDate: '2024-05-10', supportDate: '' },
-      { name: 'Speaking (Ex-2)', text: 'Extract specific information (names and possession) from short and simple texts.', regularRating: 3, afterSupportRating: null, regularDate: '2024-05-10', supportDate: '' },
-      { name: 'Reading', text: 'Recite a short and simple poem and guess the meaning of unfamiliar words.', regularRating: 4, afterSupportRating: null, regularDate: '2024-05-10', supportDate: '' },
-      { name: 'Writing', text: 'Write a short simple thank you note/message to a friend.', regularRating: 3, afterSupportRating: null, regularDate: '2024-05-10', supportDate: '' }
+      { name: 'Listening', text: 'Respond to rhymes and songs having simple structures and rhyming patterns.', regularRating: 4, afterSupportRating: null, regularDate: '2024-05-10', supportDate: '', fullMarks: 20, passMarks: 8, taskType: 'Listening' },
+      { name: 'Speaking (Ex-1)', text: 'Participate in a short and simple conversation for expressing possession.', regularRating: 3, afterSupportRating: null, regularDate: '2024-05-10', supportDate: '', fullMarks: 20, passMarks: 8, taskType: 'Speaking' },
+      { name: 'Speaking (Ex-2)', text: 'Extract specific information (names and possession) from short and simple texts.', regularRating: 3, afterSupportRating: null, regularDate: '2024-05-10', supportDate: '', fullMarks: 20, passMarks: 8, taskType: 'Speaking' },
+      { name: 'Reading', text: 'Recite a short and simple poem and guess the meaning of unfamiliar words.', regularRating: 4, afterSupportRating: null, regularDate: '2024-05-10', supportDate: '', fullMarks: 20, passMarks: 8, taskType: 'Reading' },
+      { name: 'Writing', text: 'Write a short simple thank you note/message to a friend.', regularRating: 3, afterSupportRating: null, regularDate: '2024-05-10', supportDate: '', fullMarks: 20, passMarks: 8, taskType: 'Writing' }
     ]
   },
   {
@@ -130,8 +130,8 @@ export const INITIAL_EVALUATIONS: EvaluationPlan[] = [
     date: 'Nov 05, 2023',
     unit: 'Unit 1: Linear Equations',
     learningOutcomes: [
-      { name: 'Concept Application', text: 'Formulate and apply linear equations systems to real-world datasets.', regularRating: 2, afterSupportRating: null, regularDate: '2024-05-11', supportDate: '' },
-      { name: 'Graphical Analysis', text: 'Plot variable pairs and calculate intercepts seamlessly.', regularRating: 3, afterSupportRating: null, regularDate: '2024-05-11', supportDate: '' }
+      { name: 'Concept Application', text: 'Formulate and apply linear equations systems to real-world datasets.', regularRating: 2, afterSupportRating: null, regularDate: '2024-05-11', supportDate: '', fullMarks: 75, passMarks: 30, taskType: 'Written' },
+      { name: 'Graphical Analysis', text: 'Plot variable pairs and calculate intercepts seamlessly.', regularRating: 3, afterSupportRating: null, regularDate: '2024-05-11', supportDate: '', fullMarks: 75, passMarks: 30, taskType: 'Practical' }
     ]
   },
   {
@@ -146,7 +146,7 @@ export const INITIAL_EVALUATIONS: EvaluationPlan[] = [
     date: 'Oct 20, 2023',
     unit: 'Modern Epics',
     learningOutcomes: [
-      { name: 'Thematic Analysis', text: 'Analyze primary classic narratives and evaluate tone variations.', regularRating: 4, afterSupportRating: 4, regularDate: '2024-05-08', supportDate: '2024-05-10' }
+      { name: 'Thematic Analysis', text: 'Analyze primary classic narratives and evaluate tone variations.', regularRating: 4, afterSupportRating: 4, regularDate: '2024-05-08', supportDate: '2024-05-10', fullMarks: 50, passMarks: 20, taskType: 'Essay' }
     ]
   },
   {
@@ -161,7 +161,7 @@ export const INITIAL_EVALUATIONS: EvaluationPlan[] = [
     date: 'Dec 15, 2023',
     unit: 'Subatomic Physics',
     learningOutcomes: [
-      { name: 'Wave Functions', text: 'Differentiate wave configurations and model localized energy densities.', regularRating: 3, afterSupportRating: null, regularDate: '2024-05-12', supportDate: '' }
+      { name: 'Wave Functions', text: 'Differentiate wave configurations and model localized energy densities.', regularRating: 3, afterSupportRating: null, regularDate: '2024-05-12', supportDate: '', fullMarks: 80, passMarks: 32, taskType: 'Written' }
     ]
   }
 ];
@@ -237,4 +237,51 @@ export const INITIAL_ALLOCATIONS: Allocation[] = [
   { id: 'alloc-2', teacher: 'Michael Chen', title: 'HOD Science', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=100&q=80', classes: ['Grade 12-C'], subjects: ['Quantum Physics'], status: 'Active' },
   { id: 'alloc-3', teacher: 'Amina Mensah', title: 'Assistant Teacher', avatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=100&q=80', classes: ['Grade 09-B'], subjects: ['English Literature'], status: 'Inactive' },
   { id: 'alloc-4', teacher: 'David Rossi', title: 'Senior Lecturer', avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=100&q=80', classes: ['Grade 11-A'], subjects: ['World History'], status: 'Active' }
+];
+
+// ── Teacher Assignments ────────────────────────────────────────
+// Maps the logged-in teacher to class + subject + evaluation combos.
+// In a real app this would come from the allocations/assignments API.
+export const INITIAL_TEACHER_ASSIGNMENTS: TeacherAssignment[] = [
+  { teacherId: 'teacher-1', className: 'Grade 10 - Section A', subject: 'Science', evaluationId: 'eval-1' },
+  { teacherId: 'teacher-1', className: 'Grade 10 - Section A', subject: 'Mathematics', evaluationId: 'eval-2' },
+  { teacherId: 'teacher-1', className: 'Grade 10 - Section A', subject: 'Literature', evaluationId: 'eval-3' },
+  { teacherId: 'teacher-1', className: 'Senior Year - Section B', subject: 'Physics', evaluationId: 'eval-4' },
+];
+
+// ── Per-student outcome marks ──────────────────────────────────
+// Central mark store: studentId + evaluationId → per-outcome marks.
+// All screens (overview table + detailed view) read/write from here.
+export const INITIAL_STUDENT_MARKS: StudentOutcomeMark[] = [
+  // eval-1 marks for Grade 10-A Science
+  {
+    studentId: 'CS-2024-001',
+    evaluationId: 'eval-1',
+    outcomeMarks: {
+      'Listening':       { regularMark: 16, regularDate: '2024-05-10', supportMark: null, supportDate: '', remarks: '' },
+      'Speaking (Ex-1)': { regularMark: 14, regularDate: '2024-05-10', supportMark: null, supportDate: '', remarks: '' },
+      'Speaking (Ex-2)': { regularMark: 15, regularDate: '2024-05-10', supportMark: null, supportDate: '', remarks: '' },
+      'Reading':         { regularMark: 18, regularDate: '2024-05-10', supportMark: null, supportDate: '', remarks: '' },
+      'Writing':         { regularMark: 17, regularDate: '2024-05-10', supportMark: null, supportDate: '', remarks: '' },
+    }
+  },
+  {
+    studentId: 'CS-2024-006',
+    evaluationId: 'eval-1',
+    outcomeMarks: {
+      'Listening':       { regularMark: 10, regularDate: '2024-05-10', supportMark: null, supportDate: '', remarks: '' },
+      'Speaking (Ex-1)': { regularMark: 6,  regularDate: '2024-05-10', supportMark: null, supportDate: '', remarks: '' },
+      'Speaking (Ex-2)': { regularMark: 7,  regularDate: '2024-05-10', supportMark: null, supportDate: '', remarks: '' },
+      'Reading':         { regularMark: 9,  regularDate: '2024-05-10', supportMark: null, supportDate: '', remarks: '' },
+      'Writing':         { regularMark: 8,  regularDate: '2024-05-10', supportMark: null, supportDate: '', remarks: '' },
+    }
+  },
+  // eval-4 marks for Senior Year-B Physics
+  {
+    studentId: 'UG-2024-8842',
+    evaluationId: 'eval-4',
+    outcomeMarks: {
+      'Wave Functions': { regularMark: 55, regularDate: '2024-05-12', supportMark: null, supportDate: '', remarks: '' },
+    }
+  },
 ];
