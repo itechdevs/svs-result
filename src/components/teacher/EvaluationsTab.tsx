@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EvaluationPlan } from '@/types/academic';
+import Link from 'next/link';
 
 interface EvaluationsTabProps {
   evaluations: EvaluationPlan[];
@@ -35,17 +36,13 @@ export default function EvaluationsTab({
         <div>
           <h2 className="text-2xl font-bold text-[#002045] dark:text-white">Academic Evaluations Plan</h2>
         </div>
-        <button
-          onClick={() => {
-            setNewEvalTitle('Sub-Evaluation Written Project Term 3');
-            setNewEvalSubject('Mathematics');
-            setCurrentTab('create-evaluation');
-          }}
+        <Link
+          href="/teacher/create-evaluation"
           className="bg-[#002045] text-white hover:bg-opacity-90 font-bold py-2 px-5 rounded-lg flex items-center gap-2 transform active:scale-95 transition-all text-xs shadow-sm cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Create Evaluation Plan</span>
-        </button>
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 bg-white dark:bg-card p-5 rounded-2xl border border-slate-200 dark:border-border shadow-sm">
@@ -61,10 +58,6 @@ export default function EvaluationsTab({
           <span className="text-2xl font-bold text-[#ba1a1a] dark:text-red-400 mt-1 block">
             {evaluations.length < 10 ? `0${evaluations.length}` : evaluations.length} Evaluations
           </span>
-        </div>
-        <div className="border-l border-slate-200 dark:border-border pl-6">
-          <p className="text-[10px] font-bold text-slate-400 uppercase">Academic Average GPA</p>
-          <span className="text-2xl font-bold text-[#0a6c44] dark:text-emerald-400 mt-1 block">3.82 / 4.0</span>
         </div>
       </div>
 
@@ -97,7 +90,7 @@ export default function EvaluationsTab({
                 <h3 className="font-bold text-sm text-[#002045] dark:text-white leading-snug line-clamp-1">{evalPlan.title}</h3>
                 <p className="text-[11px] text-slate-400 mt-1">Assessment Unit: {evalPlan.unit || "Core Modules"}</p>
               </div>
-              
+
               <div>
                 <label className="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">
                   Subject Title
@@ -151,23 +144,20 @@ export default function EvaluationsTab({
             </div>
 
             <div className="px-5 pb-5 pt-2 border-t border-slate-50 dark:border-border/50 flex items-center gap-3">
+              <Link
+                href={`/teacher/edit-evaluation/${evalPlan.id}`}
+                className="flex-1 bg-slate-100 dark:bg-slate-800 text-[#002045] dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 font-bold py-2 rounded text-xs transition-all text-center"
+              >
+                Edit
+              </Link>
               <button
                 onClick={() => {
                   setSelectedEvaluationId(evalPlan.id);
                   setCurrentTab('mark-entry');
                 }}
-                className="flex-grow bg-[#002045] text-white hover:bg-opacity-95 font-bold py-2 rounded text-xs transition-all text-center cursor-pointer"
+                className="flex-1 bg-[#002045] text-white hover:bg-opacity-95 font-bold py-2 rounded text-xs transition-all text-center cursor-pointer"
               >
                 Enter Marks
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedEvaluationId(evalPlan.id);
-                  setCurrentTab('mark-entry'); // Redirects to grading for detail view
-                }}
-                className="px-3 border border-slate-200 dark:border-border text-slate-600 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold py-2 rounded text-xs transition-all text-center cursor-pointer"
-              >
-                Details
               </button>
             </div>
           </div>

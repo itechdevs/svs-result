@@ -56,7 +56,12 @@ interface AcademicContextType {
   showTranscriptModal: Student | null;
   setShowTranscriptModal: React.Dispatch<React.SetStateAction<Student | null>>;
 
+  editingEvaluationId: string | null;
+  setEditingEvaluationId: React.Dispatch<React.SetStateAction<string | null>>;
+
   handleCreateEvaluation: () => void;
+  handleUpdateEvaluation: () => void;
+  loadEvaluationForEdit: (id: string) => void;
   toggleTeacherStatus: (id: string) => void;
   updateIndividualRating: (outcomeName: string, value: number, isSupport: boolean) => void;
   handleImportSuccess: () => void;
@@ -79,9 +84,9 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
   const [targetMarks, setTargetMarks] = useState(55);
   const [newOutcomes, setNewOutcomes] = useState<TaskGroup[]>([
     {
-      taskType: 'Written Examination',
-      max: 60,
-      pass: 24,
+      taskType: 'Written',
+      max: 4,
+      pass: 2,
       outcomes: [
         { name: 'Theory & Principles', date: '2024-05-20', max: 30, pass: 12 },
       ]
@@ -104,6 +109,51 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
   const [isSavingReExam, setIsSavingReExam] = useState(false);
 
   const [showTranscriptModal, setShowTranscriptModal] = useState<Student | null>(null);
+  const [editingEvaluationId, setEditingEvaluationId] = useState<string | null>(null);
+
+  const loadEvaluationForEdit = (id: string) => {
+    const evaluation = evaluations.find(e => e.id === id);
+    if (!evaluation) return;
+
+    setEditingEvaluationId(id);
+    setNewEvalTitle(evaluation.title);
+    setNewEvalSubject(evaluation.subject);
+
+    // Calculate marks per outcome (distribute proportionally)
+    const totalOutcomes = evaluation.learningOutcomes.length;
+    const marksPerOutcome = totalOutcomes > 0 ? Math.floor(evaluation.fullMarks / totalOutcomes) : 20;
+    const passPerOutcome = totalOutcomes > 0 ? Math.floor(evaluation.passMarks / totalOutcomes) : 8;
+
+    // Reconstruct TaskGroups from learningOutcomes
+    const taskGroups = new Map<string, TaskGroup>();
+    
+    evaluation.learningOutcomes.forEach(lo => {
+      const match = lo.name.match(/^\[(.*?)\]\s*(.*)$/);
+      const taskType = match ? match[1] : 'Written';
+      const outcomeName = match ? match[2] : lo.name;
+
+      if (!taskGroups.has(taskType)) {
+        taskGroups.set(taskType, {
+          taskType,
+          max: 0,
+          pass: 0,
+          outcomes: []
+        });
+      }
+
+      const group = taskGroups.get(taskType)!;
+      group.outcomes.push({
+        name: outcomeName,
+        date: lo.regularDate,
+        max: marksPerOutcome,
+        pass: passPerOutcome
+      });
+      group.max += marksPerOutcome;
+      group.pass += passPerOutcome;
+    });
+
+    setNewOutcomes(Array.from(taskGroups.values()));
+  };
 
   const handleCreateEvaluation = () => {
     const flatOutcomes = newOutcomes.flatMap(group =>
@@ -133,6 +183,40 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
       }))
     };
     setEvaluations([formatted, ...evaluations]);
+  };
+
+  const handleUpdateEvaluation = () => {
+    if (!editingEvaluationId) return;
+
+    const flatOutcomes = newOutcomes.flatMap(group =>
+      group.outcomes.map(out => ({ ...out, taskType: group.taskType }))
+    );
+    const totalMax = flatOutcomes.reduce((acc, curr) => acc + Number(curr.max), 0);
+    const totalPass = flatOutcomes.reduce((acc, curr) => acc + Number(curr.pass), 0);
+
+    const updated: EvaluationPlan = {
+      id: editingEvaluationId,
+      title: newEvalTitle,
+      subject: newEvalSubject,
+      status: 'Active',
+      testTypes: `${newOutcomes.length} Types`,
+      outcomes: `${flatOutcomes.length} Outcomes`,
+      fullMarks: totalMax,
+      passMarks: totalPass,
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+      unit: '',
+      learningOutcomes: flatOutcomes.map(item => ({
+        name: `[${item.taskType}] ${item.name}`,
+        text: `Evaluate competency and rigorous practical applications for ${item.name}.`,
+        regularRating: 3,
+        afterSupportRating: null,
+        regularDate: item.date,
+        supportDate: ''
+      }))
+    };
+
+    setEvaluations(evaluations.map(e => e.id === editingEvaluationId ? updated : e));
+    setEditingEvaluationId(null);
   };
 
   const toggleTeacherStatus = (id: string) => {
@@ -208,7 +292,10 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
       saveSuccessMessage, setSaveSuccessMessage,
       isSavingReExam, setIsSavingReExam,
       showTranscriptModal, setShowTranscriptModal,
+      editingEvaluationId, setEditingEvaluationId,
       handleCreateEvaluation,
+      handleUpdateEvaluation,
+      loadEvaluationForEdit,
       toggleTeacherStatus,
       updateIndividualRating,
       handleImportSuccess,

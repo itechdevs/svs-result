@@ -11,7 +11,7 @@ export default function AdminAllocationsPage() {
     <AnimatePresence mode="wait">
       <AllocationsTab
         allocations={allocations}
-        toggleTeacherStatus={toggleTeacherStatus}
+        // toggleTeacherStatus={toggleTeacherStatus}
         onImportSuccess={handleImportSuccess}
       />
     </AnimatePresence>
