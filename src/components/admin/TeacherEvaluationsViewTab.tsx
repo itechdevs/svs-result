@@ -151,8 +151,8 @@ export default function TeacherEvaluationsViewTab({ teacher, evaluations, onView
                       {evaluation.date}
                     </td>
                     <td className="px-5 py-4 text-center">
-                      <button
-                        onClick={() => onView?.(evaluation)}
+                      <Link
+                        href={`/admin/mark-entry?class=${encodeURIComponent(teacher.classes[0])}&subject=${encodeURIComponent(evaluation.subject)}`}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded transition-colors"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -160,7 +160,7 @@ export default function TeacherEvaluationsViewTab({ teacher, evaluations, onView
                           <circle cx="12" cy="12" r="3" />
                         </svg>
                         View
-                      </button>
+                      </Link>
                     </td>
                   </tr>
                 ))}
