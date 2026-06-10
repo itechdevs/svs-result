@@ -138,7 +138,8 @@ export const createEvaluationTemplateSchema = z.object({
 
 export const updateEvaluationTemplateSchema = createEvaluationTemplateSchema
   .omit({ gradeConfigId: true, syncedSubjectId: true })
-  .partial();
+  .partial()
+  .extend({ isActive: z.boolean().optional() });
 
 export const listEvaluationTemplatesSchema = z.object({
   gradeConfigId: z.string().cuid().optional(),
@@ -166,12 +167,13 @@ export const listTeacherAssignmentsSchema = z.object({
 
 // ─── Student Evaluation Result ────────────────────────────────────────────────
 
-export const upsertEvaluationResultSchema = z
-  .object({
-    marksObtained: z.number().min(0).optional(),
-    isAbsent: z.boolean().default(false),
-    remarks: z.string().max(500).optional(),
-  })
+const upsertEvaluationResultBaseSchema = z.object({
+  marksObtained: z.number().min(0).optional(),
+  isAbsent: z.boolean().default(false),
+  remarks: z.string().max(500).optional(),
+});
+
+export const upsertEvaluationResultSchema = upsertEvaluationResultBaseSchema
   .refine((d) => d.isAbsent || d.marksObtained !== undefined, {
     message: "marksObtained is required unless student is absent",
     path: ["marksObtained"],
@@ -181,8 +183,11 @@ export const bulkUpsertEvaluationResultsSchema = z.object({
   evaluationTemplateId: z.string().cuid(),
   results: z
     .array(
-      upsertEvaluationResultSchema.extend({
+      upsertEvaluationResultBaseSchema.extend({
         syncedStudentId: z.string().cuid(),
+      }).refine((d) => d.isAbsent || d.marksObtained !== undefined, {
+        message: "marksObtained is required unless student is absent",
+        path: ["marksObtained"],
       }),
     )
     .min(1),

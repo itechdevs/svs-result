@@ -2,22 +2,24 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { useAcademicContext } from "@/contexts/AcademicContext";
+import { useEvaluationTemplates } from "@/hooks/use-evaluations";
+import { useReExamSchedules } from "@/hooks/use-re-exams";
 
 export default function DashboardPage() {
-  const { evaluations, reExams } = useAcademicContext();
+  const { data: templatesData = [] } = useEvaluationTemplates();
+  const { data: reExamData = [] } = useReExamSchedules();
 
   const reExamStats = useMemo(() => {
-    const scheduled = reExams.filter(r => r.status === 'SCHEDULED').length;
-    const pending = reExams.filter(r => r.status !== 'SCHEDULED').length;
-    return { scheduled, pending, total: reExams.length };
-  }, [reExams]);
+    const scheduled = reExamData.filter(r => r.status === 'SCHEDULED').length;
+    const pending = reExamData.filter(r => r.status !== 'SCHEDULED').length;
+    return { scheduled, pending };
+  }, [reExamData]);
 
-  const recentEvaluations = evaluations.slice(0, 4);
-  const reExamStudents = reExams.filter(r => r.status !== 'SCHEDULED').slice(0, 2);
+  const recentEvaluations = templatesData.slice(0, 4);
+  const reExamAlerts = reExamData.filter(r => r.status !== 'SCHEDULED').slice(0, 2);
 
   const kpis = [
-    { label: "Total evaluations", value: String(evaluations.length), sub: "Completed this semester", icon: "📋", danger: false, href: "/teacher/evaluations" },
+    { label: "Total evaluations", value: String(templatesData.length), sub: "Completed this semester", icon: "📋", danger: false, href: "/teacher/evaluations" },
     { label: "Pending re-exams", value: String(reExamStats.pending), sub: "Require action", icon: "⚠️", danger: true, href: "/teacher/re-exam-portal" },
     { label: "Re-exams scheduled", value: String(reExamStats.scheduled), sub: "Upcoming this week", icon: "📅", danger: false, href: "/teacher/re-exam-portal" },
   ];
@@ -78,10 +80,10 @@ export default function DashboardPage() {
             <tbody>
               {recentEvaluations.map((ev) => (
                 <tr key={ev.id} className="border-b border-gray-50 last:border-0">
-                  <td className="py-3 text-gray-800">{ev.title}</td>
+                  <td className="py-3 text-gray-800">{ev.name}</td>
                   <td className="py-3">
                     <span className="text-xs bg-gray-100 text-gray-500 rounded px-2 py-1">
-                      {ev.subject}
+                      {ev.syncedSubject?.name ?? '—'}
                     </span>
                   </td>
                   <td className="py-3 text-center">
@@ -106,25 +108,19 @@ export default function DashboardPage() {
           </p>
 
           <div className="flex flex-col gap-3">
-            {reExamStudents.map((s) => (
-              <div
-                key={s.id}
-                className="bg-gray-50 border border-gray-200 rounded-lg p-3"
-              >
+            {reExamAlerts.map((s) => (
+              <div key={s.id} className="bg-gray-50 border border-gray-200 rounded-lg p-3">
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <span className="text-sm font-medium text-gray-800">
-                    {s.name}
+                    {s.evaluationTemplate?.name ?? 'Re-Exam'}
                   </span>
-                  <Link
-                    href="/teacher/re-exam-portal"
-                    className="text-xs bg-white border border-gray-300 rounded px-3 py-1 hover:bg-gray-100 transition-colors"
-                  >
+                  <Link href="/teacher/re-exam-portal" className="text-xs bg-white border border-gray-300 rounded px-3 py-1 hover:bg-gray-100 transition-colors">
                     Schedule
                   </Link>
                 </div>
                 <div className="flex items-center gap-1.5 text-xs text-gray-400">
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span>
-                  {s.roll} · {s.subject} · {s.outcome}
+                  {s.evaluationTemplate?.syncedSubject?.name ?? '—'} · {s.status}
                 </div>
               </div>
             ))}

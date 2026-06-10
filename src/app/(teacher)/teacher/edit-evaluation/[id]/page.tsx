@@ -1,37 +1,49 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
-import { useAcademicContext } from '@/contexts/AcademicContext';
 import CreateEvaluationTab from '@/components/teacher/CreateEvaluationTab';
 import { AnimatePresence } from 'motion/react';
+import { useEvaluationTemplate, useUpdateEvaluationTemplate } from '@/hooks/use-evaluations';
+
+interface OutcomeRow { name: string; date: string; max: number; pass: number; }
+interface TaskGroup { taskType: string; max: number; pass: number; outcomes: OutcomeRow[]; }
 
 export default function EditEvaluationPage() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
+  const id = params.id as string;
   const [showSuccess, setShowSuccess] = useState(false);
 
   const selectedClass = searchParams.get('class') ?? '';
   const selectedSubject = searchParams.get('subject') ?? '';
+  const backUrl = `/teacher/evaluations${selectedClass || selectedSubject ? `?${new URLSearchParams({ ...(selectedClass && { class: selectedClass }), ...(selectedSubject && { subject: selectedSubject }) })}` : ''}`;
 
-  const qs = new URLSearchParams();
-  if (selectedClass) qs.set('class', selectedClass);
-  if (selectedSubject) qs.set('subject', selectedSubject);
-  const backUrl = `/teacher/evaluations${qs.toString() ? `?${qs}` : ''}`;
+  const { data: template } = useEvaluationTemplate(id);
+  const updateMutation = useUpdateEvaluationTemplate(id);
 
-  const {
-    newEvalTitle, setNewEvalTitle,
-    newEvalSubject, setNewEvalSubject,
-    targetMarks, setTargetMarks,
-    newOutcomes, setNewOutcomes,
-    handleUpdateEvaluation,
-    loadEvaluationForEdit,
-  } = useAcademicContext();
+  const [newEvalTitle, setNewEvalTitle] = useState('');
+  const [newEvalSubject, setNewEvalSubject] = useState('');
+  const [targetMarks, setTargetMarks] = useState(55);
+  const [newOutcomes, setNewOutcomes] = useState<TaskGroup[]>([]);
 
+  // Populate form when template loads
   useEffect(() => {
-    if (params.id) loadEvaluationForEdit(params.id as string);
-  }, [params.id]);
+    if (!template) return;
+    setNewEvalTitle(template.name);
+    setNewEvalSubject(template.syncedSubject?.name ?? '');
+    setTargetMarks(Number(template.fullMarks));
+    const match = template.name.match(/^\[(.*?)\]\s*(.*)$/);
+    const taskType = match ? match[1] : 'Written';
+    const outcomeName = match ? match[2] : template.name;
+    setNewOutcomes([{
+      taskType,
+      max: Number(template.fullMarks),
+      pass: Number(template.passMarks),
+      outcomes: [{ name: outcomeName, date: template.scheduledDate ?? '', max: Number(template.fullMarks), pass: Number(template.passMarks) }],
+    }]);
+  }, [template]);
 
   const setCurrentTab = (tab: string) => {
     if (tab === 'evaluations') router.push(backUrl);
@@ -39,8 +51,15 @@ export default function EditEvaluationPage() {
     else router.push(`/teacher/${tab}`);
   };
 
-  const onHandleUpdate = () => {
-    handleUpdateEvaluation();
+  const handleUpdate = async () => {
+    const firstOutcome = newOutcomes[0]?.outcomes[0];
+    if (!firstOutcome) return;
+    await updateMutation.mutateAsync({
+      name: `[${newOutcomes[0].taskType}] ${firstOutcome.name}`,
+      fullMarks: firstOutcome.max,
+      passMarks: firstOutcome.pass,
+      scheduledDate: firstOutcome.date || undefined,
+    });
     setShowSuccess(true);
     setTimeout(() => router.push(backUrl), 1500);
   };
@@ -62,7 +81,7 @@ export default function EditEvaluationPage() {
           setTargetMarks={setTargetMarks}
           newOutcomes={newOutcomes}
           setNewOutcomes={setNewOutcomes}
-          handleCreateEvaluation={onHandleUpdate}
+          handleCreateEvaluation={handleUpdate}
           setCurrentTab={setCurrentTab as any}
           isEditMode={true}
         />

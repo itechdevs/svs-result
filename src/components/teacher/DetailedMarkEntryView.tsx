@@ -5,16 +5,58 @@ import Link from 'next/link';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
-import { useAcademicContext, calcObtainedMarks, calcFullMarks, calcPassFail } from '@/contexts/AcademicContext';
-import { Student, EvaluationPlan } from '@/types/academic';
+import { Student, EvaluationPlan, StudentOutcomeMark, OutcomeMark } from '@/types/academic';
+
+// ── Pure calculation helpers (exported for reuse) ─────────────────────────────
+
+export function calcObtainedMarks(
+  studentMarks: StudentOutcomeMark | undefined,
+  outcomes: { name: string }[]
+): number {
+  if (!studentMarks) return 0;
+  return outcomes.reduce((sum, lo) => {
+    const m = studentMarks.outcomeMarks[lo.name];
+    return sum + (m?.regularMark ?? 0);
+  }, 0);
+}
+
+export function calcFullMarks(outcomes: { fullMarks?: number }[]): number {
+  return outcomes.reduce((sum, lo) => sum + (lo.fullMarks ?? 0), 0);
+}
+
+export function calcPassFail(
+  studentMarks: StudentOutcomeMark | undefined,
+  outcomes: { name: string; passMarks?: number }[]
+): 'Pass' | 'Fail' | 'Pending' {
+  if (!studentMarks) return 'Pending';
+  const allEntered = outcomes.every(lo => {
+    const m = studentMarks.outcomeMarks[lo.name];
+    return m?.regularMark !== null && m?.regularMark !== undefined;
+  });
+  if (!allEntered) return 'Pending';
+  const anyFail = outcomes.some(lo => {
+    const m = studentMarks.outcomeMarks[lo.name];
+    const finalMark = m?.reExamMark ?? m?.regularMark ?? 0;
+    return finalMark < (lo.passMarks ?? 0);
+  });
+  return anyFail ? 'Fail' : 'Pass';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 interface Props {
   student: Student;
   evaluation: EvaluationPlan;
+  getStudentMark: (studentId: string, evaluationId: string) => StudentOutcomeMark | undefined;
+  updateOutcomeMark: (
+    studentId: string,
+    evaluationId: string,
+    outcomeName: string,
+    patch: Partial<OutcomeMark>
+  ) => void;
 }
 
-export default function DetailedMarkEntryView({ student, evaluation }: Props) {
-  const { getStudentMark, updateOutcomeMark } = useAcademicContext();
+export default function DetailedMarkEntryView({ student, evaluation, getStudentMark, updateOutcomeMark }: Props) {
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 

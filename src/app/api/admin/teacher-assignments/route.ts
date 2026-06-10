@@ -49,14 +49,12 @@ export const POST = withHandler(
     }
 
     // Check duplicate
-    const existing = await prisma.teacherAssignment.findUnique({
+    const existing = await prisma.teacherAssignment.findFirst({
       where: {
-        userId_gradeLevel_syncedSubjectId_academicYearId: {
-          userId: body.userId,
-          gradeLevel: body.gradeLevel,
-          syncedSubjectId: body.syncedSubjectId ?? null,
-          academicYearId: body.academicYearId,
-        },
+        userId: body.userId,
+        gradeLevel: body.gradeLevel,
+        syncedSubjectId: body.syncedSubjectId ?? null,
+        academicYearId: body.academicYearId,
       },
     });
     if (existing) return conflict("This teacher assignment already exists");

@@ -1,4 +1,21 @@
-// Re-export Prisma-generated types for use across the app.
-// Add new domain model exports here as you build them.
-
-export type { User, Account, Session, VerificationToken, Authenticator } from "@prisma/client";
+// Re-exports of Prisma-generated types for this project.
+export type {
+  User,
+  Session,
+  TeacherAssignment,
+  SyncedStudent,
+  SyncedTeacher,
+  SyncedSubject,
+  AcademicYear,
+  GradeConfig,
+  GradeScale,
+  EvaluationTemplate,
+  StudentEvaluationResult,
+  ReExamSchedule,
+  ReExamEnrollment,
+  ReExamResult,
+  SubjectResult,
+  FinalResult,
+  Marksheet,
+  SyncLog,
+} from "@prisma/client";

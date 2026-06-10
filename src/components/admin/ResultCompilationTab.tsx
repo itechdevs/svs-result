@@ -4,7 +4,8 @@ import React, { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { CheckCircle, BookOpen, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAcademicContext } from '@/contexts/AcademicContext';
+import { useEvaluationTemplates, useStudentEvaluationResults } from '@/hooks/use-evaluations';
+import { useStudents } from '@/hooks/use-students';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/shared/ui/select';
 
 interface CompiledResult {
@@ -21,55 +22,48 @@ interface CompiledResult {
 }
 
 export default function ResultCompilationTab() {
-  const { evaluations, students, studentMarks } = useAcademicContext();
-  
+  const { data: templatesData = [], isLoading: isLoadingEvals } = useEvaluationTemplates();
+  const { data: studentsData, isLoading: isLoadingStudents } = useStudents({ limit: 500 });
+  const { data: resultsData = [] } = useStudentEvaluationResults({ limit: 2000 });
+
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [selectedEvaluations, setSelectedEvaluations] = useState<string[]>([]);
 
-  // Extract unique classes and subjects
-  const allClasses = useMemo(() => {
-    return [...new Set(students.map(s => s.class))];
-  }, [students]);
+  const students = useMemo(() => studentsData?.students ?? [], [studentsData]);
 
-  const allSubjects = useMemo(() => {
-    return [...new Set(evaluations.map(e => e.subject))];
-  }, [evaluations]);
-
-  // Toggle subject selection
-  const toggleSubject = (subject: string) => {
-    setSelectedSubjects(prev => 
-      prev.includes(subject) 
-        ? prev.filter(s => s !== subject)
-        : [...prev, subject]
-    );
-  };
-
-  // Toggle evaluation selection
-  const toggleEvaluation = (evalId: string) => {
-    setSelectedEvaluations(prev =>
-      prev.includes(evalId)
-        ? prev.filter(id => id !== evalId)
-        : [...prev, evalId]
-    );
-  };
-
-  // Filter evaluations
-  const filteredEvaluations = useMemo(() => {
-    return evaluations.filter(evaluation => {
-      const matchesSubject = selectedSubjects.length === 0 || selectedSubjects.includes(evaluation.subject);
-      return matchesSubject;
+  // Map raw results → outcomeMarks lookup: [studentId][evaluationTemplateId] = marksObtained
+  const marksLookup = useMemo(() => {
+    const lookup: Record<string, Record<string, number | null>> = {};
+    resultsData.forEach(r => {
+      if (!lookup[r.syncedStudentId]) lookup[r.syncedStudentId] = {};
+      lookup[r.syncedStudentId][r.evaluationTemplateId] = r.marksObtained;
     });
-  }, [evaluations, selectedSubjects]);
+    return lookup;
+  }, [resultsData]);
 
-  // Compile student-wise results
+  const allClasses = useMemo(() => [...new Set(students.map(s => s.grade))], [students]);
+  const allSubjects = useMemo(() => [...new Set(templatesData.map(t => t.syncedSubject?.name ?? 'Unknown'))], [templatesData]);
+
+  const toggleSubject = (subject: string) =>
+    setSelectedSubjects(prev => prev.includes(subject) ? prev.filter(s => s !== subject) : [...prev, subject]);
+
+  const toggleEvaluation = (evalId: string) =>
+    setSelectedEvaluations(prev => prev.includes(evalId) ? prev.filter(id => id !== evalId) : [...prev, evalId]);
+
+  const filteredTemplates = useMemo(() =>
+    templatesData.filter(t =>
+      selectedSubjects.length === 0 || selectedSubjects.includes(t.syncedSubject?.name ?? 'Unknown')
+    ),
+    [templatesData, selectedSubjects]
+  );
+
   const compiledResults = useMemo((): CompiledResult[] => {
     if (selectedEvaluations.length === 0) return [];
 
-    const selectedEvalsData = evaluations.filter(e => selectedEvaluations.includes(e.id));
-    const classFilter = selectedClass !== 'all' ? selectedClass : null;
-    const filteredStudents = classFilter 
-      ? students.filter(s => s.class === classFilter)
+    const selectedTemplates = templatesData.filter(t => selectedEvaluations.includes(t.id));
+    const filteredStudents = selectedClass !== 'all'
+      ? students.filter(s => s.grade === selectedClass)
       : students;
 
     return filteredStudents.map(student => {
@@ -79,43 +73,24 @@ export default function ResultCompilationTab() {
       let hasAnyMarks = false;
       let hasFailed = false;
 
-      selectedEvalsData.forEach(evaluation => {
-        const marks = studentMarks.find(m => m.studentId === student.id && m.evaluationId === evaluation.id);
-        
-        if (marks) {
-          let obtained = 0;
-          let evalFull = 0;
-          let evalFailed = false;
+      selectedTemplates.forEach(t => {
+        const obtained = marksLookup[student.id]?.[t.id] ?? null;
+        const subject = t.syncedSubject?.name ?? 'Unknown';
+        subjectMarks[subject] = obtained;
 
-          evaluation.learningOutcomes.forEach(lo => {
-            const outcomeMark = marks.outcomeMarks[lo.name];
-            const mark = outcomeMark?.regularMark ?? null;
-            
-            if (mark !== null) {
-              obtained += mark;
-              hasAnyMarks = true;
-              
-              // Check pass/fail for this outcome
-              if (mark < (lo.passMarks ?? 0)) {
-                evalFailed = true;
-              }
-            }
-            evalFull += lo.fullMarks ?? 0;
-          });
-
-          subjectMarks[evaluation.subject] = obtained;
+        if (obtained !== null) {
+          hasAnyMarks = true;
           totalObtained += obtained;
-          totalFull += evalFull;
-          
-          if (evalFailed) hasFailed = true;
+          totalFull += Number(t.fullMarks);
+          if (obtained < Number(t.passMarks)) hasFailed = true;
         } else {
-          subjectMarks[evaluation.subject] = null;
+          totalFull += Number(t.fullMarks);
         }
       });
 
       const percentage = totalFull > 0 ? (totalObtained / totalFull) * 100 : 0;
-      const average = selectedEvalsData.length > 0 ? totalObtained / selectedEvalsData.length : 0;
-      
+      const average = selectedTemplates.length > 0 ? totalObtained / selectedTemplates.length : 0;
+
       let grade = 'N/A';
       if (hasAnyMarks) {
         if (percentage >= 90) grade = 'A+';
@@ -127,10 +102,8 @@ export default function ResultCompilationTab() {
         else grade = 'D';
       }
 
-      const result: 'Pass' | 'Fail' | 'Pending' = !hasAnyMarks ? 'Pending' : hasFailed ? 'Fail' : 'Pass';
-
       return {
-        rollNo: student.rollNo,
+        rollNo: student.rollNumber,
         studentId: student.id,
         studentName: student.name,
         subjectMarks,
@@ -139,13 +112,13 @@ export default function ResultCompilationTab() {
         average,
         percentage,
         grade,
-        result
+        result: !hasAnyMarks ? 'Pending' : hasFailed ? 'Fail' : 'Pass',
       };
     });
-  }, [selectedEvaluations, evaluations, students, studentMarks, selectedClass]);
+  }, [selectedEvaluations, templatesData, students, marksLookup, selectedClass]);
 
   return (
-    <motion.div 
+    <motion.div
       key="result-compilation"
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
@@ -168,7 +141,7 @@ export default function ResultCompilationTab() {
           </div>
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Total Evaluations</p>
-            <h4 className="text-2xl font-extrabold text-[#002045] dark:text-blue-300 mt-1">{evaluations.length}</h4>
+            <h4 className="text-2xl font-extrabold text-[#002045] dark:text-blue-300 mt-1">{templatesData.length}</h4>
           </div>
         </div>
 
@@ -179,7 +152,7 @@ export default function ResultCompilationTab() {
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Active Evaluations</p>
             <h4 className="text-2xl font-extrabold text-[#002045] dark:text-blue-300 mt-1">
-              {evaluations.filter(e => e.status === 'Active').length}
+              {templatesData.filter(t => t.isActive).length}
             </h4>
           </div>
         </div>
@@ -198,9 +171,7 @@ export default function ResultCompilationTab() {
       {/* Filters */}
       <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-border shadow-sm p-5">
         <h3 className="text-xs font-bold text-[#002045] dark:text-white uppercase tracking-wider mb-3">Filter Evaluations</h3>
-        
         <div className="grid grid-cols-1 gap-4">
-          {/* Class Filter */}
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Filter by Class</label>
             <Select value={selectedClass} onValueChange={setSelectedClass}>
@@ -214,7 +185,6 @@ export default function ResultCompilationTab() {
             </Select>
           </div>
 
-          {/* Multi-Subject Filter */}
           <div className="space-y-2">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Filter by Subjects (Multiple)</label>
             <div className="flex flex-wrap gap-2">
@@ -234,10 +204,7 @@ export default function ResultCompilationTab() {
               ))}
             </div>
             {selectedSubjects.length > 0 && (
-              <button
-                onClick={() => setSelectedSubjects([])}
-                className="text-xs text-red-600 dark:text-red-400 hover:underline"
-              >
+              <button onClick={() => setSelectedSubjects([])} className="text-xs text-red-600 dark:text-red-400 hover:underline">
                 Clear all subjects
               </button>
             )}
@@ -245,15 +212,15 @@ export default function ResultCompilationTab() {
         </div>
       </div>
 
-      {/* Evaluations Cards */}
+      {/* Evaluation Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredEvaluations.map((evalPlan) => (
+        {filteredTemplates.map(t => (
           <div
-            key={evalPlan.id}
-            onClick={() => toggleEvaluation(evalPlan.id)}
+            key={t.id}
+            onClick={() => toggleEvaluation(t.id)}
             className={cn(
               "bg-white dark:bg-card border rounded-xl overflow-hidden hover:shadow-md transition-all flex flex-col cursor-pointer",
-              selectedEvaluations.includes(evalPlan.id)
+              selectedEvaluations.includes(t.id)
                 ? "border-blue-500 ring-2 ring-blue-500"
                 : "border-slate-200 dark:border-border"
             )}
@@ -262,68 +229,46 @@ export default function ResultCompilationTab() {
               <div className="flex justify-between items-start">
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center gap-2">
-                    {selectedEvaluations.includes(evalPlan.id) && (
-                      <CheckCircle className="w-4 h-4 text-blue-500" />
-                    )}
+                    {selectedEvaluations.includes(t.id) && <CheckCircle className="w-4 h-4 text-blue-500" />}
                     <span className={cn(
                       "px-2.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider w-fit",
-                      evalPlan.status === 'Active' ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-350"
+                      t.isActive ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300" : "bg-slate-100 dark:bg-slate-800 text-slate-600"
                     )}>
-                      {evalPlan.status}
+                      {t.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </div>
-                  <span className="text-slate-400 text-[10px] font-mono block">Created: {evalPlan.date}</span>
+                  <span className="text-slate-400 text-[10px] font-mono block">
+                    {t.scheduledDate ? new Date(t.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'TBD'}
+                  </span>
                 </div>
-
-                {/* Subject badge */}
                 <span className="text-[10px] font-bold px-2.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-[#002045] dark:text-blue-300 rounded-full uppercase tracking-wider border dark:border-border">
-                  {evalPlan.subject}
+                  {t.syncedSubject?.name ?? 'Unknown'}
                 </span>
               </div>
 
               <div>
-                <h3 className="font-bold text-sm text-[#002045] dark:text-white leading-snug line-clamp-1">{evalPlan.title}</h3>
-                <p className="text-[11px] text-slate-400 mt-1">Assessment Unit: {evalPlan.unit || "Core Modules"}</p>
+                <h3 className="font-bold text-sm text-[#002045] dark:text-white leading-snug line-clamp-1">{t.name}</h3>
+                <p className="text-[11px] text-slate-400 mt-1">Grade: {t.gradeConfig?.gradeLevel ?? '—'}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-900/40 p-3 rounded-lg border border-slate-100 dark:border-border">
                 <div>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase block">Task Types</span>
-                  <span className="font-bold text-xs text-[#002045] dark:text-blue-300 font-mono">{evalPlan.testTypes}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase block">Outcomes tracked</span>
-                  <span className="font-bold text-xs text-[#002045] dark:text-blue-300 font-mono">{evalPlan.outcomes}</span>
-                </div>
-                <div>
                   <span className="text-[9px] font-bold text-slate-400 uppercase block">Max Marks</span>
-                  <span className="font-bold text-xs text-slate-700 dark:text-slate-300 font-mono">{evalPlan.fullMarks}</span>
+                  <span className="font-bold text-xs text-slate-700 dark:text-slate-300 font-mono">{t.fullMarks}</span>
                 </div>
                 <div>
                   <span className="text-[9px] font-bold text-slate-400 uppercase block">Pass Marks</span>
-                  <span className="font-bold text-xs text-slate-700 dark:text-slate-300 font-mono">{evalPlan.passMarks}</span>
+                  <span className="font-bold text-xs text-slate-700 dark:text-slate-300 font-mono">{t.passMarks}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase block">Weightage</span>
+                  <span className="font-bold text-xs text-[#002045] dark:text-blue-300 font-mono">{t.weightage}%</span>
+                </div>
+                <div>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase block">Academic Year</span>
+                  <span className="font-bold text-xs text-[#002045] dark:text-blue-300 font-mono">{t.gradeConfig?.academicYear?.name ?? '—'}</span>
                 </div>
               </div>
-
-              {/* Preview of what is inside */}
-              {evalPlan.learningOutcomes && evalPlan.learningOutcomes.length > 0 && (
-                <div className="pt-2">
-                  <span className="text-[9px] font-bold text-slate-400 uppercase block mb-1.5">Criteria Preview</span>
-                  <ul className="text-[10px] text-slate-600 dark:text-slate-400 space-y-1">
-                    {evalPlan.learningOutcomes.slice(0, 3).map((lo, idx) => (
-                      <li key={idx} className="truncate flex items-center gap-1.5">
-                        <span className="w-1 h-1 rounded-full bg-[#002045] dark:bg-blue-400 shrink-0" />
-                        {lo.name}
-                      </li>
-                    ))}
-                    {evalPlan.learningOutcomes.length > 3 && (
-                      <li className="text-[9px] text-slate-400 italic mt-1 pl-2.5">
-                        + {evalPlan.learningOutcomes.length - 3} more criteria
-                      </li>
-                    )}
-                  </ul>
-                </div>
-              )}
             </div>
           </div>
         ))}
@@ -336,27 +281,22 @@ export default function ResultCompilationTab() {
             <h3 className="text-sm font-bold text-[#002045] dark:text-white uppercase tracking-wider">
               Compiled Results ({compiledResults.length} students)
             </h3>
-            <button
-              onClick={() => setSelectedEvaluations([])}
-              className="text-xs text-red-600 dark:text-red-400 hover:underline"
-            >
+            <button onClick={() => setSelectedEvaluations([])} className="text-xs text-red-600 dark:text-red-400 hover:underline">
               Clear selection
             </button>
           </div>
-          
+
           <div className="overflow-x-auto">
             <table className="w-full text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-900/40">
                   <th className="border border-slate-200 dark:border-border px-3 py-2 text-left font-bold text-[#002045] dark:text-white">Roll No</th>
                   <th className="border border-slate-200 dark:border-border px-3 py-2 text-left font-bold text-[#002045] dark:text-white">Student Name</th>
-                  {evaluations
-                    .filter(e => selectedEvaluations.includes(e.id))
-                    .map(e => (
-                      <th key={e.id} className="border border-slate-200 dark:border-border px-3 py-2 text-center font-bold text-[#002045] dark:text-white">
-                        {e.subject}
-                      </th>
-                    ))}
+                  {templatesData.filter(t => selectedEvaluations.includes(t.id)).map(t => (
+                    <th key={t.id} className="border border-slate-200 dark:border-border px-3 py-2 text-center font-bold text-[#002045] dark:text-white">
+                      {t.syncedSubject?.name ?? 'Unknown'}
+                    </th>
+                  ))}
                   <th className="border border-slate-200 dark:border-border px-3 py-2 text-center font-bold text-[#002045] dark:text-white">Total</th>
                   <th className="border border-slate-200 dark:border-border px-3 py-2 text-center font-bold text-[#002045] dark:text-white">Average</th>
                   <th className="border border-slate-200 dark:border-border px-3 py-2 text-center font-bold text-[#002045] dark:text-white">Percentage</th>
@@ -369,13 +309,11 @@ export default function ResultCompilationTab() {
                   <tr key={result.studentId} className="hover:bg-slate-50 dark:hover:bg-slate-900/20">
                     <td className="border border-slate-200 dark:border-border px-3 py-2 text-slate-700 dark:text-slate-300">{result.rollNo}</td>
                     <td className="border border-slate-200 dark:border-border px-3 py-2 text-slate-700 dark:text-slate-300">{result.studentName}</td>
-                    {evaluations
-                      .filter(e => selectedEvaluations.includes(e.id))
-                      .map(e => (
-                        <td key={e.id} className="border border-slate-200 dark:border-border px-3 py-2 text-center text-slate-700 dark:text-slate-300">
-                          {result.subjectMarks[e.subject] !== null ? result.subjectMarks[e.subject] : '-'}
-                        </td>
-                      ))}
+                    {templatesData.filter(t => selectedEvaluations.includes(t.id)).map(t => (
+                      <td key={t.id} className="border border-slate-200 dark:border-border px-3 py-2 text-center text-slate-700 dark:text-slate-300">
+                        {result.subjectMarks[t.syncedSubject?.name ?? 'Unknown'] ?? '-'}
+                      </td>
+                    ))}
                     <td className="border border-slate-200 dark:border-border px-3 py-2 text-center font-semibold text-slate-700 dark:text-slate-300">
                       {result.totalObtained}/{result.totalFull}
                     </td>
@@ -390,8 +328,8 @@ export default function ResultCompilationTab() {
                     </td>
                     <td className={cn(
                       "border border-slate-200 dark:border-border px-3 py-2 text-center font-bold",
-                      result.result === 'Pass' ? "text-green-600 dark:text-green-400" : 
-                      result.result === 'Fail' ? "text-red-600 dark:text-red-400" : 
+                      result.result === 'Pass' ? "text-green-600 dark:text-green-400" :
+                      result.result === 'Fail' ? "text-red-600 dark:text-red-400" :
                       "text-slate-400"
                     )}>
                       {result.result}

@@ -18,8 +18,6 @@
       "@/*": ["./src/*"],
       "@/lib/utils": ["./src/utils/index.ts"],
       "@/lib/constants": ["./src/constants/index.ts"],
-      "@/lib/auth": ["./src/services/auth.ts"],
-      "@/lib/mockData": ["./src/constants/mockData.ts"],
       "@/components/ui/*": ["./src/components/shared/ui/*"],
       "@/components/common/*": ["./src/components/shared/common/*"]
     }
