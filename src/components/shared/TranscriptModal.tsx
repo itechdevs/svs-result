@@ -57,7 +57,7 @@ export default function TranscriptModal({
               </div>
               <div className="text-right">
                 <h3 className="font-extrabold text-[#002045] text-xs uppercase tracking-wider leading-none">Official Marksheet</h3>
-                <p className="text-[11px] text-slate-400 mt-2 font-mono">Session: AY {showTranscriptModal.academicYear}</p>
+                <p className="text-[11px] text-slate-400 mt-2 font-mono">Session: Current Academic Year</p>
                 <p className="text-[11px] text-[#002045] font-bold font-mono">TRANSCRIPT ID: #{showTranscriptModal.id}</p>
               </div>
             </div>
