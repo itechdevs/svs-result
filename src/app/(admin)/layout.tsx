@@ -4,8 +4,6 @@ import { ROUTES } from "@/lib/constants";
 import { Navbar } from "@/components/shared/common/navbar";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { AcademicProvider } from "@/contexts/AcademicContext";
-
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   let session;
   try {
@@ -19,17 +17,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <SidebarProvider>
-      <AcademicProvider>
-        <div className="flex min-h-screen flex-col w-full">
-          <Navbar user={session.user} />
-          <div className="flex flex-1">
-            <AdminSidebar />
-            <SidebarInset className="flex-1 overflow-y-auto p-6 bg-transparent">
-              {children}
-            </SidebarInset>
-          </div>
+      <div className="flex min-h-screen flex-col w-full">
+        <Navbar user={session.user} />
+        <div className="flex flex-1">
+          <AdminSidebar />
+          <SidebarInset className="flex-1 overflow-y-auto p-6 bg-transparent">
+            {children}
+          </SidebarInset>
         </div>
-      </AcademicProvider>
+      </div>
     </SidebarProvider>
   );
 }

@@ -4,6 +4,9 @@ import { db } from "@/db";
 import type { UserRole } from "@/types";
 import Credentials from "next-auth/providers/credentials";
 
+import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/prisma";
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET,
   adapter: PrismaAdapter(db),
@@ -24,25 +27,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const email = credentials.email as string;
         const password = credentials.password as string;
 
-        if (email === "teacher@school.com" && password === "password") {
-          return {
-            id: "teacher-1",
-            name: "Prof. Henderson",
-            email: "teacher@school.com",
-            role: "teacher" as UserRole,
-          };
+        const user = await prisma.user.findUnique({
+          where: { email },
+        });
+
+        if (!user || !user.isActive) {
+          return null;
         }
 
-        if (email === "admin@school.com" && password === "password") {
-          return {
-            id: "admin-1",
-            name: "A. Portal Executive",
-            email: "admin@school.com",
-            role: "admin" as UserRole,
-          };
+        const valid = await bcrypt.compare(password, user.passwordHash);
+        if (!valid) {
+          return null;
         }
 
-        return null;
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role.toLowerCase() as UserRole,
+        };
       },
     }),
   ],

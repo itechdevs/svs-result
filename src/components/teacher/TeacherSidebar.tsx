@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -8,14 +9,15 @@ import { ROUTES } from "@/lib/constants";
 import { useSidebar } from "@/components/shared/ui/sidebar";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/shared/ui/sheet";
 import { useState, useMemo } from "react";
-import { useAcademicContext } from "@/contexts/AcademicContext";
+import { useProfile } from "@/hooks/use-profile";
+import { useSubjects } from "@/hooks/use-subjects";
 
-const NAV_ITEMS = [
+const NAV_ITEMS: { label: string; href: string; icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>; hasSubMenu?: boolean }[] = [
   { label: "Teacher Dashboard", href: ROUTES.TEACHER_DASHBOARD, icon: LayoutGrid },
   { label: "Evaluation Plan", href: ROUTES.TEACHER_EVALUATIONS, icon: ClipboardList, hasSubMenu: true },
   { label: "Marking Center", href: ROUTES.TEACHER_MARK_ENTRY, icon: PenLine },
   { label: "Re-Exam Panel", href: ROUTES.TEACHER_RE_EXAM, icon: ClipboardX },
-] as const;
+];
 
 export function TeacherSidebar() {
   const pathname = usePathname();
@@ -23,15 +25,22 @@ export function TeacherSidebar() {
   const isCollapsed = state === "collapsed" && !isMobile;
   const [evaluationsExpanded, setEvaluationsExpanded] = useState(true);
 
-  const { assignedClasses, subjectsForClass } = useAcademicContext();
+  const { data: profile } = useProfile();
+  const { data: subjectsData = [] } = useSubjects();
 
-  // Flatten assignments: [{className, subject}]
-  const assignedPairs = useMemo(() =>
-    assignedClasses.flatMap(cls =>
-      subjectsForClass(cls).map(subject => ({ className: cls, subject }))
-    ),
-    [assignedClasses, subjectsForClass]
-  );
+  const assignedPairs = useMemo(() => {
+    if (!profile?.teacherAssignments) return [];
+    const assignedClasses = Array.from(new Set(profile.teacherAssignments.map(a => a.gradeLevel)));
+    return assignedClasses.flatMap(cls => {
+      const classAssignments = profile.teacherAssignments.filter(a => a.gradeLevel === cls);
+      const hasAllSubjects = classAssignments.some(a => a.syncedSubjectId === null);
+      const classSubjects = subjectsData.filter(s => s.gradeLevel === cls);
+      const subjectNames = hasAllSubjects
+        ? classSubjects.map(s => s.name)
+        : classSubjects.filter(s => classAssignments.some(a => a.syncedSubjectId === s.id)).map(s => s.name);
+      return subjectNames.map(subject => ({ className: cls, subject }));
+    });
+  }, [profile, subjectsData]);
 
   const SidebarContent = (
     <aside

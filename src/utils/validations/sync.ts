@@ -15,7 +15,7 @@ export const teacherSyncSchema = z.object({
   user: z.object({
     email: z.string().email(),
     name: z.string(),
-    role: z.enum(["TEACHER", "ADMIN", "SUPER_ADMIN"]),
+    role: z.enum(["TEACHER", "ADMIN"]),
   }),
 });
 
