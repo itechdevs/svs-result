@@ -72,7 +72,6 @@ export interface Student {
   class: string;
   attendance: string;
   department: string;
-  academicYear: string;
   overallTotal: string;
   overallPercent: number;
   grade: string;
