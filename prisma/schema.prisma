@@ -1,80 +1,564 @@
+// =============================================================================
+// RESULT MANAGEMENT SYSTEM — Playgroup to Grade 5
+// =============================================================================
+// Separate database from the school management system.
+// Synced entities (Student, Teacher, Subject) are referenced by sourceId
+// (the PK from the school management DB) and kept in sync via webhook/job.
+//
+// Two user roles:
+//   ADMIN   — full access; configures evaluation templates, aggregates results,
+//             publishes marksheets, manages teacher assignments
+//   TEACHER — restricted to grades/subjects they are assigned to;
+//             can only enter and submit marks; cannot aggregate or publish
+//
+// Core evaluation flow:
+//   EvaluationTemplate  (ADMIN defines: "Oral Test — 20 marks — 30% weight")
+//       ↓  teacher enters marks per student
+//   StudentEvaluationResult
+//       ↓  if student failed this evaluation → re-exam for THIS evaluation only
+//   ReExamSchedule → ReExamEnrollment → ReExamResult
+//       ↓  best of original / re-exam → effectiveMarks
+//   SubjectResult  (ADMIN triggers aggregation)
+//       ↓
+//   FinalResult  → GPA → Marksheet  (ADMIN publishes)
+// =============================================================================
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum UserRole {
+  ADMIN
+  TEACHER
+}
+
+enum MarksStatus {
+  DRAFT // Teacher saved, not yet submitted
+  SUBMITTED // Submitted to admin for verification
+  VERIFIED // Admin verified; ready for aggregation
+  LOCKED // Aggregated and published; no further edits
+}
+
+enum ReExamStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum ResultStatus {
+  PENDING // Not yet computed
+  PROMOTED
+  FAILED
+  PROBATION // Passed overall but failed in some subjects
+  WITHHELD
+}
+
+enum GradeType {
+  LETTER // A+, A, B+, B, C, D, E
+  GPA // 4.0 scale
+  DESCRIPTIVE // Outstanding, Excellent, Good, Satisfactory, Needs Improvement
+}
+
+// =============================================================================
+// 1. USER & AUTH
+//    Users are LOCAL to the result system — not synced from school management.
+//
+//    ADMIN:   created directly; no SyncedTeacher link needed.
+//    TEACHER: must be linked to a SyncedTeacher (syncedTeacherId) so the system
+//             knows which school-DB teacher this account belongs to. A teacher
+//             can only access grades/subjects in their TeacherAssignment rows.
+//
+//    Sessions are stored in DB (NextAuth-compatible pattern).
+//    PasswordResetToken covers the forgot-password flow.
+// =============================================================================
+
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  role          String    @default("teacher")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  role         UserRole
+  name         String
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  lastLoginAt  DateTime?
 
-  accounts      Account[]
-  sessions      Session[]
-  Authenticator Authenticator[]
+  // Only set for TEACHER role — links to the SyncedTeacher mirror
+  syncedTeacherId String? @unique // SyncedTeacher.id (not sourceId)
 
+  sessions            Session[]
+  passwordResetTokens PasswordResetToken[]
+
+  // Teacher-specific relations (null for ADMIN)
+  syncedTeacher      SyncedTeacher?      @relation(fields: [syncedTeacherId], references: [id], onDelete: SetNull)
+  teacherAssignments TeacherAssignment[]
+
+  // Audit: who verified which evaluation results
+  verifiedResults     StudentEvaluationResult[] @relation("VerifiedBy")
+  enteredResults      StudentEvaluationResult[] @relation("EnteredBy")
+  // Audit: who published final results
+  publishedResults    FinalResult[]             @relation("PublishedBy")
+  // Audit: who generated marksheets
+  generatedMarksheets Marksheet[]               @relation("GeneratedBy")
+
+  @@index([role, isActive])
   @@map("users")
 }
 
-model Account {
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@id([provider, providerAccountId])
-  @@map("accounts")
-}
-
 model Session {
-  sessionToken String   @id
-  userId       String
-  expires      DateTime
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+  @@index([token])
   @@map("sessions")
 }
 
-model VerificationToken {
-  identifier String
-  token      String
-  expires    DateTime
-
-  @@id([identifier, token])
-  @@map("verification_tokens")
-}
-
-model Authenticator {
-  credentialID         String  @unique
-  userId               String
-  providerAccountId    String
-  credentialPublicKey  String
-  counter              Int
-  credentialDeviceType String
-  credentialBackedUp   Boolean
-  transports           String?
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@id([userId, credentialID])
-  @@map("authenticators")
+  @@index([userId])
+  @@map("password_reset_tokens")
 }
 
+// =============================================================================
+// 2. TEACHER ASSIGNMENT
+//    Controls which grade + subject a teacher can enter marks for.
+//    Admin assigns these; the teacher dashboard filters everything by these rows.
+//
+//    If gradeLevel is set and syncedSubjectId is null → teacher sees ALL subjects
+//    in that grade (useful for class teachers).
+//    Typically both are set → teacher sees one specific subject in one grade.
+// =============================================================================
+
+model TeacherAssignment {
+  id              String   @id @default(cuid())
+  userId          String // Must be a TEACHER role user
+  gradeLevel      String // "Playgroup", "KG", "Grade 1" … "Grade 5"
+  syncedSubjectId String? // null = all subjects in this grade
+  academicYearId  String
+  assignedBy      String // User.id of the ADMIN who assigned this
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, gradeLevel, syncedSubjectId, academicYearId])
+  @@index([userId])
+  @@index([gradeLevel])
+  @@index([academicYearId])
+  @@map("teacher_assignments")
+}
+
+// =============================================================================
+// 3. SYNCED ENTITIES
+//    Mirrors of the school management DB, kept in sync via webhooks/jobs.
+//    Never hard-delete — soft-deactivate via isActive.
+// =============================================================================
+
+/// Mirror of school management → Student
+model SyncedStudent {
+  id         String   @id @default(cuid())
+  sourceId   String   @unique // Student.id from school DB
+  name       String
+  rollNumber String
+  grade      String // "Playgroup", "KG", "Grade 1" … "Grade 5"
+  section    String
+  isActive   Boolean  @default(true)
+  syncedAt   DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  evaluationResults StudentEvaluationResult[]
+  subjectResults    SubjectResult[]
+  finalResults      FinalResult[]
+  marksheets        Marksheet[]
+
+  @@index([grade, section])
+  @@index([isActive])
+  @@map("synced_students")
+}
+
+/// Mirror of school management → Teacher
+/// One SyncedTeacher can be linked to at most one User (the teacher's login).
+model SyncedTeacher {
+  id        String   @id @default(cuid())
+  sourceId  String   @unique // Teacher.id from school DB
+  name      String
+  isActive  Boolean  @default(true)
+  syncedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Back-relation to the result-system login account
+  user User?
+
+  @@map("synced_teachers")
+}
+
+/// Mirror of school management → Subject
+model SyncedSubject {
+  id         String   @id @default(cuid())
+  sourceId   String   @unique // Subject.id from school DB
+  name       String
+  code       String   @unique
+  gradeLevel String
+  isActive   Boolean  @default(true)
+  syncedAt   DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  evaluationTemplates EvaluationTemplate[]
+  subjectResults      SubjectResult[]
+
+  @@index([gradeLevel])
+  @@map("synced_subjects")
+}
+
+// =============================================================================
+// 4. ACADEMIC YEAR
+// =============================================================================
+
+model AcademicYear {
+  id        String   @id @default(cuid())
+  name      String   @unique // "2024/25", "2081 BS"
+  startDate DateTime
+  endDate   DateTime
+  isCurrent Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  gradeConfigs       GradeConfig[]
+  finalResults       FinalResult[]
+  marksheets         Marksheet[]
+  teacherAssignments TeacherAssignment[]
+
+  @@map("academic_years")
+}
+
+// =============================================================================
+// 5. GRADE CONFIG + GRADE SCALE
+//    ADMIN configures grading rules per grade level per academic year.
+// =============================================================================
+
+model GradeConfig {
+  id             String    @id @default(cuid())
+  academicYearId String
+  gradeLevel     String
+  gradeType      GradeType @default(DESCRIPTIVE)
+  passCriteria   String? // e.g. "Pass all evaluations"
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  academicYear        AcademicYear         @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  gradeScales         GradeScale[]
+  evaluationTemplates EvaluationTemplate[]
+
+  @@unique([academicYearId, gradeLevel])
+  @@index([academicYearId])
+  @@map("grade_configs")
+}
+
+/// One band in the grade scale — e.g. 80–100 → "A+" / 4.0 GPA
+model GradeScale {
+  id            String   @id @default(cuid())
+  gradeConfigId String
+  minPercent    Decimal  @db.Decimal(5, 2)
+  maxPercent    Decimal  @db.Decimal(5, 2)
+  grade         String // "A+", "Outstanding", etc.
+  gradePoint    Decimal? @db.Decimal(3, 2) // GPA value
+  description   String? // "Excellent", "Needs Improvement"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  gradeConfig GradeConfig @relation(fields: [gradeConfigId], references: [id], onDelete: Cascade)
+
+  @@unique([gradeConfigId, minPercent, maxPercent])
+  @@index([gradeConfigId])
+  @@map("grade_scales")
+}
+
+// =============================================================================
+// 6. EVALUATION TEMPLATE
+//    ADMIN defines the evaluation structure for each subject in a grade.
+//    e.g. Maths / Grade 3 / 2024-25:
+//      - Oral Test      (20 marks, pass 8,  weightage 20%)
+//      - Written Test 1 (40 marks, pass 16, weightage 40%)
+//      - Written Test 2 (40 marks, pass 16, weightage 40%)
+//    Rule: weightages across all templates for a subject MUST sum to 100.
+// =============================================================================
+
+model EvaluationTemplate {
+  id              String    @id @default(cuid())
+  gradeConfigId   String
+  syncedSubjectId String
+  name            String // "Oral Test", "Written Test 1"
+  fullMarks       Decimal   @db.Decimal(6, 2)
+  passMarks       Decimal   @db.Decimal(6, 2)
+  weightage       Decimal   @db.Decimal(5, 2) // Must sum to 100 across this subject
+  scheduledDate   DateTime?
+  displayOrder    Int       @default(0)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  gradeConfig       GradeConfig               @relation(fields: [gradeConfigId], references: [id], onDelete: Cascade)
+  syncedSubject     SyncedSubject             @relation(fields: [syncedSubjectId], references: [id], onDelete: Cascade)
+  evaluationResults StudentEvaluationResult[]
+  reExamSchedule    ReExamSchedule?
+
+  @@unique([gradeConfigId, syncedSubjectId, name])
+  @@index([gradeConfigId])
+  @@index([syncedSubjectId])
+  @@map("evaluation_templates")
+}
+
+// =============================================================================
+// 7. STUDENT EVALUATION RESULT
+//    TEACHER enters marks per student per evaluation template.
+//
+//    Lifecycle:
+//      Teacher saves → DRAFT
+//      Teacher submits → SUBMITTED  (teacher can no longer edit)
+//      Admin verifies → VERIFIED    (admin confirms marks are correct)
+//      Admin aggregates → LOCKED    (frozen; effectiveMarks is written)
+//
+//    effectiveMarks is computed at LOCK time:
+//      = max(marksObtained, reExamResult.marksObtained)  if re-exam exists
+//      = marksObtained                                   otherwise
+// =============================================================================
+
+model StudentEvaluationResult {
+  id                   String      @id @default(cuid())
+  syncedStudentId      String
+  evaluationTemplateId String
+  enteredById          String // User.id of the TEACHER who entered marks
+  marksObtained        Decimal?    @db.Decimal(6, 2) // null if absent
+  isAbsent             Boolean     @default(false)
+  isPassed             Boolean? // Set on SUBMIT/VERIFY
+  effectiveMarks       Decimal?    @db.Decimal(6, 2) // Set on LOCK; used in aggregation
+  status               MarksStatus @default(DRAFT)
+  submittedAt          DateTime?
+  verifiedById         String? // User.id of the ADMIN who verified
+  verifiedAt           DateTime?
+  remarks              String?
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+  deletedAt            DateTime?
+
+  syncedStudent      SyncedStudent      @relation(fields: [syncedStudentId], references: [id], onDelete: Cascade)
+  evaluationTemplate EvaluationTemplate @relation(fields: [evaluationTemplateId], references: [id], onDelete: Cascade)
+  enteredBy          User               @relation("EnteredBy", fields: [enteredById], references: [id], onDelete: Restrict)
+  verifiedBy         User?              @relation("VerifiedBy", fields: [verifiedById], references: [id], onDelete: SetNull)
+  reExamResult       ReExamResult?
+
+  @@unique([syncedStudentId, evaluationTemplateId])
+  @@index([syncedStudentId])
+  @@index([evaluationTemplateId])
+  @@index([status])
+  @@map("student_evaluation_results")
+}
+
+// =============================================================================
+// 8. RE-EXAMINATION
+//    ADMIN schedules a re-exam for a specific evaluation when students fail.
+//    Re-exam is scoped to one EvaluationTemplate only.
+// =============================================================================
+
+model ReExamSchedule {
+  id                   String       @id @default(cuid())
+  evaluationTemplateId String       @unique // One active re-exam per evaluation
+  scheduledDate        DateTime
+  entryOpenDate        DateTime?
+  entryCloseDate       DateTime?
+  fullMarks            Decimal      @db.Decimal(6, 2)
+  passMarks            Decimal      @db.Decimal(6, 2)
+  status               ReExamStatus @default(SCHEDULED)
+  remarks              String?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  evaluationTemplate EvaluationTemplate @relation(fields: [evaluationTemplateId], references: [id], onDelete: Cascade)
+  enrollments        ReExamEnrollment[]
+
+  @@index([status])
+  @@map("re_exam_schedules")
+}
+
+/// ADMIN enrolls specific students who failed into the re-exam
+model ReExamEnrollment {
+  id               String   @id @default(cuid())
+  reExamScheduleId String
+  syncedStudentId  String
+  isEligible       Boolean  @default(true) // Admin can block ineligible students
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  reExamSchedule ReExamSchedule @relation(fields: [reExamScheduleId], references: [id], onDelete: Cascade)
+  reExamResult   ReExamResult?
+
+  @@unique([reExamScheduleId, syncedStudentId])
+  @@index([reExamScheduleId])
+  @@map("re_exam_enrollments")
+}
+
+/// TEACHER enters re-exam marks; ADMIN verifies
+model ReExamResult {
+  id                        String      @id @default(cuid())
+  reExamEnrollmentId        String      @unique
+  studentEvaluationResultId String      @unique // Links back to original attempt
+  enteredById               String // User.id of TEACHER
+  marksObtained             Decimal     @db.Decimal(6, 2)
+  isPassed                  Boolean
+  status                    MarksStatus @default(DRAFT)
+  verifiedById              String? // User.id of ADMIN
+  verifiedAt                DateTime?
+  remarks                   String?
+  createdAt                 DateTime    @default(now())
+  updatedAt                 DateTime    @updatedAt
+
+  reExamEnrollment        ReExamEnrollment        @relation(fields: [reExamEnrollmentId], references: [id], onDelete: Cascade)
+  studentEvaluationResult StudentEvaluationResult @relation(fields: [studentEvaluationResultId], references: [id], onDelete: Cascade)
+
+  @@index([reExamEnrollmentId])
+  @@map("re_exam_results")
+}
+
+// =============================================================================
+// 9. AGGREGATED RESULTS  (ADMIN triggers; never entered manually)
+//
+//    SubjectResult = weighted aggregate of all evaluations for one subject
+//    FinalResult   = aggregate of all SubjectResults → CGPA → promotion decision
+//
+//    SubjectResult.isPassed = true only if student passed every evaluation
+//                             (original or re-exam)
+// =============================================================================
+
+model SubjectResult {
+  id                String   @id @default(cuid())
+  syncedStudentId   String
+  syncedSubjectId   String
+  academicYearId    String
+  finalResultId     String?
+  totalFullMarks    Decimal  @db.Decimal(8, 2)
+  obtainedMarks     Decimal  @db.Decimal(8, 2) // Weighted obtained marks
+  percentage        Decimal  @db.Decimal(5, 2)
+  grade             String?
+  gradePoint        Decimal? @db.Decimal(3, 2)
+  isPassed          Boolean
+  failedEvaluations Int      @default(0) // How many evaluations still failed
+  remarks           String?
+  computedAt        DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  syncedStudent SyncedStudent @relation(fields: [syncedStudentId], references: [id], onDelete: Cascade)
+  syncedSubject SyncedSubject @relation(fields: [syncedSubjectId], references: [id], onDelete: Cascade)
+  finalResult   FinalResult?  @relation(fields: [finalResultId], references: [id], onDelete: SetNull)
+
+  @@unique([syncedStudentId, syncedSubjectId, academicYearId])
+  @@index([syncedStudentId])
+  @@index([academicYearId])
+  @@map("subject_results")
+}
+
+model FinalResult {
+  id              String       @id @default(cuid())
+  syncedStudentId String
+  academicYearId  String
+  totalSubjects   Int
+  passedSubjects  Int
+  failedSubjects  Int
+  percentage      Decimal      @db.Decimal(5, 2)
+  cgpa            Decimal?     @db.Decimal(4, 2)
+  overallGrade    String?
+  classRank       Int?
+  resultStatus    ResultStatus @default(PENDING)
+  isPublished     Boolean      @default(false)
+  publishedAt     DateTime?
+  publishedById   String? // User.id of ADMIN who published
+  remarks         String?
+  computedAt      DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  syncedStudent  SyncedStudent   @relation(fields: [syncedStudentId], references: [id], onDelete: Cascade)
+  academicYear   AcademicYear    @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  publishedBy    User?           @relation("PublishedBy", fields: [publishedById], references: [id], onDelete: SetNull)
+  subjectResults SubjectResult[]
+  marksheet      Marksheet?
+
+  @@unique([syncedStudentId, academicYearId])
+  @@index([syncedStudentId])
+  @@index([academicYearId, resultStatus])
+  @@index([isPublished])
+  @@map("final_results")
+}
+
+// =============================================================================
+// 10. MARKSHEET
+//     ADMIN generates after FinalResult is published.
+//     metadata = full point-in-time snapshot so re-printing is always correct.
+// =============================================================================
+
+model Marksheet {
+  id              String   @id @default(cuid())
+  syncedStudentId String
+  finalResultId   String   @unique
+  academicYearId  String
+  generatedById   String // User.id of ADMIN
+  generatedAt     DateTime @default(now())
+  fileUrl         String?
+  // Snapshot: student info, all subjects, all evaluations, marks, grades, GPA
+  metadata        Json
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  syncedStudent SyncedStudent @relation(fields: [syncedStudentId], references: [id], onDelete: Cascade)
+  finalResult   FinalResult   @relation(fields: [finalResultId], references: [id], onDelete: Cascade)
+  academicYear  AcademicYear  @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  generatedBy   User          @relation("GeneratedBy", fields: [generatedById], references: [id], onDelete: Restrict)
+
+  @@index([syncedStudentId])
+  @@index([academicYearId])
+  @@map("marksheets")
+}
+
+// =============================================================================
+// 11. SYNC LOG
+//     Audit trail of every inbound sync from the school management system.
+// =============================================================================
+
+model SyncLog {
+  id       String   @id @default(cuid())
+  entity   String // "student" | "teacher" | "subject"
+  sourceId String
+  action   String // "create" | "update" | "deactivate"
+  payload  Json?
+  status   String   @default("success")
+  error    String?
+  syncedAt DateTime @default(now())
+
+  @@index([entity, sourceId])
+  @@index([syncedAt])
+  @@map("sync_logs")
+}
