@@ -1,0 +1,153 @@
+/**
+ * POST /api/sync/webhook
+ * Receives sync events from the school management system.
+ * Secured via HMAC signature on the X-Sync-Signature header.
+ */
+import { NextRequest } from "next/server";
+import crypto from "crypto";
+import { prisma } from "@/lib/prisma";
+import { badRequest, ok, unauthorized } from "@/lib/response";
+import { withPublicHandler } from "@/lib/handlers";
+import { syncWebhookSchema } from "@/lib/schemas";
+
+const SYNC_SECRET = process.env.SYNC_WEBHOOK_SECRET ?? "";
+
+function verifySignature(rawBody: string, signature: string): boolean {
+  if (!SYNC_SECRET) return true; // Skip in dev if secret not set
+  const expected = crypto
+    .createHmac("sha256", SYNC_SECRET)
+    .update(rawBody)
+    .digest("hex");
+  return crypto.timingSafeEqual(
+    Buffer.from(`sha256=${expected}`),
+    Buffer.from(signature),
+  );
+}
+
+export const POST = withPublicHandler(async (req: NextRequest) => {
+  const rawBody = await req.text();
+  const signature = req.headers.get("x-sync-signature") ?? "";
+
+  if (!verifySignature(rawBody, signature)) {
+    return unauthorized("Invalid webhook signature");
+  }
+
+  let payload: unknown;
+  try {
+    payload = JSON.parse(rawBody);
+  } catch {
+    return badRequest("Invalid JSON payload");
+  }
+
+  const event = syncWebhookSchema.parse(payload);
+
+  let status = "success";
+  let error: string | null = null;
+
+  try {
+    if (event.entity === "student") {
+      const data = event.payload as {
+        sourceId: string;
+        name: string;
+        rollNumber: string;
+        grade: string;
+        section: string;
+        isActive: boolean;
+      };
+
+      if (event.action === "deactivate") {
+        await prisma.syncedStudent.updateMany({
+          where: { sourceId: data.sourceId },
+          data: { isActive: false, updatedAt: new Date() },
+        });
+      } else {
+        await prisma.syncedStudent.upsert({
+          where: { sourceId: data.sourceId },
+          create: { ...data },
+          update: {
+            name: data.name,
+            rollNumber: data.rollNumber,
+            grade: data.grade,
+            section: data.section,
+            isActive: data.isActive,
+            syncedAt: new Date(),
+          },
+        });
+      }
+    } else if (event.entity === "teacher") {
+      const data = event.payload as {
+        sourceId: string;
+        name: string;
+        isActive: boolean;
+      };
+
+      if (event.action === "deactivate") {
+        await prisma.syncedTeacher.updateMany({
+          where: { sourceId: data.sourceId },
+          data: { isActive: false },
+        });
+      } else {
+        await prisma.syncedTeacher.upsert({
+          where: { sourceId: data.sourceId },
+          create: { sourceId: data.sourceId, name: data.name },
+          update: {
+            name: data.name,
+            isActive: data.isActive,
+            syncedAt: new Date(),
+          },
+        });
+      }
+    } else if (event.entity === "subject") {
+      const data = event.payload as {
+        sourceId: string;
+        name: string;
+        code: string;
+        gradeLevel: string;
+        isActive: boolean;
+      };
+
+      if (event.action === "deactivate") {
+        await prisma.syncedSubject.updateMany({
+          where: { sourceId: data.sourceId },
+          data: { isActive: false },
+        });
+      } else {
+        await prisma.syncedSubject.upsert({
+          where: { sourceId: data.sourceId },
+          create: { ...data },
+          update: {
+            name: data.name,
+            code: data.code,
+            gradeLevel: data.gradeLevel,
+            isActive: data.isActive,
+            syncedAt: new Date(),
+          },
+        });
+      }
+    }
+  } catch (err) {
+    status = "error";
+    error = err instanceof Error ? err.message : "Unknown error";
+  }
+
+  // Always log sync events
+  await prisma.syncLog.create({
+    data: {
+      entity: event.entity,
+      sourceId: (event.payload as { sourceId: string }).sourceId,
+      action: event.action,
+      payload: event.payload as object,
+      status,
+      error,
+    },
+  });
+
+  if (status === "error") {
+    return ok(
+      { status: "error", error },
+      "Sync event received but processing failed",
+    );
+  }
+
+  return ok({ status: "success" }, "Sync event processed");
+});
