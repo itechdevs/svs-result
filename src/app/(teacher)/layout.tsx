@@ -4,6 +4,9 @@ import { ROUTES } from "@/lib/constants";
 import { Navbar } from "@/components/shared/common/navbar";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+
+export const dynamic = "force-dynamic";
+
 export default async function TeacherLayout({ children }: { children: React.ReactNode }) {
   let session;
   try {

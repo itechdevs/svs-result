@@ -4,6 +4,9 @@ import { ROUTES } from "@/lib/constants";
 import { Navbar } from "@/components/shared/common/navbar";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+
+export const dynamic = "force-dynamic";
+
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   let session;
   try {

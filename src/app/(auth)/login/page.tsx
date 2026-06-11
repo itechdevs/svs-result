@@ -36,20 +36,15 @@ function LoginForm() {
     try {
       const callbackUrl = email.includes("admin") ? "/admin/dashboard" : "/teacher/dashboard";
       
-      const result = await signIn("credentials", {
+      await signIn("credentials", {
         email,
         password,
         callbackUrl,
-        redirect: true,
       });
-
-      // If redirect: true, this code won't run on success
-      if (result?.error) {
-        setError("Invalid email or password. Please try again.");
-        setLoading(false);
-      }
-    } catch {
-      setError("An unexpected error occurred. Please try again.");
+      
+      // If we reach here, redirect happened (success)
+    } catch (err) {
+      setError("Invalid email or password. Please try again.");
       setLoading(false);
     }
   };
@@ -68,9 +63,10 @@ function LoginForm() {
       await signIn("credentials", {
         ...credentials,
         callbackUrl,
-        redirect: true,
       });
-    } catch {
+      
+      // If we reach here, redirect happened (success)
+    } catch (err) {
       setError("An unexpected error occurred during quick login.");
       setLoading(false);
     }

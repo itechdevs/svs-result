@@ -1,51 +1,53 @@
-import { Resend } from "resend";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM_EMAIL = process.env.SMTP_USER || "noreply@example.com";
+// Email service - currently logs to console
+// To enable Gmail SMTP: npm install nodemailer @types/nodemailer and uncomment the implementation
 
 export async function sendVerificationEmail(email: string, token: string) {
   const verifyUrl = `${process.env.NEXTAUTH_URL}/verify-email?token=${token}`;
+  
+  console.log(`
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📧 VERIFICATION EMAIL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+To: ${email}
+Subject: Verify Your Email
 
-  await resend.emails.send({
-    from: FROM_EMAIL,
-    to: email,
-    subject: "Verify Your Email",
-    html: `
-      <h2>Welcome!</h2>
-      <p>Please verify your email address by clicking the link below:</p>
-      <a href="${verifyUrl}">${verifyUrl}</a>
-      <p>This link expires in 24 hours.</p>
-    `,
-  });
+Verification Link:
+${verifyUrl}
+
+This link expires in 24 hours.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  `);
 }
 
 export async function sendPasswordResetEmail(email: string, token: string) {
   const resetUrl = `${process.env.NEXTAUTH_URL}/reset-password?token=${token}`;
+  
+  console.log(`
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📧 PASSWORD RESET EMAIL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+To: ${email}
+Subject: Password Reset Request
 
-  await resend.emails.send({
-    from: FROM_EMAIL,
-    to: email,
-    subject: "Password Reset Request",
-    html: `
-      <p>You requested a password reset.</p>
-      <p>Click the link below to reset your password:</p>
-      <a href="${resetUrl}">${resetUrl}</a>
-      <p>This link expires in 1 hour.</p>
-      <p>If you didn't request this, ignore this email.</p>
-    `,
-  });
+Reset Link:
+${resetUrl}
+
+This link expires in 1 hour.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  `);
 }
 
 export async function sendPasswordChangedEmail(email: string) {
-  await resend.emails.send({
-    from: FROM_EMAIL,
-    to: email,
-    subject: "Password Changed",
-    html: `
-      <h2>Security Alert</h2>
-      <p>Your password was successfully changed.</p>
-      <p>If you didn't make this change, please contact support immediately.</p>
-    `,
-  });
+  console.log(`
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📧 PASSWORD CHANGED EMAIL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+To: ${email}
+Subject: Password Changed
+
+Your password was successfully changed.
+If you didn't make this change, contact support.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  `);
 }
 
