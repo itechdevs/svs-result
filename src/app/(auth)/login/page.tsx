@@ -4,7 +4,14 @@ import React, { useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { ROUTES } from "@/lib/constants";
-import { GraduationCap, Mail, Lock, ArrowRight, ShieldCheck, UserCheck } from "lucide-react";
+import {
+  GraduationCap,
+  Mail,
+  Lock,
+  ArrowRight,
+  ShieldCheck,
+  UserCheck,
+} from "lucide-react";
 
 function LoginForm() {
   const router = useRouter();
@@ -14,7 +21,10 @@ function LoginForm() {
   const [error, setError] = useState("");
 
   const redirectForRole = (role?: string | null) => {
-    router.push(role === "admin" ? ROUTES.ADMIN_DASHBOARD : ROUTES.TEACHER_DASHBOARD);
+    const normalizedRole = role?.toLowerCase();
+    router.push(
+      normalizedRole === "admin" ? ROUTES.ADMIN_DASHBOARD : ROUTES.TEACHER_DASHBOARD,
+    );
     router.refresh();
   };
 
@@ -24,14 +34,19 @@ function LoginForm() {
     setError("");
 
     try {
-      const result = await signIn("credentials", { email, password, redirect: false });
+      const callbackUrl = email.includes("admin") ? "/admin/dashboard" : "/teacher/dashboard";
+      
+      const result = await signIn("credentials", {
+        email,
+        password,
+        callbackUrl,
+        redirect: true,
+      });
+
+      // If redirect: true, this code won't run on success
       if (result?.error) {
         setError("Invalid email or password. Please try again.");
         setLoading(false);
-      } else {
-        // Determine role from email since we have hardcoded credentials
-        const role = email === "admin@school.com" ? "admin" : "teacher";
-        redirectForRole(role);
       }
     } catch {
       setError("An unexpected error occurred. Please try again.");
@@ -48,13 +63,13 @@ function LoginForm() {
     }[role];
 
     try {
-      const result = await signIn("credentials", { ...credentials, redirect: false });
-      if (result?.error) {
-        setError("Quick login failed.");
-        setLoading(false);
-      } else {
-        redirectForRole(role);
-      }
+      const callbackUrl = role === "admin" ? "/admin/dashboard" : "/teacher/dashboard";
+      
+      await signIn("credentials", {
+        ...credentials,
+        callbackUrl,
+        redirect: true,
+      });
     } catch {
       setError("An unexpected error occurred during quick login.");
       setLoading(false);
@@ -64,8 +79,12 @@ function LoginForm() {
   return (
     <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] space-y-6">
       <div className="text-center">
-        <h2 className="text-lg font-semibold text-white">Sign In to Dashboard</h2>
-        <p className="text-xs text-slate-400 mt-1">Enter your school credentials or select Quick Login below</p>
+        <h2 className="text-lg font-semibold text-white">
+          Sign In to Dashboard
+        </h2>
+        <p className="text-xs text-slate-400 mt-1">
+          Enter your school credentials or select Quick Login below
+        </p>
       </div>
 
       {error && (
@@ -76,7 +95,9 @@ function LoginForm() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1">
-          <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Email Address</label>
+          <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+            Email Address
+          </label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
               <Mail className="w-4 h-4" />
@@ -94,7 +115,9 @@ function LoginForm() {
         </div>
 
         <div className="space-y-1">
-          <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Password</label>
+          <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+            Password
+          </label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
               <Lock className="w-4 h-4" />
@@ -128,7 +151,9 @@ function LoginForm() {
       </form>
 
       <div className="space-y-3 pt-4 border-t border-white/10">
-        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest text-center">Quick Portal Sign-In</p>
+        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest text-center">
+          Quick Portal Sign-In
+        </p>
         <div className="grid grid-cols-2 gap-3">
           <button
             type="button"
@@ -166,17 +191,23 @@ export default function LoginPage() {
             <GraduationCap className="w-8 h-8" />
           </div>
           <div>
-            <h1 className="text-3xl font-extrabold text-white tracking-tight">EduGrade Pro</h1>
-            <p className="text-xs uppercase font-bold text-blue-300/60 tracking-widest mt-1">School Result Management System</p>
+            <h1 className="text-3xl font-extrabold text-white tracking-tight">
+              EduGrade Pro
+            </h1>
+            <p className="text-xs uppercase font-bold text-blue-300/60 tracking-widest mt-1">
+              School Result Management System
+            </p>
           </div>
         </div>
 
-        <Suspense fallback={
-          <div className="bg-white/5 border border-white/10 p-8 rounded-3xl text-center text-slate-400 text-xs py-12">
-            <span className="w-6 h-6 border-2 border-[#9ff5c1] border-t-transparent rounded-full animate-spin inline-block mb-3" />
-            <p>Loading portal...</p>
-          </div>
-        }>
+        <Suspense
+          fallback={
+            <div className="bg-white/5 border border-white/10 p-8 rounded-3xl text-center text-slate-400 text-xs py-12">
+              <span className="w-6 h-6 border-2 border-[#9ff5c1] border-t-transparent rounded-full animate-spin inline-block mb-3" />
+              <p>Loading portal...</p>
+            </div>
+          }
+        >
           <LoginForm />
         </Suspense>
       </div>

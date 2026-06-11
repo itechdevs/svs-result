@@ -13,7 +13,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   if (!session?.user) redirect(ROUTES.LOGIN);
-  if (session.user.role !== "admin") redirect(ROUTES.TEACHER_DASHBOARD);
+  if (session.user.role !== "ADMIN") redirect(ROUTES.TEACHER_DASHBOARD);
 
   return (
     <SidebarProvider>

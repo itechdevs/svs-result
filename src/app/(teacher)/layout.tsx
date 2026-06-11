@@ -13,7 +13,7 @@ export default async function TeacherLayout({ children }: { children: React.Reac
   }
 
   if (!session?.user) redirect(ROUTES.LOGIN);
-  if (session.user.role !== "teacher") redirect(ROUTES.ADMIN_DASHBOARD);
+  if (session.user.role !== "TEACHER") redirect(ROUTES.ADMIN_DASHBOARD);
 
   return (
     <SidebarProvider>

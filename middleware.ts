@@ -1,45 +1,60 @@
-import { auth } from "@/services/auth";
+import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 
-const ADMIN_PREFIX = "/admin";
-const TEACHER_PREFIX = "/teacher";
-const AUTH_ONLY_ROUTES = ["/login"];
-
 export default auth((req) => {
-  const { nextUrl, auth: session } = req;
-  const isLoggedIn = !!session;
-  const path = nextUrl.pathname;
-  const role = session?.user?.role;
+  const { pathname } = req.nextUrl;
+  const user = req.auth?.user;
 
-  const isAdminRoute = path.startsWith(ADMIN_PREFIX);
-  const isTeacherRoute = path.startsWith(TEACHER_PREFIX);
-  const isProtected = isAdminRoute || isTeacherRoute;
-  const isAuthRoute = AUTH_ONLY_ROUTES.some((r) => path === r);
-
-  // Redirect unauthenticated users trying to access protected routes
-  if (isProtected && !isLoggedIn) {
-    const loginUrl = new URL("/login", nextUrl.origin);
-    loginUrl.searchParams.set("callbackUrl", path);
-    return NextResponse.redirect(loginUrl);
+  // Allow API auth routes
+  if (pathname.startsWith("/api/auth")) {
+    return NextResponse.next();
   }
 
-  // Role-based access control
-  if (isLoggedIn && isAdminRoute && role !== "admin") {
-    return NextResponse.redirect(new URL("/teacher/dashboard", nextUrl.origin));
-  }
-  if (isLoggedIn && isTeacherRoute && role !== "teacher") {
-    return NextResponse.redirect(new URL("/admin/dashboard", nextUrl.origin));
+  // Public routes
+  if (pathname.startsWith("/login") || pathname.startsWith("/register") || pathname.startsWith("/verify-email") || pathname.startsWith("/reset-password") || pathname.startsWith("/forgot-password")) {
+    if (user) {
+      const redirectPath = user.role === "ADMIN" ? "/admin/dashboard" : "/teacher/dashboard";
+      return NextResponse.redirect(new URL(redirectPath, req.url));
+    }
+    return NextResponse.next();
   }
 
-  // Redirect authenticated users away from login
-  if (isAuthRoute && isLoggedIn) {
-    const dest = role === "admin" ? "/admin/dashboard" : "/teacher/dashboard";
-    return NextResponse.redirect(new URL(dest, nextUrl.origin));
+  // Protected routes require authentication
+  if (pathname.startsWith("/admin") || pathname.startsWith("/teacher")) {
+    if (!user) {
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
+
+    // Only redirect if user is on WRONG dashboard
+    const isAdmin = user.role === "ADMIN";
+    const isOnAdminPage = pathname.startsWith("/admin");
+    const isOnTeacherPage = pathname.startsWith("/teacher");
+
+    // ADMIN trying to access teacher pages -> redirect to admin
+    if (isAdmin && isOnTeacherPage) {
+      return NextResponse.redirect(new URL("/admin/dashboard", req.url));
+    }
+
+    // TEACHER trying to access admin pages -> redirect to teacher
+    if (!isAdmin && isOnAdminPage) {
+      return NextResponse.redirect(new URL("/teacher/dashboard", req.url));
+    }
+
+    // User is on correct dashboard, allow
+    return NextResponse.next();
+  }
+
+  // Protected API routes (except /api/auth)
+  if (pathname.startsWith("/api")) {
+    if (!user) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+    return NextResponse.next();
   }
 
   return NextResponse.next();
-});
+}) as never;
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)"],
 };
