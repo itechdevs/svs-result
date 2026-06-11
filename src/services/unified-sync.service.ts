@@ -59,6 +59,7 @@ export class UnifiedSyncService {
                 role: "TEACHER",
                 syncedTeacherId: syncedTeacher.id,
                 isActive: true,
+                emailVerified: new Date(),
               },
             });
 
