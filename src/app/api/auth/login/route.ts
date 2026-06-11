@@ -1,39 +1,13 @@
-import { NextRequest } from "next/server";
-import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/prisma";
-import { badRequest, ok, unauthorized } from "@/lib/response";
-import { withPublicHandler } from "@/lib/handlers";
-import { createSession } from "@/lib/auth";
-import { loginSchema } from "@/lib/schemas";
-import { setSessionCookie } from "@/lib/auth";
+// This custom login route has been replaced by NextAuth v5
+// Login is now handled by: POST /api/auth/callback/credentials
+// Use signIn("credentials", { email, password }) from next-auth/react on client
+// Or use the built-in NextAuth signin flow
 
-export const POST = withPublicHandler(async (req: NextRequest) => {
-  const body = await req.json();
-  const { email, password } = loginSchema.parse(body);
+import { NextResponse } from "next/server";
 
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user || !user.isActive) return unauthorized("Invalid credentials");
-
-  const valid = await bcrypt.compare(password, user.passwordHash);
-  if (!valid) return unauthorized("Invalid credentials");
-
-  const token = await createSession(user.id);
-
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { lastLoginAt: new Date() },
-  });
-
-  const response = ok(
-    {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-    },
-    "Login successful",
+export async function POST() {
+  return NextResponse.json(
+    { message: "Use NextAuth signin endpoint: POST /api/auth/callback/credentials" },
+    { status: 410 }
   );
-
-  response.headers.set("Set-Cookie", setSessionCookie(token));
-  return response;
-});
+}

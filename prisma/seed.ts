@@ -15,6 +15,7 @@ async function main() {
       passwordHash,
       role: "TEACHER",
       isActive: true,
+      emailVerified: new Date(),
     },
   });
 
@@ -27,10 +28,11 @@ async function main() {
       passwordHash,
       role: "ADMIN",
       isActive: true,
+      emailVerified: new Date(),
     },
   });
 
-  console.log("✅ Seed complete: teacher@school.com and admin@school.com");
+  console.log("✅ Seed complete: teacher@school.com and admin@school.com (both verified)");
 }
 
 main()

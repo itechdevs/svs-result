@@ -1,15 +1,12 @@
-import { cookies } from "next/headers";
-import { ok } from "@/lib/response";
-import { withPublicHandler } from "@/lib/handlers";
-import { destroySession } from "@/lib/auth";
-import { clearSessionCookie } from "@/lib/auth";
+// Logout is handled by NextAuth v5
+// Use: POST /api/auth/signout
+// Or client-side: signOut() from next-auth/react
 
-export const POST = withPublicHandler(async () => {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("result_session")?.value;
-  if (token) await destroySession(token);
+import { NextResponse } from "next/server";
 
-  const response = ok(null, "Logged out successfully");
-  response.headers.set("Set-Cookie", clearSessionCookie());
-  return response;
-});
+export async function POST() {
+  return NextResponse.json(
+    { message: "Use NextAuth signout endpoint: POST /api/auth/signout" },
+    { status: 410 }
+  );
+}

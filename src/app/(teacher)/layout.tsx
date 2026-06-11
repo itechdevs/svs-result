@@ -4,6 +4,9 @@ import { ROUTES } from "@/lib/constants";
 import { Navbar } from "@/components/shared/common/navbar";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+
+export const dynamic = "force-dynamic";
+
 export default async function TeacherLayout({ children }: { children: React.ReactNode }) {
   let session;
   try {
@@ -13,7 +16,7 @@ export default async function TeacherLayout({ children }: { children: React.Reac
   }
 
   if (!session?.user) redirect(ROUTES.LOGIN);
-  if (session.user.role !== "teacher") redirect(ROUTES.ADMIN_DASHBOARD);
+  if (session.user.role !== "TEACHER") redirect(ROUTES.ADMIN_DASHBOARD);
 
   return (
     <SidebarProvider>

@@ -82,21 +82,25 @@ enum GradeType {
 // =============================================================================
 
 model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  passwordHash String
-  role         UserRole
-  name         String
-  isActive     Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  lastLoginAt  DateTime?
+  id               String    @id @default(cuid())
+  email            String    @unique
+  passwordHash     String
+  role             UserRole
+  name             String
+  isActive         Boolean   @default(true)
+  emailVerified    DateTime? // NextAuth email verification
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  lastLoginAt      DateTime?
 
   // Only set for TEACHER role — links to the SyncedTeacher mirror
   syncedTeacherId String? @unique // SyncedTeacher.id (not sourceId)
 
-  sessions            Session[]
-  passwordResetTokens PasswordResetToken[]
+  sessions               Session[]
+  passwordResetTokens    PasswordResetToken[]
+  verificationTokens     VerificationToken[]
+  loginAttempts          LoginAttempt[]
+  auditLogs              AuditLog[]
 
   // Teacher-specific relations (null for ADMIN)
   syncedTeacher      SyncedTeacher?      @relation(fields: [syncedTeacherId], references: [id], onDelete: SetNull)
@@ -111,6 +115,7 @@ model User {
   generatedMarksheets Marksheet[]               @relation("GeneratedBy")
 
   @@index([role, isActive])
+  @@index([email])
   @@map("users")
 }
 
@@ -140,6 +145,55 @@ model PasswordResetToken {
 
   @@index([userId])
   @@map("password_reset_tokens")
+}
+
+model VerificationToken {
+  id         String    @id @default(cuid())
+  userId     String
+  token      String    @unique
+  expiresAt  DateTime
+  verifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("verification_tokens")
+}
+
+model LoginAttempt {
+  id         String   @id @default(cuid())
+  userId     String?
+  email      String
+  ipAddress  String?
+  userAgent  String?
+  success    Boolean
+  failReason String?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([email, createdAt])
+  @@index([ipAddress, createdAt])
+  @@map("login_attempts")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String // LOGIN, LOGOUT, PASSWORD_CHANGE, EMAIL_VERIFY, etc.
+  entityType String?
+  entityId   String?
+  ipAddress  String?
+  userAgent  String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+  @@map("audit_logs")
 }
 
 // =============================================================================

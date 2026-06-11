@@ -8,7 +8,13 @@ import {
   unauthorized,
 } from "./response";
 import type { UserRole } from "@prisma/client";
-import type { SessionUser } from "./auth";
+
+type SessionUser = {
+  id: string;
+  email?: string | null;
+  name?: string | null;
+  role: "ADMIN" | "TEACHER";
+};
 
 type Context = { params: Promise<Record<string, string>> };
 
