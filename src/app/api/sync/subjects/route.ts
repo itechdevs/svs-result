@@ -4,7 +4,7 @@ import { UnifiedSyncService } from "@/services/unified-sync.service";
 export async function POST() {
   try {
     const syncService = new UnifiedSyncService();
-    const result = await syncService.syncTeachers();
+    const result = await syncService.syncSubjects();
 
     return NextResponse.json({
       success: result.errors.length === 0,

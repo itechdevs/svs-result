@@ -25,6 +25,7 @@ export const ROUTES = {
   ADMIN_RE_EXAM: "/admin/re-exam-portal",
   ADMIN_MARK_ENTRY: "/admin/mark-entry",
   ADMIN_RESULT_COMPILATION: "/admin/result-compilation",
+  ADMIN_SYNC: "/admin/sync",
   // Teacher routes
   TEACHER_DASHBOARD: "/teacher/dashboard",
   TEACHER_EVALUATIONS: "/teacher/evaluations",
