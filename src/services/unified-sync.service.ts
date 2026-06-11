@@ -32,7 +32,6 @@ export class UnifiedSyncService {
 
     try {
       const teachers = await this.fetchData<any>("/api/sync/teachers");
-      const currentYear = await prisma.academicYear.findFirst({ where: { isCurrent: true } });
 
       for (const teacher of teachers) {
         try {
@@ -45,7 +44,7 @@ export class UnifiedSyncService {
 
           // Auto-create or update user account
           if (teacher.user.email && teacher.user.password) {
-            const user = await prisma.user.upsert({
+            await prisma.user.upsert({
               where: { email: teacher.user.email },
               update: {
                 name: teacher.user.name,
@@ -63,28 +62,27 @@ export class UnifiedSyncService {
               },
             });
 
-            // Create teacher assignments if subjects and classrooms exist
-            if (currentYear && teacher.subjects?.length > 0) {
-              for (const subject of teacher.subjects) {
-                await prisma.teacherAssignment.upsert({
-                  where: {
-                    userId_gradeLevel_syncedSubjectId_academicYearId: {
-                      userId: user.id,
-                      gradeLevel: subject.gradeLevel,
-                      syncedSubjectId: subject.id,
-                      academicYearId: currentYear.id,
-                    },
-                  },
-                  update: {},
-                  create: {
-                    userId: user.id,
-                    gradeLevel: subject.gradeLevel,
-                    syncedSubjectId: subject.id,
-                    academicYearId: currentYear.id,
-                    assignedBy: "system",
-                  },
-                });
-              }
+            // Update subjects assigned to this teacher
+            if (teacher.subjectIds?.length > 0) {
+              // Find synced subjects by their sourceIds
+              const syncedSubjects = await prisma.syncedSubject.findMany({
+                where: { sourceId: { in: teacher.subjectIds } },
+              });
+
+              // Assign teacher to these subjects
+              await prisma.syncedSubject.updateMany({
+                where: { id: { in: syncedSubjects.map(s => s.id) } },
+                data: { teacherId: syncedTeacher.id },
+              });
+
+              // Unassign subjects not in the list
+              await prisma.syncedSubject.updateMany({
+                where: {
+                  teacherId: syncedTeacher.id,
+                  id: { notIn: syncedSubjects.map(s => s.id) },
+                },
+                data: { teacherId: null },
+              });
             }
           }
 
@@ -168,12 +166,22 @@ export class UnifiedSyncService {
 
       for (const subject of subjects) {
         try {
+          // Find teacher by sourceId if teacherId is provided
+          let teacherId: string | null = null;
+          if (subject.teacherId) {
+            const teacher = await prisma.syncedTeacher.findUnique({
+              where: { sourceId: subject.teacherId },
+            });
+            teacherId = teacher?.id || null;
+          }
+
           await prisma.syncedSubject.upsert({
             where: { sourceId: subject.id },
             update: {
               name: subject.name,
               code: subject.code || subject.name.toUpperCase().substring(0, 6),
               gradeLevel: subject.gradeLevel || "General",
+              teacherId,
               syncedAt: new Date(),
             },
             create: {
@@ -181,6 +189,7 @@ export class UnifiedSyncService {
               name: subject.name,
               code: subject.code || subject.name.toUpperCase().substring(0, 6),
               gradeLevel: subject.gradeLevel || "General",
+              teacherId,
             },
           });
 
@@ -220,10 +229,11 @@ export class UnifiedSyncService {
   }
 
   async syncAll() {
+    // Sync in order: teachers first, then subjects (since subjects reference teachers), then students
     const results = {
       teachers: await this.syncTeachers(),
-      students: await this.syncStudents(),
       subjects: await this.syncSubjects(),
+      students: await this.syncStudents(),
     };
 
     const totalSynced = results.teachers.synced + results.students.synced + results.subjects.synced;

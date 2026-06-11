@@ -7,8 +7,9 @@
 //
 // Two user roles:
 //   ADMIN   — full access; configures evaluation templates, aggregates results,
-//             publishes marksheets, manages teacher assignments
-//   TEACHER — restricted to grades/subjects they are assigned to;
+//             publishes marksheets, assigns teachers to subjects
+//   TEACHER — restricted to subjects they are assigned to; can only access
+//             subjects where SyncedSubject.teacherId matches their syncedTeacherId;
 //             can only enter and submit marks; cannot aggregate or publish
 //
 // Core evaluation flow:
@@ -75,7 +76,8 @@ enum GradeType {
 //    ADMIN:   created directly; no SyncedTeacher link needed.
 //    TEACHER: must be linked to a SyncedTeacher (syncedTeacherId) so the system
 //             knows which school-DB teacher this account belongs to. A teacher
-//             can only access grades/subjects in their TeacherAssignment rows.
+//             can only access subjects where SyncedSubject.teacherId matches
+//             their syncedTeacherId.
 //
 //    Sessions are stored in DB (NextAuth-compatible pattern).
 //    PasswordResetToken covers the forgot-password flow.
@@ -104,7 +106,6 @@ model User {
 
   // Teacher-specific relations (null for ADMIN)
   syncedTeacher      SyncedTeacher?      @relation(fields: [syncedTeacherId], references: [id], onDelete: SetNull)
-  teacherAssignments TeacherAssignment[]
 
   // Audit: who verified which evaluation results
   verifiedResults     StudentEvaluationResult[] @relation("VerifiedBy")
@@ -197,37 +198,7 @@ model AuditLog {
 }
 
 // =============================================================================
-// 2. TEACHER ASSIGNMENT
-//    Controls which grade + subject a teacher can enter marks for.
-//    Admin assigns these; the teacher dashboard filters everything by these rows.
-//
-//    If gradeLevel is set and syncedSubjectId is null → teacher sees ALL subjects
-//    in that grade (useful for class teachers).
-//    Typically both are set → teacher sees one specific subject in one grade.
-// =============================================================================
-
-model TeacherAssignment {
-  id              String   @id @default(cuid())
-  userId          String // Must be a TEACHER role user
-  gradeLevel      String // "Playgroup", "KG", "Grade 1" … "Grade 5"
-  syncedSubjectId String? // null = all subjects in this grade
-  academicYearId  String
-  assignedBy      String // User.id of the ADMIN who assigned this
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, gradeLevel, syncedSubjectId, academicYearId])
-  @@index([userId])
-  @@index([gradeLevel])
-  @@index([academicYearId])
-  @@map("teacher_assignments")
-}
-
-// =============================================================================
-// 3. SYNCED ENTITIES
+// 2. SYNCED ENTITIES
 //    Mirrors of the school management DB, kept in sync via webhooks/jobs.
 //    Never hard-delete — soft-deactivate via isActive.
 // =============================================================================
@@ -265,7 +236,8 @@ model SyncedTeacher {
   updatedAt DateTime @updatedAt
 
   // Back-relation to the result-system login account
-  user User?
+  user     User?           @relation
+  subjects SyncedSubject[]
 
   @@map("synced_teachers")
 }
@@ -277,14 +249,17 @@ model SyncedSubject {
   name       String
   code       String   @unique
   gradeLevel String
+  teacherId  String? // SyncedTeacher.id — teacher assigned to this subject
   isActive   Boolean  @default(true)
   syncedAt   DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  teacher             SyncedTeacher?       @relation(fields: [teacherId], references: [id], onDelete: SetNull)
   evaluationTemplates EvaluationTemplate[]
   subjectResults      SubjectResult[]
 
   @@index([gradeLevel])
+  @@index([teacherId])
   @@map("synced_subjects")
 }
 
@@ -304,7 +279,6 @@ model AcademicYear {
   gradeConfigs       GradeConfig[]
   finalResults       FinalResult[]
   marksheets         Marksheet[]
-  teacherAssignments TeacherAssignment[]
 
   @@map("academic_years")
 }
