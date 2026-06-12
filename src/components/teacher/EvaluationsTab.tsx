@@ -161,8 +161,8 @@ export default function EvaluationsTab({
                 <label className="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">
                   Unit Title
                 </label>
-                <div className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-border rounded-lg p-2.5 text-xs text-slate-900 dark:text-white font-medium">
-                  {evalPlan.unit}
+                <div className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-border rounded-lg p-2.5 text-xs text-slate-900 dark:text-white font-medium min-h-[34px]">
+                  {evalPlan.unit || <span className="text-slate-400 italic">Not set</span>}
                 </div>
               </div>
 

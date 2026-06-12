@@ -60,11 +60,11 @@ export default function CreateEvaluationPage() {
 
     try {
       for (const [i, item] of flatOutcomes.entries()) {
-        // Include evalTitle in the name to make each plan's templates uniquely keyed
+        // Name format: [EvalTitle|UnitTitle][TaskType] OutcomeName
         await createPlan.mutateAsync({
           syncedSubjectId: subject.id,
           gradeLevel: selectedClass,
-          name: `[${newEvalTitle}][${item.taskType}] ${item.name}`,
+          name: `[${newEvalTitle}|${newSubjectTitle}][${item.taskType}] ${item.name}`,
           fullMarks: item.max,
           passMarks: item.pass,
           weightage,

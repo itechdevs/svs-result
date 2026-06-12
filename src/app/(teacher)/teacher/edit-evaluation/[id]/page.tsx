@@ -39,15 +39,18 @@ export default function EditEvaluationPage() {
   const groupMeta = useRef<{ gradeConfigId: string; syncedSubjectId: string; gradeLevel: string } | null>(null);
 
   useEffect(() => {
-    if (!template || allTemplates.length === 0) return;
+    if (!template) return;
 
     const newFormatMatch = template.name.match(/^\[([^\]]+)\]\[/);
-    const evalTitle = newFormatMatch ? newFormatMatch[1] : '';
+    const rawEvalPart = newFormatMatch ? newFormatMatch[1] : '';
+    const [evalTitle, unitTitle = ''] = rawEvalPart.split('|');
 
-    const group = allTemplates.filter(t => {
+    // Find siblings — fall back to just the loaded template if allTemplates not yet loaded
+    const pool = allTemplates.length > 0 ? allTemplates : [template];
+    const group = pool.filter(t => {
       if (t.gradeConfigId !== template.gradeConfigId) return false;
       if (t.syncedSubjectId !== template.syncedSubjectId) return false;
-      if (evalTitle) return t.name.startsWith(`[${evalTitle}][`);
+      if (evalTitle) return t.name.startsWith(`[${evalTitle}|`) || t.name.startsWith(`[${evalTitle}][`);
       return !t.name.match(/^\[[^\]]+\]\[/);
     });
 
@@ -62,6 +65,7 @@ export default function EditEvaluationPage() {
     };
 
     setNewEvalTitle(evalTitle || template.syncedSubject?.name || template.name);
+    setNewSubjectTitle(unitTitle);
     setNewEvalSubject(template.syncedSubject?.name ?? '');
     setTargetMarks(resolvedGroup.reduce((s, t) => s + Number(t.fullMarks), 0));
 
@@ -118,7 +122,7 @@ export default function EditEvaluationPage() {
 
       // 2. UPDATE existing + CREATE new criteria
       for (const [i, outcome] of flatOutcomes.entries()) {
-        const newName = `[${newEvalTitle}][${outcome.taskType}] ${outcome.name}`;
+        const newName = `[${newEvalTitle}|${newSubjectTitle}][${outcome.taskType}] ${outcome.name}`;
 
         if (outcome.templateId) {
           // UPDATE existing record

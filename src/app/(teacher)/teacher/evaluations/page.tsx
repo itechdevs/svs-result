@@ -41,9 +41,11 @@ export default function TeacherEvaluationsPage() {
     // Group by gradeConfigId+syncedSubjectId+evalTitle → one card per distinct evaluation plan
     const groups = new Map<string, typeof templates>();
     for (const t of templates) {
-      // Name format: [EvalTitle][TaskType] OutcomeName  OR legacy: [TaskType] OutcomeName
+      // Name format: [EvalTitle|UnitTitle][TaskType] OutcomeName  OR legacy: [EvalTitle][TaskType] or [TaskType]
       const evalTitleMatch = t.name.match(/^\[([^\]]+)\]\[/);
-      const evalTitle = evalTitleMatch ? evalTitleMatch[1] : '__legacy__';
+      const rawEvalPart = evalTitleMatch ? evalTitleMatch[1] : '__legacy__';
+      // Strip unit title from key so same eval title+unit = same card
+      const evalTitle = rawEvalPart.split('|')[0];
       const key = `${t.gradeConfigId}::${t.syncedSubjectId}::${evalTitle}`;
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(t);
@@ -54,9 +56,10 @@ export default function TeacherEvaluationsPage() {
       const subjectName = first.syncedSubject?.name ?? 'Unknown';
       const gradeLevel = first.syncedSubject?.gradeLevel ?? first.gradeConfig?.gradeLevel ?? '';
       const academicYear = first.gradeConfig?.academicYear?.name ?? '';
-      // Extract eval title from name: [EvalTitle][TaskType] ... → EvalTitle
+      // Parse [EvalTitle|UnitTitle] from first template's name
       const evalTitleMatch = first.name.match(/^\[([^\]]+)\]\[/);
-      const evalTitle = evalTitleMatch ? evalTitleMatch[1] : subjectName;
+      const rawEvalPart = evalTitleMatch ? evalTitleMatch[1] : '';
+      const [evalTitle, unitTitle = ''] = rawEvalPart.split('|');
       const totalFullMarks = group.reduce((s, t) => s + Number(t.fullMarks), 0);
       const totalPassMarks = group.reduce((s, t) => s + Number(t.passMarks), 0);
       const anyActive = group.some(t => t.isActive);
@@ -67,7 +70,7 @@ export default function TeacherEvaluationsPage() {
 
       return {
         id: first.id,
-        title: evalTitle,
+        title: evalTitle || subjectName,
         subjectTitle: gradeLevel ? `${subjectName} — ${gradeLevel}` : subjectName,
         subject: subjectName,
         gradeLevel,
@@ -80,7 +83,7 @@ export default function TeacherEvaluationsPage() {
         date: latestDate
           ? latestDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
           : 'TBD',
-        unit: subjectName,
+        unit: unitTitle,
         learningOutcomes: group.map(t => ({
           name: t.name,
           text: `Evaluate outcome competence for ${t.name}.`,
