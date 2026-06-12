@@ -15,14 +15,15 @@ export const GET = withHandler(async (_req, { user }) => {
       lastLoginAt: true,
       createdAt: true,
       syncedTeacher: {
-        select: { id: true, name: true, sourceId: true },
-      },
-      teacherAssignments: {
         select: {
           id: true,
-          gradeLevel: true,
-          syncedSubjectId: true,
-          academicYearId: true,
+          name: true,
+          sourceId: true,
+          subjects: {
+            where: { isActive: true },
+            select: { id: true, name: true, gradeLevel: true },
+            orderBy: [{ gradeLevel: "asc" }, { name: "asc" }],
+          },
         },
       },
     },

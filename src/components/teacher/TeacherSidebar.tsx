@@ -10,7 +10,6 @@ import { useSidebar } from "@/components/shared/ui/sidebar";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/shared/ui/sheet";
 import { useState, useMemo } from "react";
 import { useProfile } from "@/hooks/use-profile";
-import { useSubjects } from "@/hooks/use-subjects";
 
 const NAV_ITEMS: { label: string; href: string; icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>; hasSubMenu?: boolean }[] = [
   { label: "Teacher Dashboard", href: ROUTES.TEACHER_DASHBOARD, icon: LayoutGrid },
@@ -26,21 +25,11 @@ export function TeacherSidebar() {
   const [evaluationsExpanded, setEvaluationsExpanded] = useState(true);
 
   const { data: profile } = useProfile();
-  const { data: subjectsData = [] } = useSubjects();
 
   const assignedPairs = useMemo(() => {
-    if (!profile?.teacherAssignments) return [];
-    const assignedClasses = Array.from(new Set(profile.teacherAssignments.map(a => a.gradeLevel)));
-    return assignedClasses.flatMap(cls => {
-      const classAssignments = profile.teacherAssignments.filter(a => a.gradeLevel === cls);
-      const hasAllSubjects = classAssignments.some(a => a.syncedSubjectId === null);
-      const classSubjects = subjectsData.filter(s => s.gradeLevel === cls);
-      const subjectNames = hasAllSubjects
-        ? classSubjects.map(s => s.name)
-        : classSubjects.filter(s => classAssignments.some(a => a.syncedSubjectId === s.id)).map(s => s.name);
-      return subjectNames.map(subject => ({ className: cls, subject }));
-    });
-  }, [profile, subjectsData]);
+    const subjects = profile?.syncedTeacher?.subjects ?? [];
+    return subjects.map(s => ({ className: s.gradeLevel, subject: s.name }));
+  }, [profile]);
 
   const SidebarContent = (
     <aside
