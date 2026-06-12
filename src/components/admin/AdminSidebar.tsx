@@ -36,7 +36,7 @@ export function AdminSidebar() {
         </p>
       </div>
 
-      <nav className={cn("flex-1 py-3 flex flex-col gap-0.5", isCollapsed ? "px-2" : "px-3")} aria-label="Admin navigation">
+      <nav className={cn("flex-1 py-3 flex flex-col gap-0.5 overflow-y-auto", isCollapsed ? "px-2" : "px-3")} aria-label="Admin navigation">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
@@ -77,22 +77,23 @@ export function AdminSidebar() {
         })}
       </nav>
 
-      <div className={cn("p-3 border-t border-sidebar-border", isCollapsed && "flex flex-col items-center")}>
-        <div className={cn("flex items-center gap-2.5", isCollapsed ? "justify-center" : "px-1")}>
-          <div className="w-[34px] h-[34px] rounded-full overflow-hidden border border-sidebar-border shrink-0">
-            <img
-              src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=80&q=80"
-              alt="Admin avatar"
-              className="object-cover w-full h-full"
-            />
-          </div>
-          {!isCollapsed && (
-            <div className="overflow-hidden">
-              <p className="text-[12.5px] font-semibold text-sidebar-foreground truncate">A. Portal Executive</p>
-              <p className="text-[10px] font-semibold text-sidebar-foreground/50 uppercase tracking-[0.08em]">Administrator</p>
-            </div>
-          )}
+      <div className={cn(
+        "px-3 py-2 border-t border-sidebar-border flex items-center gap-2.5 shrink-0",
+        isCollapsed ? "justify-center" : ""
+      )}>
+        <div className="w-7 h-7 rounded-full overflow-hidden border border-sidebar-border shrink-0">
+          <img
+            src="/SVS LOGO NEW.png"
+            alt="Admin avatar"
+            className="object-cover w-full h-full"
+          />
         </div>
+        {!isCollapsed && (
+          <div className="overflow-hidden min-w-0">
+            <p className="text-[12px] font-semibold text-sidebar-foreground truncate leading-tight">A. Portal Executive</p>
+            <p className="text-[10px] text-sidebar-foreground/50 truncate leading-tight">Administrator</p>
+          </div>
+        )}
       </div>
     </aside>
   );
