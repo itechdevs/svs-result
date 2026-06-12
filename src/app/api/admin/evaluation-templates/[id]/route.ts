@@ -86,28 +86,18 @@ export const PATCH = withHandler(
 
 // DELETE /api/admin/evaluation-templates/[id] — soft-delete
 export const DELETE = withHandler(
-  async (_req, { params }) => {
+  async (_req, { params, user }) => {
     const existing = await prisma.evaluationTemplate.findFirst({
       where: { id: params.id, deletedAt: null },
+      include: { syncedSubject: { include: { teacher: { include: { user: { select: { id: true } } } } } } },
     });
     if (!existing) return notFound("Evaluation template not found");
 
-    // Check if there are any results for this template
-    const resultsCount = await prisma.studentEvaluationResult.count({
-      where: { evaluationTemplateId: params.id, deletedAt: null },
-    });
-
-    if (resultsCount > 0) {
-      // Soft-deactivate instead of soft-delete if results exist, or block?
-      // Since it's a soft-delete field, we can soft-delete it by setting deletedAt
-      await prisma.evaluationTemplate.update({
-        where: { id: params.id },
-        data: { deletedAt: new Date(), isActive: false },
-      });
-      return ok({ status: "soft-deleted" }, "Evaluation template soft-deleted (results preserved)");
+    // Teachers can only delete their own subject's templates
+    if (user.role === "TEACHER" && existing.syncedSubject.teacher?.user?.id !== user.id) {
+      return notFound("Evaluation template not found");
     }
 
-    // No results, we can safely soft-delete or hard delete
     await prisma.evaluationTemplate.update({
       where: { id: params.id },
       data: { deletedAt: new Date(), isActive: false },
@@ -115,5 +105,5 @@ export const DELETE = withHandler(
 
     return noContent();
   },
-  ["ADMIN"],
+  ["ADMIN", "TEACHER"],
 );

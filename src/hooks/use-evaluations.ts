@@ -188,6 +188,27 @@ export function useStudentEvaluationResults(filters: ListResultsFilters = {}) {
   });
 }
 
+export interface CreateTeacherEvaluationPlanInput {
+  syncedSubjectId: string;
+  gradeLevel: string;
+  name: string;
+  fullMarks: number;
+  passMarks: number;
+  weightage: number;
+  scheduledDate?: string;
+  displayOrder?: number;
+}
+
+export function useCreateTeacherEvaluationPlan() {
+  const queryClient = useQueryClient();
+  return useMutation<EvaluationTemplate, Error, CreateTeacherEvaluationPlanInput>({
+    mutationFn: (data) => apiClient.post("/teacher/evaluation-plans", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["evaluation-templates"] });
+    },
+  });
+}
+
 export function useBulkSaveMarks() {
   const queryClient = useQueryClient();
   return useMutation<{ count: number }, Error, BulkSaveResultsInput>({

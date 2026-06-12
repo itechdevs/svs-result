@@ -1,6 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 
+export interface AssignedSubject {
+  id: string;
+  name: string;
+  gradeLevel: string;
+}
+
 export interface UserProfile {
   id: string;
   email: string;
@@ -13,13 +19,8 @@ export interface UserProfile {
     id: string;
     name: string;
     sourceId: string;
+    subjects: AssignedSubject[];
   } | null;
-  teacherAssignments: Array<{
-    id: string;
-    gradeLevel: string;
-    syncedSubjectId: string | null;
-    academicYearId: string;
-  }>;
 }
 
 export function useProfile() {

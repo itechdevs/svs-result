@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useEvaluationTemplates } from "@/hooks/use-evaluations";
 import { useProfile } from "@/hooks/use-profile";
-import { useSubjects } from "@/hooks/use-subjects";
+import { useDeleteEvaluationTemplate } from "@/hooks/use-evaluations";
 import EvaluationsTab from "@/components/teacher/EvaluationsTab";
 import { AnimatePresence } from "motion/react";
 import { EvaluationPlan } from "@/types/academic";
@@ -17,28 +17,22 @@ export default function TeacherEvaluationsPage() {
 
   const { data: templatesData = [] } = useEvaluationTemplates();
   const { data: profile } = useProfile();
-  const { data: subjectsData = [] } = useSubjects();
 
   const [selectedEvaluationId, setSelectedEvaluationId] = useState('');
   const [newEvalTitle, setNewEvalTitle] = useState('');
   const [newEvalSubject, setNewEvalSubject] = useState(selectedSubject);
+  const deleteTemplate = useDeleteEvaluationTemplate();
 
   // Derive assigned subject IDs for this teacher
   const assignedSubjectIds = useMemo(() => {
-    if (!profile?.teacherAssignments) return new Set<string | null>();
-    return new Set(profile.teacherAssignments.map(a => a.syncedSubjectId));
+    return new Set(profile?.syncedTeacher?.subjects.map(s => s.id) ?? []);
   }, [profile]);
-
-  const hasAllSubjects = useMemo(() =>
-    profile?.teacherAssignments.some(a => a.syncedSubjectId === null) ?? false,
-    [profile]
-  );
 
   const evaluations: EvaluationPlan[] = useMemo(() => {
     let templates = templatesData;
 
-    // Filter by teacher's assigned subjects (unless teacher has all-subject access)
-    if (!hasAllSubjects) {
+    // Filter by teacher's assigned subjects
+    if (profile && assignedSubjectIds.size > 0) {
       templates = templates.filter(t => assignedSubjectIds.has(t.syncedSubjectId));
     }
 
@@ -60,7 +54,7 @@ export default function TeacherEvaluationsPage() {
         supportDate: '', fullMarks: Number(t.fullMarks), passMarks: Number(t.passMarks), taskType: 'Standard',
       }],
     }));
-  }, [templatesData, hasAllSubjects, assignedSubjectIds, selectedSubject]);
+  }, [templatesData, assignedSubjectIds, selectedSubject]);
 
   const setCurrentTab = (tab: string) => {
     if (tab === "create-evaluation") {
@@ -89,6 +83,7 @@ export default function TeacherEvaluationsPage() {
         newEvalSubject={newEvalSubject}
         selectedClass={selectedClass}
         selectedSubject={selectedSubject}
+        onDelete={(id) => deleteTemplate.mutate(id)}
       />
     </AnimatePresence>
   );
