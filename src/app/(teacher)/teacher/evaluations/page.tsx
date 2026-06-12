@@ -23,53 +23,107 @@ export default function TeacherEvaluationsPage() {
   const [newEvalSubject, setNewEvalSubject] = useState(selectedSubject);
   const deleteTemplate = useDeleteEvaluationTemplate();
 
-  // Derive assigned subject IDs for this teacher
-  const assignedSubjectIds = useMemo(() => {
-    return new Set(profile?.syncedTeacher?.subjects.map(s => s.id) ?? []);
-  }, [profile]);
+  const assignedSubjectIds = useMemo(() =>
+    new Set(profile?.syncedTeacher?.subjects.map(s => s.id) ?? []),
+    [profile]
+  );
 
   const evaluations: EvaluationPlan[] = useMemo(() => {
     let templates = templatesData;
 
-    // Filter by teacher's assigned subjects
     if (profile && assignedSubjectIds.size > 0) {
       templates = templates.filter(t => assignedSubjectIds.has(t.syncedSubjectId));
     }
-
-    // Filter by URL params
     if (selectedSubject) {
       templates = templates.filter(t => (t.syncedSubject?.name ?? '') === selectedSubject);
     }
 
-    return templates.map(t => ({
-      id: t.id, title: t.name, subject: t.syncedSubject?.name ?? 'Unknown',
-      status: t.isActive ? 'Active' : 'Inactive', testTypes: 'Standard', outcomes: '1 Outcomes',
-      fullMarks: Number(t.fullMarks), passMarks: Number(t.passMarks),
-      date: t.scheduledDate ? new Date(t.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'TBD',
-      unit: t.name,
-      learningOutcomes: [{
-        name: t.name, text: `Evaluate outcome competence for ${t.name}.`,
-        regularRating: 0, afterSupportRating: null,
-        regularDate: t.scheduledDate ? new Date(t.scheduledDate).toISOString().split('T')[0] : '',
-        supportDate: '', fullMarks: Number(t.fullMarks), passMarks: Number(t.passMarks), taskType: 'Standard',
-      }],
-    }));
+    // Group by gradeConfigId+syncedSubjectId+evalTitle → one card per distinct evaluation plan
+    const groups = new Map<string, typeof templates>();
+    for (const t of templates) {
+      // Name format: [EvalTitle|UnitTitle][TaskType] OutcomeName  OR legacy: [EvalTitle][TaskType] or [TaskType]
+      const evalTitleMatch = t.name.match(/^\[([^\]]+)\]\[/);
+      const rawEvalPart = evalTitleMatch ? evalTitleMatch[1] : '__legacy__';
+      // Strip unit title from key so same eval title+unit = same card
+      const evalTitle = rawEvalPart.split('|')[0];
+      const key = `${t.gradeConfigId}::${t.syncedSubjectId}::${evalTitle}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(t);
+    }
+
+    return Array.from(groups.entries()).map(([, group]) => {
+      const first = group[0];
+      const subjectName = first.syncedSubject?.name ?? 'Unknown';
+      const gradeLevel = first.syncedSubject?.gradeLevel ?? first.gradeConfig?.gradeLevel ?? '';
+      const academicYear = first.gradeConfig?.academicYear?.name ?? '';
+      // Parse [EvalTitle|UnitTitle] from first template's name
+      const evalTitleMatch = first.name.match(/^\[([^\]]+)\]\[/);
+      const rawEvalPart = evalTitleMatch ? evalTitleMatch[1] : '';
+      const [evalTitle, unitTitle = ''] = rawEvalPart.split('|');
+      const totalFullMarks = group.reduce((s, t) => s + Number(t.fullMarks), 0);
+      const totalPassMarks = group.reduce((s, t) => s + Number(t.passMarks), 0);
+      const anyActive = group.some(t => t.isActive);
+      const latestDate = group
+        .map(t => t.scheduledDate ? new Date(t.scheduledDate) : null)
+        .filter(Boolean)
+        .sort((a, b) => b!.getTime() - a!.getTime())[0];
+
+      return {
+        id: first.id,
+        title: evalTitle || subjectName,
+        subjectTitle: gradeLevel ? `${subjectName} — ${gradeLevel}` : subjectName,
+        subject: subjectName,
+        gradeLevel,
+        syncedSubjectId: first.syncedSubjectId,
+        status: anyActive ? 'Active' : 'Inactive',
+        testTypes: `${group.length} Task${group.length !== 1 ? 's' : ''}`,
+        outcomes: `${group.length} Outcome${group.length !== 1 ? 's' : ''}`,
+        fullMarks: totalFullMarks,
+        passMarks: totalPassMarks,
+        date: latestDate
+          ? latestDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
+          : 'TBD',
+        unit: unitTitle,
+        learningOutcomes: group.map(t => ({
+          name: t.name,
+          text: `Evaluate outcome competence for ${t.name}.`,
+          regularRating: 0,
+          afterSupportRating: null,
+          regularDate: t.scheduledDate ? new Date(t.scheduledDate).toISOString().split('T')[0] : '',
+          supportDate: '',
+          fullMarks: Number(t.fullMarks),
+          passMarks: Number(t.passMarks),
+          taskType: 'Standard',
+        })),
+        subEvaluations: group.map(t => {
+          // Supports both [EvalTitle][TaskType] OutcomeName and legacy [TaskType] OutcomeName
+          const newFormat = t.name.match(/^\[[^\]]+\]\[([^\]]+)\]\s*(.+)$/);
+          const legacyFormat = t.name.match(/^\[([^\]]+)\]\s*(.+)$/);
+          const taskType = newFormat ? newFormat[1] : (legacyFormat ? legacyFormat[1] : 'Standard');
+          const outcomeName = newFormat ? newFormat[2] : (legacyFormat ? legacyFormat[2] : t.name);
+          return {
+            id: t.id,
+            name: outcomeName,
+            fullMarks: Number(t.fullMarks),
+            passMarks: Number(t.passMarks),
+            weightage: Number(t.weightage),
+            scheduledDate: t.scheduledDate,
+            taskType,
+          };
+        }),
+        templateIds: group.map(t => t.id),
+      } satisfies EvaluationPlan;
+    });
   }, [templatesData, assignedSubjectIds, selectedSubject]);
 
   const setCurrentTab = (tab: string) => {
-    if (tab === "create-evaluation") {
-      const params = new URLSearchParams();
-      if (selectedClass) params.set("class", selectedClass);
-      if (selectedSubject) params.set("subject", selectedSubject);
-      router.push(`/teacher/create-evaluation${params.toString() ? `?${params}` : ""}`);
-    } else if (tab === "mark-entry") {
-      const params = new URLSearchParams();
-      if (selectedClass) params.set("class", selectedClass);
-      if (selectedSubject) params.set("subject", selectedSubject);
-      router.push(`/teacher/mark-entry${params.toString() ? `?${params}` : ""}`);
-    } else {
-      router.push("/teacher/dashboard");
-    }
+    const params = new URLSearchParams();
+    if (selectedClass) params.set("class", selectedClass);
+    if (selectedSubject) params.set("subject", selectedSubject);
+    const suffix = params.toString() ? `?${params}` : "";
+    if (tab === "create-evaluation") router.push(`/teacher/create-evaluation${suffix}`);
+    else if (tab === "mark-entry") router.push(`/teacher/mark-entry${suffix}`);
+    else router.push("/teacher/dashboard");
   };
 
   return (
@@ -83,7 +137,11 @@ export default function TeacherEvaluationsPage() {
         newEvalSubject={newEvalSubject}
         selectedClass={selectedClass}
         selectedSubject={selectedSubject}
-        onDelete={(id) => deleteTemplate.mutate(id)}
+        onDelete={async (id) => {
+          const plan = evaluations.find(e => e.id === id);
+          const ids = plan?.templateIds ?? [id];
+          for (const tid of ids) await deleteTemplate.mutateAsync(tid);
+        }}
       />
     </AnimatePresence>
   );

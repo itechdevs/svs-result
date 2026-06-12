@@ -130,7 +130,7 @@ export default function EvaluationsTab({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem asChild>
-                        <Link href={`/teacher/edit-evaluation/${evalPlan.id}${suffix}`} className="flex items-center gap-2 cursor-pointer">
+                        <Link href={`/teacher/edit-evaluation/${evalPlan.subEvaluations?.[0]?.id ?? evalPlan.id}${suffix}`} className="flex items-center gap-2 cursor-pointer">
                           <Pencil className="w-3.5 h-3.5" />
                           Edit
                         </Link>
@@ -154,15 +154,15 @@ export default function EvaluationsTab({
 
               <div>
                 <h3 className="font-bold text-sm text-[#002045] dark:text-white leading-snug line-clamp-1">{evalPlan.title}</h3>
-                <p className="text-[11px] text-slate-400 mt-1">Assessment Unit: {evalPlan.unit || "Core Modules"}</p>
+                {/* <p className="text-[11px] text-slate-400 mt-1">Assessment Unit: {evalPlan.unit || "Core Modules"}</p> */}
               </div>
 
               <div>
                 <label className="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">
-                  Subject Title
+                  Unit Title
                 </label>
-                <div className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-border rounded-lg p-2.5 text-xs text-slate-900 dark:text-white font-medium">
-                  {evalPlan.subject}
+                <div className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-border rounded-lg p-2.5 text-xs text-slate-900 dark:text-white font-medium min-h-[34px]">
+                  {evalPlan.unit || <span className="text-slate-400 italic">Not set</span>}
                 </div>
               </div>
 
@@ -174,14 +174,6 @@ export default function EvaluationsTab({
                 <div>
                   <span className="text-[9px] font-bold text-slate-400 uppercase block">Outcomes tracked</span>
                   <span className="font-bold text-xs text-[#002045] dark:text-blue-300 font-mono">{evalPlan.outcomes}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase block">Max Marks</span>
-                  <span className="font-bold text-xs text-slate-700 dark:text-slate-300 font-mono">{evalPlan.fullMarks}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase block">Pass Marks</span>
-                  <span className="font-bold text-xs text-slate-700 dark:text-slate-300 font-mono">{evalPlan.passMarks}</span>
                 </div>
               </div>
 

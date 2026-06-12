@@ -16,12 +16,13 @@ export default function CreateEvaluationPage() {
   const selectedClass = searchParams.get('class') ?? '';
   const selectedSubject = searchParams.get('subject') ?? '';
 
-  const [newEvalTitle, setNewEvalTitle] = useState('Term 1 Assessment');
-  const [newEvalSubject, setNewEvalSubject] = useState(selectedSubject || 'Science');
+  const [newEvalTitle, setNewEvalTitle] = useState('');
+  const [newEvalSubject, setNewEvalSubject] = useState(selectedSubject || '');
+  const [newSubjectTitle, setNewSubjectTitle] = useState('');
   const [targetMarks, setTargetMarks] = useState(55);
   const [newOutcomes, setNewOutcomes] = useState<TaskGroup[]>([
-    { taskType: 'Written', max: 4, pass: 2, outcomes: [{ name: 'Theory & Principles', date: '', max: 30, pass: 12 }] },
-    { taskType: 'Practical Assessment', max: 40, pass: 16, outcomes: [{ name: 'Laboratory Safety & Setup', date: '', max: 25, pass: 10 }] },
+    { taskType: '', max: 4, pass: 2, outcomes: [{ name: '', date: '', max: 4, pass: 2 }] },
+    { taskType: '', max: 1, pass: 0, outcomes: [{ name: '', date: '', max: 1, pass: 0 }] },
   ]);
 
   const { data: profile } = useProfile();
@@ -45,10 +46,10 @@ export default function CreateEvaluationPage() {
     }
 
     const subject = profile?.syncedTeacher?.subjects.find(
-      s => s.name === newEvalSubject && s.gradeLevel === selectedClass
+      s => s.name === (newEvalSubject || selectedSubject) && s.gradeLevel === selectedClass
     );
     if (!subject) {
-      alert(`Subject "${newEvalSubject}" not found for ${selectedClass}`);
+      alert(`Subject "${newEvalSubject || selectedSubject}" not found for ${selectedClass}`);
       return;
     }
 
@@ -59,10 +60,11 @@ export default function CreateEvaluationPage() {
 
     try {
       for (const [i, item] of flatOutcomes.entries()) {
+        // Name format: [EvalTitle|UnitTitle][TaskType] OutcomeName
         await createPlan.mutateAsync({
           syncedSubjectId: subject.id,
           gradeLevel: selectedClass,
-          name: `[${item.taskType}] ${item.name}`,
+          name: `[${newEvalTitle}|${newSubjectTitle}][${item.taskType}] ${item.name}`,
           fullMarks: item.max,
           passMarks: item.pass,
           weightage,
@@ -76,10 +78,8 @@ export default function CreateEvaluationPage() {
       return;
     }
 
-    const markParams = new URLSearchParams();
-    if (selectedClass) markParams.set('class', selectedClass);
-    if (selectedSubject) markParams.set('subject', selectedSubject);
-    router.push(`/teacher/mark-entry${markParams.toString() ? `?${markParams}` : ''}`);
+    // Redirect back to evaluations list so the new card is immediately visible
+    router.push(`/teacher/evaluations${suffix}`);
   };
 
   return (
@@ -89,6 +89,8 @@ export default function CreateEvaluationPage() {
         setNewEvalTitle={setNewEvalTitle}
         newEvalSubject={newEvalSubject}
         setNewEvalSubject={setNewEvalSubject}
+        newSubjectTitle={newSubjectTitle}
+        setNewSubjectTitle={setNewSubjectTitle}
         targetMarks={targetMarks}
         setTargetMarks={setTargetMarks}
         newOutcomes={newOutcomes}
