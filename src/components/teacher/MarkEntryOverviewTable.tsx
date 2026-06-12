@@ -239,8 +239,8 @@ export default function MarkEntryOverviewTable() {
                         <td className="px-4 py-3 text-center">
                           <span className={cn('px-2.5 py-1 rounded-full text-[10px] font-bold uppercase',
                             status === 'Pass' ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300'
-                            : status === 'Fail' ? 'bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-300'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                              : status === 'Fail' ? 'bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-300'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
                           )}>{status}</span>
                         </td>
                         <td className="px-4 py-3 text-center">

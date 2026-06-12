@@ -2,12 +2,11 @@
 
 import React, { useId, useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
-import { Loader2,UserCheck,ShieldCheck, Eye, EyeOff } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
+import { Loader2, ShieldCheck, UserCheck, Eye, EyeOff } from "lucide-react";
+import { Button } from "@/components/shared/ui/button";
+import { Input } from "@/components/shared/ui/input";
+import { Separator } from "@/components/shared/ui/separator";
 import { ROUTES } from "@/lib/constants";
-
 
 // ─── LoginForm ────────────────────────────────────────────────────────────────
 
@@ -62,7 +61,6 @@ function LoginForm() {
     <div className="w-full bg-card border border-border rounded-2xl shadow-lg overflow-hidden">
 
       {/* ── Card Header ── */}
-      
       <div className="px-8 pt-8 pb-6 text-center">
         <div className="flex justify-center mb-5">
           <img
@@ -72,12 +70,12 @@ function LoginForm() {
           />
         </div>
 
-        <h3 className="text-xl font-bold text-foreground">
+        <h1 className="text-xl font-bold text-foreground">
           Result Management System
-        </h3>
+        </h1>
 
         <p className="mt-2 text-sm text-muted-foreground">
-          Sign in to access student results
+          Sign in to access student results and academic records
         </p>
       </div>
 
@@ -89,7 +87,7 @@ function LoginForm() {
           <div
             role="alert"
             aria-live="polite"
-            className="flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3"
+            className="flex items-start gap-3 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3"
           >
             <span className="mt-0.5 shrink-0 w-4 h-4 rounded-full bg-destructive/20 flex items-center justify-center text-destructive text-[10px] font-bold">
               !
@@ -118,7 +116,8 @@ function LoginForm() {
               onChange={(e) => setEmail(e.target.value)}
               required
               disabled={loading}
-              className="h-10 px-3.5 text-sm rounded-md"
+              aria-required="true"
+              className="h-10 px-3.5 text-sm rounded-xl"
             />
           </div>
 
@@ -140,8 +139,8 @@ function LoginForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loading}
-                
-                className="h-10 px-3.5 pr-10 text-sm rounded-md"
+                aria-required="true"
+                className="h-10 px-3.5 pr-10 text-sm rounded-xl"
               />
               <button
                 type="button"
@@ -164,7 +163,7 @@ function LoginForm() {
             type="submit"
             disabled={loading}
             aria-busy={loading}
-            className="w-full h-10 text-sm font-medium mt-1"
+            className="w-full h-10 text-sm font-semibold mt-1 rounded-xl"
           >
             {loading ? (
               <>
@@ -194,7 +193,7 @@ function LoginForm() {
             disabled={loading}
             onClick={() => handleQuickLogin("teacher")}
             aria-label="Quick sign in as Teacher"
-            className="h-10 text-sm font-medium gap-2"
+            className="h-10 text-sm font-medium gap-2 rounded-xl"
           >
             <UserCheck className="w-4 h-4 shrink-0" aria-hidden="true" />
             Teacher mode
@@ -205,7 +204,7 @@ function LoginForm() {
             disabled={loading}
             onClick={() => handleQuickLogin("admin")}
             aria-label="Quick sign in as Admin"
-            className="h-10 text-sm font-medium gap-2"
+            className="h-11 text-sm font-medium gap-2 rounded-xl"
           >
             <ShieldCheck className="w-4 h-4 shrink-0" aria-hidden="true" />
             Admin mode
