@@ -154,7 +154,7 @@ export default function EvaluationsTab({
 
               <div>
                 <h3 className="font-bold text-sm text-[#002045] dark:text-white leading-snug line-clamp-1">{evalPlan.title}</h3>
-                <p className="text-[11px] text-slate-400 mt-1">Assessment Unit: {evalPlan.unit || "Core Modules"}</p>
+                {/* <p className="text-[11px] text-slate-400 mt-1">Assessment Unit: {evalPlan.unit || "Core Modules"}</p> */}
               </div>
 
               <div>
@@ -174,14 +174,6 @@ export default function EvaluationsTab({
                 <div>
                   <span className="text-[9px] font-bold text-slate-400 uppercase block">Outcomes tracked</span>
                   <span className="font-bold text-xs text-[#002045] dark:text-blue-300 font-mono">{evalPlan.outcomes}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase block">Max Marks</span>
-                  <span className="font-bold text-xs text-slate-700 dark:text-slate-300 font-mono">{evalPlan.fullMarks}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase block">Pass Marks</span>
-                  <span className="font-bold text-xs text-slate-700 dark:text-slate-300 font-mono">{evalPlan.passMarks}</span>
                 </div>
               </div>
 

@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import CreateEvaluationTab from '@/components/teacher/CreateEvaluationTab';
 import { AnimatePresence } from 'motion/react';
 import { useEvaluationTemplate, useEvaluationTemplates } from '@/hooks/use-evaluations';
-import { useUpdateEvaluationTemplate } from '@/hooks/use-evaluations';
+import { useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 
 interface OutcomeRow { name: string; date: string; max: number; pass: number; templateId?: string; }
@@ -15,6 +15,7 @@ export default function EditEvaluationPage() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const id = params.id as string;
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -33,31 +34,37 @@ export default function EditEvaluationPage() {
   const [targetMarks, setTargetMarks] = useState(55);
   const [newOutcomes, setNewOutcomes] = useState<TaskGroup[]>([]);
 
+  // Track original DB state for diffing on save
+  const originalTemplateIds = useRef<Set<string>>(new Set());
+  const groupMeta = useRef<{ gradeConfigId: string; syncedSubjectId: string; gradeLevel: string } | null>(null);
+
   useEffect(() => {
     if (!template || allTemplates.length === 0) return;
 
-    // Extract the eval title from the clicked template's name
     const newFormatMatch = template.name.match(/^\[([^\]]+)\]\[/);
     const evalTitle = newFormatMatch ? newFormatMatch[1] : '';
 
-    // Find all siblings: same gradeConfigId + syncedSubjectId + evalTitle
     const group = allTemplates.filter(t => {
       if (t.gradeConfigId !== template.gradeConfigId) return false;
       if (t.syncedSubjectId !== template.syncedSubjectId) return false;
-      if (evalTitle) {
-        return t.name.startsWith(`[${evalTitle}][`);
-      }
-      // Legacy format: same gradeConfig+subject, no [EvalTitle][ prefix
+      if (evalTitle) return t.name.startsWith(`[${evalTitle}][`);
       return !t.name.match(/^\[[^\]]+\]\[/);
     });
 
     const resolvedGroup = group.length > 0 ? group : [template];
 
+    // Store original IDs and metadata for diffing
+    originalTemplateIds.current = new Set(resolvedGroup.map(t => t.id));
+    groupMeta.current = {
+      gradeConfigId: template.gradeConfigId,
+      syncedSubjectId: template.syncedSubjectId,
+      gradeLevel: template.syncedSubject?.gradeLevel ?? template.gradeConfig?.gradeLevel ?? '',
+    };
+
     setNewEvalTitle(evalTitle || template.syncedSubject?.name || template.name);
     setNewEvalSubject(template.syncedSubject?.name ?? '');
     setTargetMarks(resolvedGroup.reduce((s, t) => s + Number(t.fullMarks), 0));
 
-    // Rebuild task groups, preserving templateId per outcome for targeted updates
     const taskGroupMap = new Map<string, TaskGroup>();
     for (const t of resolvedGroup) {
       const newFmt = t.name.match(/^\[[^\]]+\]\[([^\]]+)\]\s*(.+)$/);
@@ -90,21 +97,59 @@ export default function EditEvaluationPage() {
   };
 
   const handleUpdate = async () => {
+    if (!groupMeta.current) return;
+    const { gradeConfigId, syncedSubjectId, gradeLevel } = groupMeta.current;
+
+    const flatOutcomes = newOutcomes.flatMap(tg =>
+      tg.outcomes.map(o => ({ ...o, taskType: tg.taskType }))
+    );
+    const weightage = parseFloat((flatOutcomes.length > 0 ? 100 / flatOutcomes.length : 100).toFixed(2));
+
+    // IDs still present in the updated UI
+    const survivingIds = new Set(flatOutcomes.map(o => o.templateId).filter(Boolean) as string[]);
+    // IDs that were in DB but removed from UI → delete them
+    const toDelete = [...originalTemplateIds.current].filter(tid => !survivingIds.has(tid));
+
     try {
-      for (const tg of newOutcomes) {
-        for (const outcome of tg.outcomes) {
-          if (!outcome.templateId) continue;
-          const newName = `[${newEvalTitle}][${tg.taskType}] ${outcome.name}`;
-          await apiClient.patch(`/admin/evaluation-templates/${outcome.templateId}`, {
+      // 1. DELETE removed criteria
+      for (const tid of toDelete) {
+        await apiClient.delete(`/teacher/evaluation-plans/${tid}`);
+      }
+
+      // 2. UPDATE existing + CREATE new criteria
+      for (const [i, outcome] of flatOutcomes.entries()) {
+        const newName = `[${newEvalTitle}][${outcome.taskType}] ${outcome.name}`;
+
+        if (outcome.templateId) {
+          // UPDATE existing record
+          await apiClient.patch(`/teacher/evaluation-plans/${outcome.templateId}`, {
             name: newName,
             fullMarks: outcome.max,
             passMarks: outcome.pass,
+            weightage,
             scheduledDate: outcome.date || undefined,
+            displayOrder: i,
+          });
+        } else {
+          // CREATE new record — use the same gradeConfigId so it stays in the same group
+          await apiClient.post('/teacher/evaluation-plans', {
+            syncedSubjectId,
+            gradeLevel,
+            name: newName,
+            fullMarks: outcome.max,
+            passMarks: outcome.pass,
+            weightage,
+            scheduledDate: outcome.date || undefined,
+            displayOrder: i,
           });
         }
       }
+
+      // 3. Invalidate cache so evaluations list re-fetches immediately
+      await queryClient.invalidateQueries({ queryKey: ['evaluation-templates'] });
+
       setShowSuccess(true);
-      setTimeout(() => router.push(backUrl), 1500);
+      setTimeout(() => router.push(backUrl), 1200);
     } catch (err: any) {
       alert(err.message || 'Failed to update evaluation');
     }
