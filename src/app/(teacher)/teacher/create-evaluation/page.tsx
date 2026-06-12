@@ -2,11 +2,10 @@
 
 import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import CreateEvaluationTab from '@/components/teacher/CreateEvaluationTab';
 import { AnimatePresence } from 'motion/react';
-import { useCreateEvaluationTemplate } from '@/hooks/use-evaluations';
-import { useAcademicYears, useGradeConfigs } from '@/hooks/use-academic-config';
-import { useSubjects } from '@/hooks/use-subjects';
+import { useCreateTeacherEvaluationPlan } from '@/hooks/use-evaluations';
+import { useProfile } from '@/hooks/use-profile';
+import CreateEvaluationTab from '@/components/teacher/CreateEvaluationTab';
 
 interface OutcomeRow { name: string; date: string; max: number; pass: number; }
 interface TaskGroup { taskType: string; max: number; pass: number; outcomes: OutcomeRow[]; }
@@ -25,10 +24,8 @@ export default function CreateEvaluationPage() {
     { taskType: 'Practical Assessment', max: 40, pass: 16, outcomes: [{ name: 'Laboratory Safety & Setup', date: '', max: 25, pass: 10 }] },
   ]);
 
-  const createTemplateMutation = useCreateEvaluationTemplate();
-  const { data: academicYears } = useAcademicYears();
-  const { data: gradeConfigs } = useGradeConfigs();
-  const { data: subjects } = useSubjects();
+  const { data: profile } = useProfile();
+  const createPlan = useCreateTeacherEvaluationPlan();
 
   const qs = new URLSearchParams();
   if (selectedClass) qs.set('class', selectedClass);
@@ -42,28 +39,41 @@ export default function CreateEvaluationPage() {
   };
 
   const handleCreateEvaluation = async () => {
-    const currentYear = academicYears?.find(y => y.isCurrent);
-    if (!currentYear) { alert('No current academic year defined'); return; }
+    if (!selectedClass) {
+      alert('Please select a class from the sidebar first');
+      return;
+    }
 
-    const gradeConfig = gradeConfigs?.find(c => c.academicYearId === currentYear.id && c.gradeLevel === selectedClass);
-    if (!gradeConfig) { alert(`No grade config found for ${selectedClass}`); return; }
+    const subject = profile?.syncedTeacher?.subjects.find(
+      s => s.name === newEvalSubject && s.gradeLevel === selectedClass
+    );
+    if (!subject) {
+      alert(`Subject "${newEvalSubject}" not found for ${selectedClass}`);
+      return;
+    }
 
-    const subject = subjects?.find(s => s.name === newEvalSubject && s.gradeLevel === selectedClass);
-    if (!subject) { alert(`Subject ${newEvalSubject} not found for ${selectedClass}`); return; }
+    const flatOutcomes = newOutcomes.flatMap(g =>
+      g.outcomes.map((o, i) => ({ ...o, taskType: g.taskType, displayOrder: i }))
+    );
+    const weightage = parseFloat((flatOutcomes.length > 0 ? 100 / flatOutcomes.length : 100).toFixed(2));
 
-    const flatOutcomes = newOutcomes.flatMap(g => g.outcomes.map(o => ({ ...o, taskType: g.taskType })));
-    const weightage = flatOutcomes.length > 0 ? 100 / flatOutcomes.length : 100;
-
-    for (const item of flatOutcomes) {
-      await createTemplateMutation.mutateAsync({
-        gradeConfigId: gradeConfig.id,
-        syncedSubjectId: subject.id,
-        name: `[${item.taskType}] ${item.name}`,
-        fullMarks: item.max,
-        passMarks: item.pass,
-        weightage,
-        scheduledDate: item.date || undefined,
-      });
+    try {
+      for (const [i, item] of flatOutcomes.entries()) {
+        await createPlan.mutateAsync({
+          syncedSubjectId: subject.id,
+          gradeLevel: selectedClass,
+          name: `[${item.taskType}] ${item.name}`,
+          fullMarks: item.max,
+          passMarks: item.pass,
+          weightage,
+          scheduledDate: item.date ? item.date : undefined,
+          displayOrder: i,
+        });
+      }
+    } catch (err: any) {
+      const detail = err.details ? JSON.stringify(err.details) : '';
+      alert(`${err.message || 'Failed to create evaluation plan'}${detail ? `\n${detail}` : ''}`);
+      return;
     }
 
     const markParams = new URLSearchParams();

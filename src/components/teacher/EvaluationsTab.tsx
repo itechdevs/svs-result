@@ -1,11 +1,28 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Plus } from 'lucide-react';
+import { Plus, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EvaluationPlan } from '@/types/academic';
 import Link from 'next/link';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/shared/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '@/components/shared/ui/alert-dialog';
 
 interface EvaluationsTabProps {
   evaluations: EvaluationPlan[];
@@ -16,6 +33,7 @@ interface EvaluationsTabProps {
   newEvalSubject: string;
   selectedClass?: string;
   selectedSubject?: string;
+  onDelete?: (id: string) => void;
 }
 
 export default function EvaluationsTab({
@@ -27,11 +45,15 @@ export default function EvaluationsTab({
   newEvalSubject,
   selectedClass = '',
   selectedSubject = '',
+  onDelete,
 }: EvaluationsTabProps) {
   const qs = new URLSearchParams();
   if (selectedClass) qs.set('class', selectedClass);
   if (selectedSubject) qs.set('subject', selectedSubject);
   const suffix = qs.toString() ? `?${qs.toString()}` : '';
+
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const deleteTarget = evaluations.find(e => e.id === deleteTargetId);
 
   return (
     <motion.div
@@ -95,10 +117,39 @@ export default function EvaluationsTab({
                   <span className="text-slate-400 text-[10px] font-mono block">Created: {evalPlan.date}</span>
                 </div>
 
-                {/* Subject badge */}
-                <span className="text-[10px] font-bold px-2.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-[#002045] dark:text-blue-300 rounded-full uppercase tracking-wider border dark:border-border">
-                  {evalPlan.subject}
-                </span>
+                {/* Subject badge + kebab */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold px-2.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-[#002045] dark:text-blue-300 rounded-full uppercase tracking-wider border dark:border-border">
+                    {evalPlan.subject}
+                  </span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer">
+                        <MoreVertical className="w-4 h-4 text-slate-400" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem asChild>
+                        <Link href={`/teacher/edit-evaluation/${evalPlan.id}${suffix}`} className="flex items-center gap-2 cursor-pointer">
+                          <Pencil className="w-3.5 h-3.5" />
+                          Edit
+                        </Link>
+                      </DropdownMenuItem>
+                      {onDelete && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-red-600 dark:text-red-400 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30 flex items-center gap-2 cursor-pointer"
+                            onSelect={() => setDeleteTargetId(evalPlan.id)}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Delete
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
 
               <div>
@@ -156,12 +207,6 @@ export default function EvaluationsTab({
             </div>
 
             <div className="px-5 pb-5 pt-2 border-t border-slate-50 dark:border-border/50 flex items-center gap-3">
-              <Link
-                href={`/teacher/edit-evaluation/${evalPlan.id}${suffix}`}
-                className="flex-1 bg-slate-100 dark:bg-slate-800 text-[#002045] dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 font-bold py-2 rounded text-xs transition-all text-center"
-              >
-                Edit
-              </Link>
               <button
                 onClick={() => {
                   setSelectedEvaluationId(evalPlan.id);
@@ -187,6 +232,26 @@ export default function EvaluationsTab({
           <p className="text-xs text-slate-400 mt-1 max-w-[200px]">Catalog customized assessment rubrics for your department.</p>
         </button>
       </div>
+
+      <AlertDialog open={!!deleteTargetId} onOpenChange={(open) => !open && setDeleteTargetId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Evaluation Plan?</AlertDialogTitle>
+            <AlertDialogDescription>
+              &ldquo;{deleteTarget?.title}&rdquo; will be permanently removed. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => { onDelete?.(deleteTargetId!); setDeleteTargetId(null); }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </motion.div>
   );
 }

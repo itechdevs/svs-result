@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useEvaluationTemplates } from "@/hooks/use-evaluations";
 import { useProfile } from "@/hooks/use-profile";
+import { useDeleteEvaluationTemplate } from "@/hooks/use-evaluations";
 import EvaluationsTab from "@/components/teacher/EvaluationsTab";
 import { AnimatePresence } from "motion/react";
 import { EvaluationPlan } from "@/types/academic";
@@ -20,6 +21,7 @@ export default function TeacherEvaluationsPage() {
   const [selectedEvaluationId, setSelectedEvaluationId] = useState('');
   const [newEvalTitle, setNewEvalTitle] = useState('');
   const [newEvalSubject, setNewEvalSubject] = useState(selectedSubject);
+  const deleteTemplate = useDeleteEvaluationTemplate();
 
   // Derive assigned subject IDs for this teacher
   const assignedSubjectIds = useMemo(() => {
@@ -81,6 +83,7 @@ export default function TeacherEvaluationsPage() {
         newEvalSubject={newEvalSubject}
         selectedClass={selectedClass}
         selectedSubject={selectedSubject}
+        onDelete={(id) => deleteTemplate.mutate(id)}
       />
     </AnimatePresence>
   );
