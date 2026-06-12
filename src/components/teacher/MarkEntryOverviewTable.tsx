@@ -10,7 +10,17 @@ import { useSubjects } from '@/hooks/use-subjects';
 import { useEvaluationTemplates, useStudentEvaluationResults, useBulkSaveMarks } from '@/hooks/use-evaluations';
 import { useStudents } from '@/hooks/use-students';
 import { calcObtainedMarks, calcFullMarks, calcPassFail } from '@/components/teacher/DetailedMarkEntryView';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/shared/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { useSearchParams } from 'next/navigation';
 import { StudentOutcomeMark, OutcomeMark } from '@/types/academic';
 
@@ -140,11 +150,11 @@ export default function MarkEntryOverviewTable() {
   return (
     <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       {/* Filters */}
-      <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-border shadow-sm p-5">
-        <h1 className="text-lg font-bold text-[#002045] dark:text-white mb-4">Mark Entry</h1>
+      <div className="bg-card rounded-xl border border-border shadow-sm p-5">
+        <h1 className="text-lg font-bold text-foreground mb-4">Mark Entry</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Select Class</label>
+            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Select Class</label>
             <Select value={selectedClass} onValueChange={handleClassChange}>
               <SelectTrigger className="w-full text-sm"><SelectValue placeholder="Select a class..." /></SelectTrigger>
               <SelectContent>
@@ -153,7 +163,7 @@ export default function MarkEntryOverviewTable() {
             </Select>
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Select Subject</label>
+            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Select Subject</label>
             <Select value={selectedSubject} onValueChange={setSelectedSubject} disabled={!selectedClass}>
               <SelectTrigger className="w-full text-sm"><SelectValue placeholder={selectedClass ? 'Select a subject...' : 'Select a class first'} /></SelectTrigger>
               <SelectContent>
@@ -165,96 +175,96 @@ export default function MarkEntryOverviewTable() {
       </div>
 
       {(!selectedClass || !selectedSubject) && (
-        <div className="bg-white dark:bg-card rounded-xl border border-dashed border-slate-300 dark:border-border p-12 text-center">
-          <p className="text-sm text-slate-500 dark:text-slate-400">Select a class and subject to view the mark entry table.</p>
+        <div className="bg-card rounded-xl border border-dashed border-border p-12 text-center">
+          <p className="text-sm text-muted-foreground">Select a class and subject to view the mark entry table.</p>
         </div>
       )}
 
       {selectedClass && selectedSubject && !evaluation && (
-        <div className="bg-white dark:bg-card rounded-xl border border-dashed border-slate-300 dark:border-border p-12 text-center">
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+        <div className="bg-card rounded-xl border border-dashed border-border p-12 text-center">
+          <p className="text-sm text-muted-foreground">
             No evaluation plan found for <strong>{selectedSubject}</strong> in <strong>{selectedClass}</strong>.
           </p>
         </div>
       )}
 
       {evaluation && (
-        <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-border shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-border">
+        <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border">
             <div>
-              <p className="font-bold text-sm text-[#002045] dark:text-white">{evaluation.title}</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">{selectedClass} · {selectedSubject} · {classStudents.length} student{classStudents.length !== 1 ? 's' : ''}</p>
+              <p className="font-bold text-sm text-foreground">{evaluation.title}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">{selectedClass} · {selectedSubject} · {classStudents.length} student{classStudents.length !== 1 ? 's' : ''}</p>
             </div>
-            <button onClick={handleSaveAll} className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm">
+            <Button onClick={handleSaveAll} className="px-5 py-2 text-xs font-bold text-primary-foreground bg-primary hover:bg-primary/90">
               Save All
-            </button>
+            </Button>
           </div>
 
           {classStudents.length === 0 ? (
-            <p className="p-8 text-center text-sm text-slate-400">No students found in {selectedClass}.</p>
+            <p className="p-8 text-center text-sm text-muted-foreground">No students found in {selectedClass}.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-sm">
-                <thead>
-                  <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-border">
-                    <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Roll No</th>
-                    <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Student Name</th>
-                    {outcomes.map(lo => (
-                      <th key={lo.name} className="px-2 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center whitespace-nowrap">
-                        <div>{lo.name}</div>
-                        <div className="text-[9px] font-normal text-slate-400 normal-case">/{lo.fullMarks ?? '—'} · pass {lo.passMarks ?? '—'}</div>
-                      </th>
-                    ))}
-                    <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center whitespace-nowrap">Total</th>
-                    <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Result</th>
-                    <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Detail</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-border">
-                  {classStudents.map(student => {
-                    const marks = getStudentMark(student.id, evaluation.id);
-                    const obtained = calcObtainedMarks(marks, outcomes);
-                    const fullTotal = calcFullMarks(outcomes);
-                    const status = calcPassFail(marks, outcomes);
-                    return (
-                      <tr key={student.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/20 transition-colors">
-                        <td className="px-4 py-3 font-mono text-xs font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">{student.rollNumber}</td>
-                        <td className="px-4 py-3 font-medium text-[#002045] dark:text-white whitespace-nowrap">{student.name}</td>
-                        {outcomes.map(lo => {
-                          const val = marks?.outcomeMarks[lo.name]?.regularMark;
-                          const max = lo.fullMarks ?? 100;
-                          const isFail = val !== null && val !== undefined && val < (lo.passMarks ?? 0);
-                          return (
-                            <td key={lo.name} className="px-2 py-3 text-center">
-                              <input type="number" min={0} max={max} step="any" value={val ?? ''} placeholder="—"
-                                onChange={e => handleMarkChange(student.id, lo.name, e.target.value, max)}
-                                className={cn('w-16 px-2 py-1.5 text-center text-xs font-bold rounded border-2 focus:outline-none focus:ring-2',
-                                  isFail ? 'bg-red-50 dark:bg-red-950/20 border-red-300 dark:border-red-800 text-red-900 dark:text-red-300 focus:ring-red-400'
-                                    : 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-300 focus:ring-emerald-400'
-                                )} />
-                            </td>
-                          );
-                        })}
-                        <td className="px-4 py-3 text-center font-bold text-sm text-[#002045] dark:text-white whitespace-nowrap">{obtained} / {fullTotal}</td>
-                        <td className="px-4 py-3 text-center">
-                          <span className={cn('px-2.5 py-1 rounded-full text-[10px] font-bold uppercase',
-                            status === 'Pass' ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300'
-                              : status === 'Fail' ? 'bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-300'
-                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-                          )}>{status}</span>
-                        </td>
-                        <td className="px-4 py-3 text-center">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30 border-b border-border">
+                  <TableHead className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Roll No</TableHead>
+                  <TableHead className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Student Name</TableHead>
+                  {outcomes.map(lo => (
+                    <TableHead key={lo.name} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center whitespace-nowrap">
+                      <div>{lo.name}</div>
+                      <div className="text-[9px] font-normal text-muted-foreground normal-case font-mono">/{lo.fullMarks ?? '—'} · pass {lo.passMarks ?? '—'}</div>
+                    </TableHead>
+                  ))}
+                  <TableHead className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center whitespace-nowrap">Total</TableHead>
+                  <TableHead className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">Result</TableHead>
+                  <TableHead className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">Detail</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {classStudents.map(student => {
+                  const marks = getStudentMark(student.id, evaluation.id);
+                  const obtained = calcObtainedMarks(marks, outcomes);
+                  const fullTotal = calcFullMarks(outcomes);
+                  const status = calcPassFail(marks, outcomes);
+                  return (
+                    <TableRow key={student.id} className="hover:bg-muted/20 transition-colors">
+                      <TableCell className="font-mono text-xs font-semibold text-muted-foreground whitespace-nowrap">{student.rollNumber}</TableCell>
+                      <TableCell className="font-medium text-foreground whitespace-nowrap">{student.name}</TableCell>
+                      {outcomes.map(lo => {
+                        const val = marks?.outcomeMarks[lo.name]?.regularMark;
+                        const max = lo.fullMarks ?? 100;
+                        const isFail = val !== null && val !== undefined && val < (lo.passMarks ?? 0);
+                        return (
+                          <TableCell key={lo.name} className="text-center">
+                            <Input type="number" min={0} max={max} step="any" value={val ?? ''} placeholder="—"
+                              onChange={e => handleMarkChange(student.id, lo.name, e.target.value, max)}
+                              className={cn('w-16 text-center text-xs font-bold mx-auto border-2',
+                                isFail ? 'bg-red-50 dark:bg-red-950/20 border-red-300 dark:border-red-800 text-red-900 dark:text-red-300'
+                                  : 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-300'
+                              )} />
+                          </TableCell>
+                        );
+                      })}
+                      <TableCell className="text-center font-bold text-sm text-foreground whitespace-nowrap">{obtained} / {fullTotal}</TableCell>
+                      <TableCell className="text-center">
+                        <span className={cn('px-2.5 py-1 rounded-full text-[10px] font-bold uppercase',
+                          status === 'Pass' ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300'
+                            : status === 'Fail' ? 'bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-300'
+                              : 'bg-muted text-muted-foreground'
+                        )}>{status}</span>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Button variant="outline" size="sm" asChild>
                           <Link href={`/teacher/mark-entry/${student.id}?evalId=${evaluation.id}`}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded border border-slate-200 dark:border-border transition-colors">
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold">
                             <Eye className="w-3 h-3" />View
                           </Link>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           )}
         </div>
       )}
