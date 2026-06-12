@@ -20,9 +20,9 @@ export default async function TeacherLayout({ children }: { children: React.Reac
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen flex-col w-full">
+      <div className="h-screen overflow-hidden flex flex-col w-full">
         <Navbar user={session.user} />
-        <div className="flex flex-1">
+        <div className="flex flex-1 overflow-hidden">
           <TeacherSidebar />
           <SidebarInset className="flex-1 overflow-y-auto p-6 bg-transparent">
             {children}
