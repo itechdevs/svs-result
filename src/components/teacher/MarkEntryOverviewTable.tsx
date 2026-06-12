@@ -6,19 +6,15 @@ import { Eye, CheckCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { useProfile } from '@/hooks/use-profile';
-import { useSubjects } from '@/hooks/use-subjects';
 import { useEvaluationTemplates, useStudentEvaluationResults, useBulkSaveMarks } from '@/hooks/use-evaluations';
 import { useStudents } from '@/hooks/use-students';
-import { calcObtainedMarks, calcFullMarks, calcPassFail } from '@/components/teacher/DetailedMarkEntryView';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/shared/ui/select';
 import { useSearchParams } from 'next/navigation';
 import { StudentOutcomeMark, OutcomeMark } from '@/types/academic';
 
 export default function MarkEntryOverviewTable() {
   const { data: profile } = useProfile();
-  const { data: subjectsData = [] } = useSubjects();
   const { data: templatesData = [] } = useEvaluationTemplates();
-  const { data: studentsData } = useStudents({ limit: 500 });
   const bulkSave = useBulkSaveMarks();
 
   const searchParams = useSearchParams();
@@ -27,60 +23,52 @@ export default function MarkEntryOverviewTable() {
   const [saved, setSaved] = useState(false);
   const [localMarks, setLocalMarks] = useState<StudentOutcomeMark[]>([]);
 
-  // Assigned classes
+  const { data: studentsData } = useStudents(selectedClass ? { grade: selectedClass, limit: 9999 } : { limit: 1 });
+
+  // Assigned classes from syncedTeacher.subjects
   const assignedClasses = useMemo(() => {
-    if (!profile?.teacherAssignments) return [];
-    return Array.from(new Set(profile.teacherAssignments.map(a => a.gradeLevel)));
+    const subjects = profile?.syncedTeacher?.subjects ?? [];
+    return Array.from(new Set(subjects.map(s => s.gradeLevel)));
   }, [profile]);
 
   // Subjects for selected class
   const subjects = useMemo(() => {
-    if (!selectedClass || !profile?.teacherAssignments) return [];
-    const classAssignments = profile.teacherAssignments.filter(a => a.gradeLevel === selectedClass);
-    const hasAllSubjects = classAssignments.some(a => a.syncedSubjectId === null);
-    const classSubjects = subjectsData.filter(s => s.gradeLevel === selectedClass);
-    if (hasAllSubjects) return classSubjects.map(s => s.name);
-    const ids = new Set(classAssignments.map(a => a.syncedSubjectId));
-    return classSubjects.filter(s => ids.has(s.id)).map(s => s.name);
-  }, [selectedClass, profile, subjectsData]);
+    const teacherSubjects = profile?.syncedTeacher?.subjects ?? [];
+    return teacherSubjects.filter(s => s.gradeLevel === selectedClass).map(s => s.name);
+  }, [selectedClass, profile]);
 
-  // Evaluation template for class+subject
-  const evaluation = useMemo(() => {
+  // All evaluation templates for selected class+subject (multiple per subject)
+  const subjectObj = useMemo(() => {
     if (!selectedClass || !selectedSubject) return undefined;
-    const subject = subjectsData.find(s => s.name === selectedSubject && s.gradeLevel === selectedClass);
-    if (!subject) return undefined;
-    const t = templatesData.find(t => t.syncedSubjectId === subject.id);
-    if (!t) return undefined;
-    return {
-      id: t.id, title: t.name, subject: t.syncedSubject?.name ?? 'Unknown',
-      learningOutcomes: [{
-        name: t.name, text: '', regularRating: 0, afterSupportRating: null,
-        regularDate: '', supportDate: '',
-        fullMarks: Number(t.fullMarks), passMarks: Number(t.passMarks), taskType: 'Standard',
-      }],
-      fullMarks: Number(t.fullMarks), passMarks: Number(t.passMarks),
-    };
-  }, [selectedClass, selectedSubject, subjectsData, templatesData]);
+    return profile?.syncedTeacher?.subjects.find(s => s.name === selectedSubject && s.gradeLevel === selectedClass);
+  }, [selectedClass, selectedSubject, profile]);
+
+  const evaluations = useMemo(() => {
+    if (!subjectObj) return [];
+    return templatesData.filter(t => t.syncedSubjectId === subjectObj.id);
+  }, [subjectObj, templatesData]);
 
   // Students for selected class
   const classStudents = useMemo(() =>
-    studentsData?.students.filter(s => s.grade === selectedClass) ?? [],
-    [studentsData, selectedClass]
+    studentsData?.students ?? [],
+    [studentsData]
   );
 
-  // Fetch results for this evaluation
+  // Fetch results for all evaluations in this subject
+  const evalIds = evaluations.map(e => e.id);
   const { data: resultsData = [] } = useStudentEvaluationResults(
-    evaluation ? { evaluationTemplateId: evaluation.id, limit: 1000 } : {}
+    evalIds.length > 0 ? { evaluationTemplateId: evalIds[0], limit: 1000 } : {}
   );
 
   // Sync DB results into local marks once
   useEffect(() => {
-    if (!evaluation || resultsData.length === 0) return;
+    if (evaluations.length === 0 || resultsData.length === 0) return;
+    const t = evaluations[0];
     const mapped: StudentOutcomeMark[] = resultsData.map(r => ({
       studentId: r.syncedStudentId,
       evaluationId: r.evaluationTemplateId,
       outcomeMarks: {
-        [evaluation.learningOutcomes[0].name]: {
+        [t.name]: {
           regularMark: r.marksObtained,
           regularDate: r.submittedAt ? new Date(r.submittedAt).toISOString().split('T')[0] : '',
           supportMark: null, supportDate: '', reExamMark: null, reExamDate: '', remarks: r.remarks ?? '',
@@ -88,7 +76,7 @@ export default function MarkEntryOverviewTable() {
       },
     }));
     setLocalMarks(mapped);
-  }, [resultsData, evaluation?.id]);
+  }, [resultsData, evaluations.length > 0 ? evaluations[0].id : null]);
 
   const getStudentMark = useCallback(
     (studentId: string, evalId: string) => localMarks.find(m => m.studentId === studentId && m.evaluationId === evalId),
@@ -111,31 +99,38 @@ export default function MarkEntryOverviewTable() {
   );
 
   const handleSaveAll = async () => {
-    if (!evaluation) return;
-    const relevantMarks = localMarks.filter(m => m.evaluationId === evaluation.id);
-    if (relevantMarks.length === 0) return;
-    const outcomeKey = evaluation.learningOutcomes[0].name;
-    await bulkSave.mutateAsync({
-      evaluationTemplateId: evaluation.id,
-      results: relevantMarks.map(m => ({
-        syncedStudentId: m.studentId,
-        marksObtained: m.outcomeMarks[outcomeKey]?.regularMark ?? undefined,
-        isAbsent: m.outcomeMarks[outcomeKey]?.regularMark === null || m.outcomeMarks[outcomeKey]?.regularMark === undefined,
-        remarks: m.outcomeMarks[outcomeKey]?.remarks || undefined,
-      })),
-    });
+    if (evaluations.length === 0) return;
+    for (const t of evaluations) {
+      const relevantMarks = localMarks.filter(m => m.evaluationId === t.id);
+      if (relevantMarks.length === 0) continue;
+      await bulkSave.mutateAsync({
+        evaluationTemplateId: t.id,
+        results: relevantMarks.map(m => ({
+          syncedStudentId: m.studentId,
+          marksObtained: m.outcomeMarks[t.name]?.regularMark ?? undefined,
+          isAbsent: m.outcomeMarks[t.name]?.regularMark === null || m.outcomeMarks[t.name]?.regularMark === undefined,
+          remarks: m.outcomeMarks[t.name]?.remarks || undefined,
+        })),
+      });
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };
 
-  const handleMarkChange = (studentId: string, outcomeName: string, raw: string, max: number) => {
-    if (!evaluation) return;
+  const handleMarkChange = (studentId: string, evalId: string, outcomeName: string, raw: string, max: number) => {
     const num = raw === '' ? null : Math.min(Math.max(0, Number(raw)), max);
-    updateOutcomeMark(studentId, evaluation.id, outcomeName, { regularMark: num });
+    updateOutcomeMark(studentId, evalId, outcomeName, { regularMark: num });
   };
 
   const handleClassChange = (value: string) => { setSelectedClass(value); setSelectedSubject(''); };
-  const outcomes = evaluation?.learningOutcomes ?? [];
+
+  // Build outcome columns: one per template
+  const outcomeColumns = useMemo(() => evaluations.map(t => ({
+    evalId: t.id,
+    name: t.name,
+    fullMarks: Number(t.fullMarks),
+    passMarks: Number(t.passMarks),
+  })), [evaluations]);
 
   return (
     <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
@@ -170,7 +165,7 @@ export default function MarkEntryOverviewTable() {
         </div>
       )}
 
-      {selectedClass && selectedSubject && !evaluation && (
+      {selectedClass && selectedSubject && evaluations.length === 0 && (
         <div className="bg-white dark:bg-card rounded-xl border border-dashed border-slate-300 dark:border-border p-12 text-center">
           <p className="text-sm text-slate-500 dark:text-slate-400">
             No evaluation plan found for <strong>{selectedSubject}</strong> in <strong>{selectedClass}</strong>.
@@ -178,11 +173,11 @@ export default function MarkEntryOverviewTable() {
         </div>
       )}
 
-      {evaluation && (
+      {evaluations.length > 0 && (
         <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-border shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-border">
             <div>
-              <p className="font-bold text-sm text-[#002045] dark:text-white">{evaluation.title}</p>
+              <p className="font-bold text-sm text-[#002045] dark:text-white">{selectedSubject}</p>
               <p className="text-[11px] text-slate-400 mt-0.5">{selectedClass} · {selectedSubject} · {classStudents.length} student{classStudents.length !== 1 ? 's' : ''}</p>
             </div>
             <button onClick={handleSaveAll} className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm">
@@ -199,10 +194,10 @@ export default function MarkEntryOverviewTable() {
                   <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-border">
                     <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Roll No</th>
                     <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Student Name</th>
-                    {outcomes.map(lo => (
-                      <th key={lo.name} className="px-2 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center whitespace-nowrap">
-                        <div>{lo.name}</div>
-                        <div className="text-[9px] font-normal text-slate-400 normal-case">/{lo.fullMarks ?? '—'} · pass {lo.passMarks ?? '—'}</div>
+                    {outcomeColumns.map(col => (
+                      <th key={col.evalId} className="px-2 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center whitespace-nowrap">
+                        <div className="max-w-[120px] truncate" title={col.name}>{col.name}</div>
+                        <div className="text-[9px] font-normal text-slate-400 normal-case">/{col.fullMarks} · pass {col.passMarks}</div>
                       </th>
                     ))}
                     <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center whitespace-nowrap">Total</th>
@@ -212,22 +207,33 @@ export default function MarkEntryOverviewTable() {
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-border">
                   {classStudents.map(student => {
-                    const marks = getStudentMark(student.id, evaluation.id);
-                    const obtained = calcObtainedMarks(marks, outcomes);
-                    const fullTotal = calcFullMarks(outcomes);
-                    const status = calcPassFail(marks, outcomes);
+                    const totalObtained = outcomeColumns.reduce((sum, col) => {
+                      const mark = getStudentMark(student.id, col.evalId);
+                      return sum + (mark?.outcomeMarks[col.name]?.regularMark ?? 0);
+                    }, 0);
+                    const totalFull = outcomeColumns.reduce((sum, col) => sum + col.fullMarks, 0);
+                    const anyFail = outcomeColumns.some(col => {
+                      const mark = getStudentMark(student.id, col.evalId);
+                      const val = mark?.outcomeMarks[col.name]?.regularMark;
+                      return val !== null && val !== undefined && val < col.passMarks;
+                    });
+                    const hasMarks = outcomeColumns.some(col => {
+                      const mark = getStudentMark(student.id, col.evalId);
+                      return mark?.outcomeMarks[col.name]?.regularMark !== null && mark?.outcomeMarks[col.name]?.regularMark !== undefined;
+                    });
+                    const status = !hasMarks ? '—' : anyFail ? 'Fail' : 'Pass';
                     return (
                       <tr key={student.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/20 transition-colors">
                         <td className="px-4 py-3 font-mono text-xs font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">{student.rollNumber}</td>
                         <td className="px-4 py-3 font-medium text-[#002045] dark:text-white whitespace-nowrap">{student.name}</td>
-                        {outcomes.map(lo => {
-                          const val = marks?.outcomeMarks[lo.name]?.regularMark;
-                          const max = lo.fullMarks ?? 100;
-                          const isFail = val !== null && val !== undefined && val < (lo.passMarks ?? 0);
+                        {outcomeColumns.map(col => {
+                          const mark = getStudentMark(student.id, col.evalId);
+                          const val = mark?.outcomeMarks[col.name]?.regularMark;
+                          const isFail = val !== null && val !== undefined && val < col.passMarks;
                           return (
-                            <td key={lo.name} className="px-2 py-3 text-center">
-                              <input type="number" min={0} max={max} step="any" value={val ?? ''} placeholder="—"
-                                onChange={e => handleMarkChange(student.id, lo.name, e.target.value, max)}
+                            <td key={col.evalId} className="px-2 py-3 text-center">
+                              <input type="number" min={0} max={col.fullMarks} step="any" value={val ?? ''} placeholder="—"
+                                onChange={e => handleMarkChange(student.id, col.evalId, col.name, e.target.value, col.fullMarks)}
                                 className={cn('w-16 px-2 py-1.5 text-center text-xs font-bold rounded border-2 focus:outline-none focus:ring-2',
                                   isFail ? 'bg-red-50 dark:bg-red-950/20 border-red-300 dark:border-red-800 text-red-900 dark:text-red-300 focus:ring-red-400'
                                     : 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-300 focus:ring-emerald-400'
@@ -235,7 +241,7 @@ export default function MarkEntryOverviewTable() {
                             </td>
                           );
                         })}
-                        <td className="px-4 py-3 text-center font-bold text-sm text-[#002045] dark:text-white whitespace-nowrap">{obtained} / {fullTotal}</td>
+                        <td className="px-4 py-3 text-center font-bold text-sm text-[#002045] dark:text-white whitespace-nowrap">{totalObtained} / {totalFull}</td>
                         <td className="px-4 py-3 text-center">
                           <span className={cn('px-2.5 py-1 rounded-full text-[10px] font-bold uppercase',
                             status === 'Pass' ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300'
@@ -244,7 +250,7 @@ export default function MarkEntryOverviewTable() {
                           )}>{status}</span>
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <Link href={`/teacher/mark-entry/${student.id}?evalId=${evaluation.id}`}
+                          <Link href={`/teacher/mark-entry/${student.id}?evalId=${evaluations[0].id}`}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded border border-slate-200 dark:border-border transition-colors">
                             <Eye className="w-3 h-3" />View
                           </Link>
