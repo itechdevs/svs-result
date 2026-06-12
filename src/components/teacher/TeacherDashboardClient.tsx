@@ -2,26 +2,47 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { useEvaluationTemplates } from "@/hooks/use-evaluations";
+import { useEvaluationTemplates, useStudentEvaluationResults } from "@/hooks/use-evaluations";
 import { useReExamSchedules } from "@/hooks/use-re-exams";
+import { useProfile } from "@/hooks/use-profile";
 
 export default function DashboardPage() {
   const { data: templatesData = [] } = useEvaluationTemplates();
-  const { data: reExamData = [] } = useReExamSchedules();
+  const { data: reExamData = [] } = useReExamSchedules('SCHEDULED');
+  const { data: allResults = [] } = useStudentEvaluationResults({ limit: 1000 });
+  const { data: profile } = useProfile();
 
-  const reExamStats = useMemo(() => {
-    const scheduled = reExamData.filter(r => r.status === 'SCHEDULED').length;
-    const pending = reExamData.filter(r => r.status !== 'SCHEDULED').length;
-    return { scheduled, pending };
-  }, [reExamData]);
+  // Total Evaluations: same grouping logic as EvaluationsTab — one card per distinct eval plan
+  const totalEvaluations = useMemo(() => {
+    const assignedSubjectIds = new Set(profile?.syncedTeacher?.subjects.map(s => s.id) ?? []);
+    const filtered = assignedSubjectIds.size > 0
+      ? templatesData.filter(t => assignedSubjectIds.has(t.syncedSubjectId))
+      : templatesData;
+    const keys = new Set(filtered.map(t => {
+      const evalTitleMatch = t.name.match(/^\[([^\]]+)\]\[/);
+      const rawEvalPart = evalTitleMatch ? evalTitleMatch[1] : '__legacy__';
+      const evalTitle = rawEvalPart.split('|')[0];
+      return `${t.gradeConfigId}::${t.syncedSubjectId}::${evalTitle}`;
+    }));
+    return keys.size;
+  }, [templatesData, profile]);
+
+  // Pending Re-Exam: same logic as MarkEntryOverviewTable — students where isPassed === false
+  const pendingReExam = useMemo(
+    () => allResults.filter(r => r.isPassed === false).length,
+    [allResults]
+  );
+
+  // Re-Exam Scheduled: count of SCHEDULED re-exam records (source for ReExamDetailedView entries)
+  const reExamScheduled = reExamData.length;
 
   const recentEvaluations = templatesData.slice(0, 4);
-  const reExamAlerts = reExamData.filter(r => r.status !== 'SCHEDULED').slice(0, 2);
+  const reExamAlerts = reExamData.slice(0, 2);
 
   const kpis = [
-    { label: "Total evaluations", value: String(templatesData.length), sub: "Completed this semester", icon: "📋", danger: false, href: "/teacher/evaluations" },
-    { label: "Pending re-exams", value: String(reExamStats.pending), sub: "Require action", icon: "⚠️", danger: true, href: "/teacher/re-exam-portal" },
-    { label: "Re-exams scheduled", value: String(reExamStats.scheduled), sub: "Upcoming this week", icon: "📅", danger: false, href: "/teacher/re-exam-portal" },
+    { label: "Total evaluations", value: String(totalEvaluations), sub: "Completed this semester", icon: "📋", danger: false, href: "/teacher/evaluations" },
+    { label: "Pending re-exams", value: String(pendingReExam), sub: "Require action", icon: "⚠️", danger: true, href: "/teacher/re-exam-portal" },
+    { label: "Re-exams scheduled", value: String(reExamScheduled), sub: "Upcoming this week", icon: "📅", danger: false, href: "/teacher/re-exam-portal" },
   ];
 
   return (
