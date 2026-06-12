@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { GraduationCap, Layers, Library, Search, AlertCircle, Users } from 'lucide-react';
+import { GraduationCap, Layers, Library, Search, AlertCircle, Users, Sparkles } from 'lucide-react';
+import { Input } from '@/components/shared/ui/input';
 
 interface SyncedAllocation {
   id: string;
@@ -14,16 +15,16 @@ interface SyncedAllocation {
 
 function SkeletonCard() {
   return (
-    <div className="bg-white dark:bg-card border border-slate-200 dark:border-border rounded-2xl p-5 shadow-sm animate-pulse space-y-4">
+    <div className="bg-card text-card-foreground border border-border rounded-xl p-5 shadow-sm animate-pulse space-y-4">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700" />
+        <div className="w-10 h-10 rounded-full bg-muted" />
         <div className="space-y-1.5 flex-1">
-          <div className="h-3.5 bg-slate-200 dark:bg-slate-700 rounded w-2/3" />
-          <div className="h-2.5 bg-slate-100 dark:bg-slate-800 rounded w-1/3" />
+          <div className="h-3.5 bg-muted rounded w-2/3" />
+          <div className="h-2.5 bg-muted/60 rounded w-1/3" />
         </div>
       </div>
-      <div className="h-2.5 bg-slate-100 dark:bg-slate-800 rounded w-full" />
-      <div className="h-2.5 bg-slate-100 dark:bg-slate-800 rounded w-4/5" />
+      <div className="h-2.5 bg-muted/60 rounded w-full" />
+      <div className="h-2.5 bg-muted/60 rounded w-4/5" />
     </div>
   );
 }
@@ -70,38 +71,38 @@ export default function AllocationsTab() {
     >
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-[#002045] dark:text-white">Teacher Allocations</h1>
-        <p className="text-xs text-slate-500 mt-1">Synced teacher-subject assignments from school management system.</p>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Teacher Allocations</h1>
+        <p className="text-sm text-muted-foreground mt-1">Synced teacher-subject assignments from school management system.</p>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { icon: GraduationCap, label: 'Teachers', value: loading ? '—' : allocations.length },
-          { icon: Layers, label: 'Subjects', value: loading ? '—' : totalSubjects },
-          { icon: Library, label: 'Classes', value: loading ? '—' : totalClasses },
-        ].map(({ icon: Icon, label, value }) => (
-          <div key={label} className="bg-white dark:bg-card border border-slate-200 dark:border-border rounded-2xl p-5 shadow-sm flex items-center gap-4">
-            <div className="w-11 h-11 rounded-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center border shadow-sm">
-              <Icon className="w-5 h-5 text-[#002045] dark:text-[#9ff5c1]" />
+          { icon: GraduationCap, label: 'Teachers', value: loading ? '—' : allocations.length, gradient: 'from-primary/10 to-primary/5', border: 'border-primary/20' },
+          { icon: Layers, label: 'Subjects', value: loading ? '—' : totalSubjects, gradient: 'from-emerald-500/10 to-emerald-500/5', border: 'border-emerald-500/20' },
+          { icon: Library, label: 'Classes', value: loading ? '—' : totalClasses, gradient: 'from-purple-500/10 to-purple-500/5', border: 'border-purple-500/20' },
+        ].map(({ icon: Icon, label, value, gradient, border }) => (
+          <div key={label} className="bg-card text-card-foreground border border-border rounded-xl p-5 shadow-sm flex items-center gap-4 hover:shadow-md transition-all duration-300 hover:-translate-y-0.5">
+            <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center border ${border} shadow-sm`}>
+              <Icon className="w-5 h-5 text-foreground" />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{label}</p>
-              <p className="text-2xl font-extrabold text-[#002045] dark:text-blue-300 mt-0.5">{value}</p>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">{label}</p>
+              <p className="text-2xl font-extrabold text-foreground mt-1.5">{value}</p>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Search */}
+      {/* Search & Actions */}
       <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-        <input
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
           type="text"
           placeholder="Search teacher, subject, or class..."
           value={query}
           onChange={e => setQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 text-xs border border-slate-200 dark:border-border rounded-lg bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#002045] dark:focus:ring-[#9ff5c1]"
+          className="pl-10 h-10 text-xs"
         />
       </div>
 
@@ -111,62 +112,70 @@ export default function AllocationsTab() {
           {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
         </div>
       ) : error ? (
-        <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-          <AlertCircle className="w-8 h-8 text-red-400" />
-          <p className="font-semibold text-red-600 dark:text-red-400">Failed to load allocations</p>
-          <p className="text-xs text-slate-500">{error}</p>
+        <div className="flex flex-col items-center justify-center py-16 gap-3 text-center bg-card rounded-xl border border-border">
+          <AlertCircle className="w-8 h-8 text-destructive" />
+          <p className="font-semibold text-destructive">Failed to load allocations</p>
+          <p className="text-xs text-muted-foreground">{error}</p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-          <Users className="w-8 h-8 text-slate-300 dark:text-slate-600" />
-          <p className="font-semibold text-slate-500">
+        <div className="flex flex-col items-center justify-center py-16 gap-3 text-center bg-card rounded-xl border border-border">
+          <Users className="w-8 h-8 text-muted-foreground/60" />
+          <p className="font-semibold text-muted-foreground">
             {allocations.length === 0 ? 'No allocations synced yet' : 'No teachers match your search'}
           </p>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-muted-foreground/85">
             {allocations.length === 0 ? 'Sync teacher data from the Sync Management tab first.' : 'Try a different search term.'}
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map(teacher => {
-            const assignments = teacher.subjects.map(s => `${s.gradeLevel}(${s.name})`).join(', ');
             const initials = teacher.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
             const syncDate = new Date(teacher.syncedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
             return (
-              <div key={teacher.id} className="bg-white dark:bg-card border border-slate-200 dark:border-border rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow space-y-3">
-                {/* Teacher identity */}
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#002045]/10 dark:bg-blue-950 flex items-center justify-center shrink-0 border border-[#002045]/20 dark:border-blue-900">
-                    <span className="text-xs font-bold text-[#002045] dark:text-blue-300">{initials}</span>
+              <div key={teacher.id} className="bg-gradient-to-br from-card to-muted/10 text-card-foreground border border-border rounded-xl p-5 shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-300 flex flex-col justify-between gap-4">
+                <div className="space-y-4">
+                  {/* Teacher identity */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 shadow-inner">
+                      <span className="text-xs font-extrabold text-primary">{initials}</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-sm text-foreground truncate leading-snug">{teacher.name}</p>
+                      <p className="text-[10px] text-muted-foreground font-mono mt-0.5">Synced {syncDate}</p>
+                    </div>
+                    {teacher.hasAccount && (
+                      <span className="shrink-0 text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                        <Sparkles className="w-2.5 h-2.5" />
+                        Account
+                      </span>
+                    )}
                   </div>
-                  <div className="min-w-0">
-                    <p className="font-bold text-sm text-[#002045] dark:text-white truncate">{teacher.name}</p>
-                    <p className="text-[10px] text-slate-400">Synced {syncDate}</p>
+
+                  {/* Divider */}
+                  <div className="border-t border-border/80" />
+
+                  {/* Assignments */}
+                  <div>
+                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Assigned Classes &amp; Subjects</p>
+                    {teacher.subjects.length === 0 ? (
+                      <p className="text-xs text-muted-foreground italic">No subjects assigned</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5">
+                        {teacher.subjects.map((s, idx) => (
+                          <span key={idx} className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded bg-muted text-foreground border border-border/50">
+                            {s.gradeLevel} · <span className="text-primary ml-1">{s.name}</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  {teacher.hasAccount && (
-                    <span className="ml-auto shrink-0 text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900">
-                      Account
-                    </span>
-                  )}
-                </div>
-
-                {/* Divider */}
-                <div className="border-t border-slate-100 dark:border-border" />
-
-                {/* Assignments */}
-                <div>
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Assigned Classes &amp; Subjects</p>
-                  {teacher.subjects.length === 0 ? (
-                    <p className="text-xs text-slate-400 italic">No subjects assigned</p>
-                  ) : (
-                    <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">{assignments}</p>
-                  )}
                 </div>
 
                 {/* Footer meta */}
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-[10px] text-slate-400">
+                <div className="flex items-center justify-between pt-2 border-t border-border/40">
+                  <span className="text-[10px] text-muted-foreground font-mono">
                     {teacher.subjects.length} subject{teacher.subjects.length !== 1 ? 's' : ''}
                     {' · '}
                     {new Set(teacher.subjects.map(s => s.gradeLevel)).size} class{new Set(teacher.subjects.map(s => s.gradeLevel)).size !== 1 ? 'es' : ''}

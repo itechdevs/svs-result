@@ -7,6 +7,15 @@ import { cn } from '@/lib/utils';
 import { useEvaluationTemplates, useStudentEvaluationResults } from '@/hooks/use-evaluations';
 import { useStudents } from '@/hooks/use-students';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/shared/ui/select';
+import { buttonVariants } from '@/components/shared/ui/button';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from '@/components/shared/ui/table';
 
 interface CompiledResult {
   rollNo: string;
@@ -128,52 +137,52 @@ export default function ResultCompilationTab() {
       {/* Header */}
       <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-2xl font-bold text-[#002045] dark:text-white">Result Compilation</h1>
-          <p className="text-xs text-slate-500">View all evaluations created by teachers</p>
+          <h1 className="text-3xl font-bold text-foreground">Result Compilation</h1>
+          <p className="text-sm text-muted-foreground mt-1">View all evaluations created by teachers</p>
         </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white dark:bg-card border border-slate-200 dark:border-border rounded-2xl p-5 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 flex items-center justify-center">
+        <div className="bg-card text-card-foreground border border-border rounded-xl p-5 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
+          <div className="w-12 h-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center border border-primary/20 shadow-sm">
             <ClipboardList className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Total Evaluations</p>
-            <h4 className="text-2xl font-extrabold text-[#002045] dark:text-blue-300 mt-1">{templatesData.length}</h4>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Total Evaluations</p>
+            <h4 className="text-2xl font-extrabold text-foreground mt-1">{templatesData.length}</h4>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-card border border-slate-200 dark:border-border rounded-2xl p-5 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 flex items-center justify-center">
+        <div className="bg-card text-card-foreground border border-border rounded-xl p-5 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
+          <div className="w-12 h-12 rounded-lg bg-emerald-500/10 text-emerald-650 dark:text-emerald-450 flex items-center justify-center border border-emerald-500/20 shadow-sm">
             <CheckCircle className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Active Evaluations</p>
-            <h4 className="text-2xl font-extrabold text-[#002045] dark:text-blue-300 mt-1">
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Active Evaluations</p>
+            <h4 className="text-2xl font-extrabold text-foreground mt-1">
               {templatesData.filter(t => t.isActive).length}
             </h4>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-card border border-slate-200 dark:border-border rounded-2xl p-5 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 flex items-center justify-center">
+        <div className="bg-card text-card-foreground border border-border rounded-xl p-5 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
+          <div className="w-12 h-12 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center border border-purple-500/20 shadow-sm">
             <BookOpen className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Unique Subjects</p>
-            <h4 className="text-2xl font-extrabold text-[#002045] dark:text-blue-300 mt-1">{allSubjects.length}</h4>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Unique Subjects</p>
+            <h4 className="text-2xl font-extrabold text-foreground mt-1">{allSubjects.length}</h4>
           </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-border shadow-sm p-5">
-        <h3 className="text-xs font-bold text-[#002045] dark:text-white uppercase tracking-wider mb-3">Filter Evaluations</h3>
+      <div className="bg-card text-card-foreground rounded-xl border border-border shadow-sm p-5">
+        <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-3">Filter Evaluations</h3>
         <div className="grid grid-cols-1 gap-4">
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Filter by Class</label>
+            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Filter by Class</label>
             <Select value={selectedClass} onValueChange={setSelectedClass}>
               <SelectTrigger className="w-full text-sm">
                 <SelectValue placeholder="All Classes" />
@@ -186,7 +195,7 @@ export default function ResultCompilationTab() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Filter by Subjects (Multiple)</label>
+            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Filter by Subjects (Multiple)</label>
             <div className="flex flex-wrap gap-2">
               {allSubjects.map(subject => (
                 <button
@@ -195,8 +204,8 @@ export default function ResultCompilationTab() {
                   className={cn(
                     "px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors",
                     selectedSubjects.includes(subject)
-                      ? "bg-blue-500 text-white border-blue-500"
-                      : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-border hover:bg-slate-50 dark:hover:bg-slate-800"
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-transparent text-foreground border-input hover:bg-muted"
                   )}
                 >
                   {subject}
@@ -204,7 +213,7 @@ export default function ResultCompilationTab() {
               ))}
             </div>
             {selectedSubjects.length > 0 && (
-              <button onClick={() => setSelectedSubjects([])} className="text-xs text-red-600 dark:text-red-400 hover:underline">
+              <button onClick={() => setSelectedSubjects([])} className="text-xs text-destructive hover:underline">
                 Clear all subjects
               </button>
             )}
@@ -219,54 +228,56 @@ export default function ResultCompilationTab() {
             key={t.id}
             onClick={() => toggleEvaluation(t.id)}
             className={cn(
-              "bg-white dark:bg-card border rounded-xl overflow-hidden hover:shadow-md transition-all flex flex-col cursor-pointer",
+              "bg-card text-card-foreground border rounded-xl overflow-hidden hover:shadow-md transition-all flex flex-col cursor-pointer",
               selectedEvaluations.includes(t.id)
-                ? "border-blue-500 ring-2 ring-blue-500"
-                : "border-slate-200 dark:border-border"
+                ? "border-primary ring-2 ring-primary"
+                : "border-border"
             )}
           >
             <div className="p-5 flex-1 space-y-4">
               <div className="flex justify-between items-start">
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center gap-2">
-                    {selectedEvaluations.includes(t.id) && <CheckCircle className="w-4 h-4 text-blue-500" />}
+                    {selectedEvaluations.includes(t.id) && <CheckCircle className="w-4 h-4 text-primary" />}
                     <span className={cn(
-                      "px-2.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider w-fit",
-                      t.isActive ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300" : "bg-slate-100 dark:bg-slate-800 text-slate-600"
+                      "px-2.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider w-fit border",
+                      t.isActive
+                        ? "bg-emerald-100 dark:bg-emerald-950/45 text-emerald-800 dark:text-emerald-300 border-emerald-250 dark:border-emerald-900/40"
+                        : "bg-muted text-muted-foreground border-border"
                     )}>
                       {t.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </div>
-                  <span className="text-slate-400 text-[10px] font-mono block">
+                  <span className="text-muted-foreground text-[10px] font-mono block">
                     {t.scheduledDate ? new Date(t.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'TBD'}
                   </span>
                 </div>
-                <span className="text-[10px] font-bold px-2.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-[#002045] dark:text-blue-300 rounded-full uppercase tracking-wider border dark:border-border">
+                <span className="text-[10px] font-bold px-2.5 py-0.5 bg-muted text-foreground rounded-full uppercase tracking-wider border border-border">
                   {t.syncedSubject?.name ?? 'Unknown'}
                 </span>
               </div>
 
               <div>
-                <h3 className="font-bold text-sm text-[#002045] dark:text-white leading-snug line-clamp-1">{t.name}</h3>
-                <p className="text-[11px] text-slate-400 mt-1">Grade: {t.gradeConfig?.gradeLevel ?? '—'}</p>
+                <h3 className="font-bold text-sm text-foreground leading-snug line-clamp-1">{t.name}</h3>
+                <p className="text-[11px] text-muted-foreground mt-1">Grade: {t.gradeConfig?.gradeLevel ?? '—'}</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-900/40 p-3 rounded-lg border border-slate-100 dark:border-border">
+              <div className="grid grid-cols-2 gap-3 bg-muted/30 p-3 rounded-lg border border-border">
                 <div>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase block">Max Marks</span>
-                  <span className="font-bold text-xs text-slate-700 dark:text-slate-300 font-mono">{t.fullMarks}</span>
+                  <span className="text-[9px] font-bold text-muted-foreground uppercase block">Max Marks</span>
+                  <span className="font-bold text-xs text-foreground font-mono">{t.fullMarks}</span>
                 </div>
                 <div>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase block">Pass Marks</span>
-                  <span className="font-bold text-xs text-slate-700 dark:text-slate-300 font-mono">{t.passMarks}</span>
+                  <span className="text-[9px] font-bold text-muted-foreground uppercase block">Pass Marks</span>
+                  <span className="font-bold text-xs text-foreground font-mono">{t.passMarks}</span>
                 </div>
                 <div>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase block">Weightage</span>
-                  <span className="font-bold text-xs text-[#002045] dark:text-blue-300 font-mono">{t.weightage}%</span>
+                  <span className="text-[9px] font-bold text-muted-foreground uppercase block">Weightage</span>
+                  <span className="font-bold text-xs text-primary font-mono">{t.weightage}%</span>
                 </div>
                 <div>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase block">Academic Year</span>
-                  <span className="font-bold text-xs text-[#002045] dark:text-blue-300 font-mono">{t.gradeConfig?.academicYear?.name ?? '—'}</span>
+                  <span className="text-[9px] font-bold text-muted-foreground uppercase block">Academic Year</span>
+                  <span className="font-bold text-xs text-primary font-mono">{t.gradeConfig?.academicYear?.name ?? '—'}</span>
                 </div>
               </div>
             </div>
@@ -276,69 +287,67 @@ export default function ResultCompilationTab() {
 
       {/* Compiled Results Table */}
       {selectedEvaluations.length > 0 && compiledResults.length > 0 && (
-        <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-border shadow-sm p-5">
+        <div className="bg-card text-card-foreground rounded-xl border border-border shadow-sm p-5">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-bold text-[#002045] dark:text-white uppercase tracking-wider">
+            <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
               Compiled Results ({compiledResults.length} students)
             </h3>
-            <button onClick={() => setSelectedEvaluations([])} className="text-xs text-red-600 dark:text-red-400 hover:underline">
+            <button onClick={() => setSelectedEvaluations([])} className="text-xs text-destructive hover:underline">
               Clear selection
             </button>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs border-collapse">
-              <thead>
-                <tr className="bg-slate-50 dark:bg-slate-900/40">
-                  <th className="border border-slate-200 dark:border-border px-3 py-2 text-left font-bold text-[#002045] dark:text-white">Roll No</th>
-                  <th className="border border-slate-200 dark:border-border px-3 py-2 text-left font-bold text-[#002045] dark:text-white">Student Name</th>
-                  {templatesData.filter(t => selectedEvaluations.includes(t.id)).map(t => (
-                    <th key={t.id} className="border border-slate-200 dark:border-border px-3 py-2 text-center font-bold text-[#002045] dark:text-white">
-                      {t.syncedSubject?.name ?? 'Unknown'}
-                    </th>
-                  ))}
-                  <th className="border border-slate-200 dark:border-border px-3 py-2 text-center font-bold text-[#002045] dark:text-white">Total</th>
-                  <th className="border border-slate-200 dark:border-border px-3 py-2 text-center font-bold text-[#002045] dark:text-white">Average</th>
-                  <th className="border border-slate-200 dark:border-border px-3 py-2 text-center font-bold text-[#002045] dark:text-white">Percentage</th>
-                  <th className="border border-slate-200 dark:border-border px-3 py-2 text-center font-bold text-[#002045] dark:text-white">Grade</th>
-                  <th className="border border-slate-200 dark:border-border px-3 py-2 text-center font-bold text-[#002045] dark:text-white">Result</th>
-                </tr>
-              </thead>
-              <tbody>
-                {compiledResults.map(result => (
-                  <tr key={result.studentId} className="hover:bg-slate-50 dark:hover:bg-slate-900/20">
-                    <td className="border border-slate-200 dark:border-border px-3 py-2 text-slate-700 dark:text-slate-300">{result.rollNo}</td>
-                    <td className="border border-slate-200 dark:border-border px-3 py-2 text-slate-700 dark:text-slate-300">{result.studentName}</td>
-                    {templatesData.filter(t => selectedEvaluations.includes(t.id)).map(t => (
-                      <td key={t.id} className="border border-slate-200 dark:border-border px-3 py-2 text-center text-slate-700 dark:text-slate-300">
-                        {result.subjectMarks[t.syncedSubject?.name ?? 'Unknown'] ?? '-'}
-                      </td>
-                    ))}
-                    <td className="border border-slate-200 dark:border-border px-3 py-2 text-center font-semibold text-slate-700 dark:text-slate-300">
-                      {result.totalObtained}/{result.totalFull}
-                    </td>
-                    <td className="border border-slate-200 dark:border-border px-3 py-2 text-center text-slate-700 dark:text-slate-300">
-                      {result.average.toFixed(1)}
-                    </td>
-                    <td className="border border-slate-200 dark:border-border px-3 py-2 text-center text-slate-700 dark:text-slate-300">
-                      {result.percentage.toFixed(1)}%
-                    </td>
-                    <td className="border border-slate-200 dark:border-border px-3 py-2 text-center font-semibold text-slate-700 dark:text-slate-300">
-                      {result.grade}
-                    </td>
-                    <td className={cn(
-                      "border border-slate-200 dark:border-border px-3 py-2 text-center font-bold",
-                      result.result === 'Pass' ? "text-green-600 dark:text-green-400" :
-                      result.result === 'Fail' ? "text-red-600 dark:text-red-400" :
-                      "text-slate-400"
-                    )}>
-                      {result.result}
-                    </td>
-                  </tr>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/40">
+                <TableHead className="border border-border px-3 py-2 text-left font-bold text-foreground">Roll No</TableHead>
+                <TableHead className="border border-border px-3 py-2 text-left font-bold text-foreground">Student Name</TableHead>
+                {templatesData.filter(t => selectedEvaluations.includes(t.id)).map(t => (
+                  <TableHead key={t.id} className="border border-border px-3 py-2 text-center font-bold text-foreground">
+                    {t.syncedSubject?.name ?? 'Unknown'}
+                  </TableHead>
                 ))}
-              </tbody>
-            </table>
-          </div>
+                <TableHead className="border border-border px-3 py-2 text-center font-bold text-foreground">Total</TableHead>
+                <TableHead className="border border-border px-3 py-2 text-center font-bold text-foreground">Average</TableHead>
+                <TableHead className="border border-border px-3 py-2 text-center font-bold text-foreground">Percentage</TableHead>
+                <TableHead className="border border-border px-3 py-2 text-center font-bold text-foreground">Grade</TableHead>
+                <TableHead className="border border-border px-3 py-2 text-center font-bold text-foreground">Result</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {compiledResults.map(result => (
+                <TableRow key={result.studentId} className="hover:bg-muted/20">
+                  <TableCell className="border border-border px-3 py-2 text-foreground">{result.rollNo}</TableCell>
+                  <TableCell className="border border-border px-3 py-2 text-foreground">{result.studentName}</TableCell>
+                  {templatesData.filter(t => selectedEvaluations.includes(t.id)).map(t => (
+                    <TableCell key={t.id} className="border border-border px-3 py-2 text-center text-foreground">
+                      {result.subjectMarks[t.syncedSubject?.name ?? 'Unknown'] ?? '-'}
+                    </TableCell>
+                  ))}
+                  <TableCell className="border border-border px-3 py-2 text-center font-semibold text-foreground">
+                    {result.totalObtained}/{result.totalFull}
+                  </TableCell>
+                  <TableCell className="border border-border px-3 py-2 text-center text-foreground">
+                    {result.average.toFixed(1)}
+                  </TableCell>
+                  <TableCell className="border border-border px-3 py-2 text-center text-foreground">
+                    {result.percentage.toFixed(1)}%
+                  </TableCell>
+                  <TableCell className="border border-border px-3 py-2 text-center font-semibold text-foreground">
+                    {result.grade}
+                  </TableCell>
+                  <TableCell className={cn(
+                    "border border-border px-3 py-2 text-center font-bold",
+                    result.result === 'Pass' ? "text-emerald-650 dark:text-emerald-450" :
+                    result.result === 'Fail' ? "text-destructive" :
+                    "text-muted-foreground"
+                  )}>
+                    {result.result}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       )}
     </motion.div>

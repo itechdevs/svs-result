@@ -4,7 +4,24 @@
 
 ---
 
-## 1. Styling — Global CSS is Law
+## 1. Design Principles & UI Aesthetics
+
+We are building a **premium, modern SaaS application**. The UI must evoke trust, clarity, and professionalism.
+
+### Visual Excellence & Aesthetics
+- **Rich Aesthetics**: Avoid flat, lifeless designs. Use subtle depth (layered shadows), smooth gradients where appropriate, and crisp contrast.
+- **Dynamic Interfaces**: Elements should respond to user interaction. Implement smooth hover states (`transition-all duration-200`), active states, and focus rings.
+- **Clean Layouts**: Embrace whitespace. Avoid clutter. Group related elements using cards with consistent padding and subtle borders.
+- **Modern Trends**: Use standard border radius (`rounded-xl` or `rounded-2xl` for large cards, `rounded-lg` for buttons), and vibrant primary colors (Indigo/Blue).
+
+### Accessibility & Responsiveness
+- **Color Contrast**: Ensure text has a minimum contrast ratio of 4.5:1 against its background.
+- **Focus Indicators**: Always maintain clear focus rings (`focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`). Do not use `outline-none` without replacing it with a robust focus state.
+- **Mobile-First**: Design responsive layouts starting from mobile devices using Tailwind's `sm:`, `md:`, `lg:`, and `xl:` breakpoints.
+
+---
+
+## 2. Styling — Global CSS is Law
 
 **Rule**: All visual tokens (colors, spacing, radius, shadows, typography) MUST come from `globals.css` CSS custom properties. No hardcoded values anywhere.
 
@@ -12,10 +29,10 @@
 
 ```tsx
 // Use Tailwind utility classes that map to CSS variables
-<div className="bg-background text-foreground border border-border rounded-lg shadow-sm" />
+<div className="bg-background text-foreground border border-border rounded-xl shadow-sm hover:shadow-md transition-shadow" />
 
 // Or raw CSS variables in inline styles / CSS modules when Tailwind class doesn't exist
-<div style={{ color: 'var(--muted-foreground)' }} />
+<div style={{ color: 'hsl(var(--muted-foreground))' }} />
 ```
 
 ### ❌ Forbidden
@@ -33,11 +50,11 @@
 | **Background/Surface** | `--background`, `--foreground`, `--card`, `--card-foreground`, `--popover`, `--popover-foreground`                    |
 | **Brand**              | `--primary`, `--primary-foreground`, `--secondary`, `--secondary-foreground`                                          |
 | **Neutral**            | `--muted`, `--muted-foreground`, `--accent`, `--accent-foreground`                                                    |
-| **Semantic**           | `--destructive`, `--border`, `--input`, `--ring`                                                                      |
+| **Semantic**           | `--destructive`, `--destructive-foreground`, `--border`, `--input`, `--ring`                                                                      |
 | **Charts**             | `--chart-1` through `--chart-5`                                                                                       |
 | **Sidebar**            | `--sidebar`, `--sidebar-foreground`, `--sidebar-primary`, `--sidebar-accent`, `--sidebar-border`, `--sidebar-ring`    |
 | **Shadows**            | `--shadow-2xs`, `--shadow-xs`, `--shadow-sm`, `--shadow`, `--shadow-md`, `--shadow-lg`, `--shadow-xl`, `--shadow-2xl` |
-| **Typography**         | `--font-heading` (Geist), `--font-body` (Source Serif 4), `--font-mono` (Source Code Pro)                             |
+| **Typography**         | `--font-heading` (Inter), `--font-body` (Lora), `--font-mono` (Source Code Pro)                             |
 | **Radius**             | `--radius-sm`, `--radius-md`, `--radius-lg`, `--radius-xl`, `--radius-2xl`, `--radius-3xl`, `--radius-4xl`            |
 
 ### Dark Mode
