@@ -1,32 +1,25 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useId, useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { Loader2,UserCheck,ShieldCheck, Eye, EyeOff } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 import { ROUTES } from "@/lib/constants";
-import {
-  GraduationCap,
-  Mail,
-  Lock,
-  ArrowRight,
-  ShieldCheck,
-  UserCheck,
-} from "lucide-react";
+
+
+// ─── LoginForm ────────────────────────────────────────────────────────────────
 
 function LoginForm() {
-  const router = useRouter();
+  const emailId = useId();
+  const passwordId = useId();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  const redirectForRole = (role?: string | null) => {
-    const normalizedRole = role?.toLowerCase();
-    router.push(
-      normalizedRole === "admin" ? ROUTES.ADMIN_DASHBOARD : ROUTES.TEACHER_DASHBOARD,
-    );
-    router.refresh();
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,16 +27,12 @@ function LoginForm() {
     setError("");
 
     try {
-      const callbackUrl = email.includes("admin") ? "/admin/dashboard" : "/teacher/dashboard";
-      
-      await signIn("credentials", {
-        email,
-        password,
-        callbackUrl,
-      });
-      
-      // If we reach here, redirect happened (success)
-    } catch (err) {
+      const callbackUrl = email.toLowerCase().includes("admin")
+        ? ROUTES.ADMIN_DASHBOARD
+        : ROUTES.TEACHER_DASHBOARD;
+
+      await signIn("credentials", { email, password, callbackUrl });
+    } catch {
       setError("Invalid email or password. Please try again.");
       setLoading(false);
     }
@@ -52,155 +41,192 @@ function LoginForm() {
   const handleQuickLogin = async (role: "teacher" | "admin") => {
     setLoading(true);
     setError("");
+
     const credentials = {
       teacher: { email: "teacher@school.com", password: "password" },
       admin: { email: "admin@school.com", password: "password" },
     }[role];
 
     try {
-      const callbackUrl = role === "admin" ? "/admin/dashboard" : "/teacher/dashboard";
-      
-      await signIn("credentials", {
-        ...credentials,
-        callbackUrl,
-      });
-      
-      // If we reach here, redirect happened (success)
-    } catch (err) {
+      const callbackUrl =
+        role === "admin" ? ROUTES.ADMIN_DASHBOARD : ROUTES.TEACHER_DASHBOARD;
+
+      await signIn("credentials", { ...credentials, callbackUrl });
+    } catch {
       setError("An unexpected error occurred during quick login.");
       setLoading(false);
     }
   };
 
   return (
-    <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] space-y-6">
-      <div className="text-center">
-        <h2 className="text-lg font-semibold text-white">
-          Sign In to Dashboard
-        </h2>
-        <p className="text-xs text-slate-400 mt-1">
-          Enter your school credentials or select Quick Login below
+    <div className="w-full bg-card border border-border rounded-2xl shadow-lg overflow-hidden">
+
+      {/* ── Card Header ── */}
+      
+      <div className="px-8 pt-8 pb-6 text-center">
+        <div className="flex justify-center mb-5">
+          <img
+            src="/SVS LOGO NEW.png"
+            alt="SVS School Logo"
+            className="h-16 w-auto object-contain"
+          />
+        </div>
+
+        <h3 className="text-xl font-bold text-foreground">
+          Result Management System
+        </h3>
+
+        <p className="mt-2 text-sm text-muted-foreground">
+          Sign in to access student results
         </p>
       </div>
 
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/20 text-red-200 text-xs py-3 px-4 rounded-xl text-center font-medium">
-          {error}
-        </div>
-      )}
+      {/* ── Card Body ── */}
+      <div className="px-8 pb-8 space-y-6">
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-1">
-          <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-            Email Address
-          </label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-              <Mail className="w-4 h-4" />
+        {/* Error alert */}
+        {error && (
+          <div
+            role="alert"
+            aria-live="polite"
+            className="flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3"
+          >
+            <span className="mt-0.5 shrink-0 w-4 h-4 rounded-full bg-destructive/20 flex items-center justify-center text-destructive text-[10px] font-bold">
+              !
             </span>
-            <input
+            <p className="text-sm text-destructive leading-snug">{error}</p>
+          </div>
+        )}
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+
+          {/* Email */}
+          <div className="space-y-1.5">
+            <label
+              htmlFor={emailId}
+              className="block text-xs font-semibold text-muted-foreground uppercase tracking-widest"
+            >
+              Email Address
+            </label>
+            <Input
+              id={emailId}
               type="email"
+              autoComplete="email"
+              placeholder="teacher@school.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="teacher@school.com"
               required
               disabled={loading}
-              className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[#9ff5c1] focus:border-[#9ff5c1] transition-all"
+              className="h-10 px-3.5 text-sm rounded-md"
             />
           </div>
-        </div>
 
-        <div className="space-y-1">
-          <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-            Password
-          </label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-              <Lock className="w-4 h-4" />
-            </span>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              disabled={loading}
-              className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[#9ff5c1] focus:border-[#9ff5c1] transition-all"
-            />
+          {/* Password */}
+          <div className="space-y-1.5">
+            <label
+              htmlFor={passwordId}
+              className="block text-xs font-semibold text-muted-foreground uppercase tracking-widest"
+            >
+              Password
+            </label>
+            <div className="relative">
+              <Input
+                id={passwordId}
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading}
+                
+                className="h-10 px-3.5 pr-10 text-sm rounded-md"
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setShowPassword(!showPassword)}
+                tabIndex={-1}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+              </button>
+            </div>
           </div>
+
+          {/* Submit */}
+          <Button
+            type="submit"
+            disabled={loading}
+            aria-busy={loading}
+            className="w-full h-10 text-sm font-medium mt-1"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                <span>Signing in…</span>
+              </>
+            ) : (
+              <span>Sign in</span>
+            )}
+          </Button>
+        </form>
+
+        {/* Divider */}
+        <div className="relative flex items-center gap-3">
+          <Separator className="flex-1" />
+          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
+            Quick portal sign-in
+          </span>
+          <Separator className="flex-1" />
         </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full py-3 bg-gradient-to-r from-[#0a6c44] to-[#0d7c4f] text-white hover:from-[#0d7c4f] hover:to-[#0f8c5a] font-bold text-xs rounded-xl flex items-center justify-center gap-2 transform active:scale-95 transition-all shadow-md shadow-emerald-950/20 cursor-pointer"
-        >
-          {loading ? (
-            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <>
-              <span>Sign In</span>
-              <ArrowRight className="w-4 h-4" />
-            </>
-          )}
-        </button>
-      </form>
-
-      <div className="space-y-3 pt-4 border-t border-white/10">
-        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest text-center">
-          Quick Portal Sign-In
-        </p>
+        {/* Quick-login buttons */}
         <div className="grid grid-cols-2 gap-3">
-          <button
+          <Button
             type="button"
+            variant="outline"
+            disabled={loading}
             onClick={() => handleQuickLogin("teacher")}
-            disabled={loading}
-            className="py-2.5 px-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all hover:border-[#9ff5c1]/30 transform active:scale-95 cursor-pointer"
+            aria-label="Quick sign in as Teacher"
+            className="h-10 text-sm font-medium gap-2"
           >
-            <UserCheck className="w-3.5 h-3.5 text-[#9ff5c1]" />
-            <span>Teacher Mode</span>
-          </button>
-          <button
+            <UserCheck className="w-4 h-4 shrink-0" aria-hidden="true" />
+            Teacher mode
+          </Button>
+          <Button
             type="button"
-            onClick={() => handleQuickLogin("admin")}
+            variant="outline"
             disabled={loading}
-            className="py-2.5 px-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all hover:border-blue-400/30 transform active:scale-95 cursor-pointer"
+            onClick={() => handleQuickLogin("admin")}
+            aria-label="Quick sign in as Admin"
+            className="h-10 text-sm font-medium gap-2"
           >
-            <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-            <span>Admin Mode</span>
-          </button>
+            <ShieldCheck className="w-4 h-4 shrink-0" aria-hidden="true" />
+            Admin mode
+          </Button>
         </div>
       </div>
     </div>
   );
 }
 
+// ─── LoginPage (shell) ────────────────────────────────────────────────────────
+
 export default function LoginPage() {
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gradient-to-tr from-[#020b18] via-[#091b36] to-[#040f21] px-4 py-12 relative overflow-hidden font-sans">
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-600/10 rounded-full blur-[100px] pointer-events-none" />
-
-      <div className="w-full max-w-md z-10 space-y-8">
-        <div className="text-center space-y-3">
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-[#9ff5c1] flex items-center justify-center text-[#002045] font-black shadow-[0_0_20px_rgba(159,245,193,0.3)] transform transition-transform hover:scale-105 duration-300">
-            <GraduationCap className="w-8 h-8" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-extrabold text-white tracking-tight">
-              EduGrade Pro
-            </h1>
-            <p className="text-xs uppercase font-bold text-blue-300/60 tracking-widest mt-1">
-              School Result Management System
-            </p>
-          </div>
-        </div>
-
+    <main className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
+      <div className="w-full max-w-sm">
         <Suspense
           fallback={
-            <div className="bg-white/5 border border-white/10 p-8 rounded-3xl text-center text-slate-400 text-xs py-12">
-              <span className="w-6 h-6 border-2 border-[#9ff5c1] border-t-transparent rounded-full animate-spin inline-block mb-3" />
-              <p>Loading portal...</p>
+            <div className="bg-card border border-border rounded-2xl shadow-lg p-12 flex flex-col items-center justify-center gap-3">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Loading portal…</p>
             </div>
           }
         >
