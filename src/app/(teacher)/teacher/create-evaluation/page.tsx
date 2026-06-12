@@ -16,13 +16,13 @@ export default function CreateEvaluationPage() {
   const selectedClass = searchParams.get('class') ?? '';
   const selectedSubject = searchParams.get('subject') ?? '';
 
-  const [newEvalTitle, setNewEvalTitle] = useState('Term 1 Assessment');
+  const [newEvalTitle, setNewEvalTitle] = useState('');
   const [newEvalSubject, setNewEvalSubject] = useState(selectedSubject || '');
   const [newSubjectTitle, setNewSubjectTitle] = useState('');
   const [targetMarks, setTargetMarks] = useState(55);
   const [newOutcomes, setNewOutcomes] = useState<TaskGroup[]>([
-    { taskType: 'Written', max: 4, pass: 2, outcomes: [{ name: 'Theory & Principles', date: '', max: 30, pass: 12 }] },
-    { taskType: 'Practical Assessment', max: 40, pass: 16, outcomes: [{ name: 'Laboratory Safety & Setup', date: '', max: 25, pass: 10 }] },
+    { taskType: '', max: 4, pass: 2, outcomes: [{ name: '', date: '', max: 4, pass: 2 }] },
+    { taskType: '', max: 1, pass: 0, outcomes: [{ name: '', date: '', max: 1, pass: 0 }] },
   ]);
 
   const { data: profile } = useProfile();
