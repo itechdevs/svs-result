@@ -9,7 +9,7 @@ import { useProfile } from '@/hooks/use-profile';
 import { useEvaluationTemplates, useStudentEvaluationResults, useBulkSaveMarks } from '@/hooks/use-evaluations';
 import { useStudents } from '@/hooks/use-students';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/shared/ui/select';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { StudentOutcomeMark, OutcomeMark } from '@/types/academic';
 
 export default function MarkEntryOverviewTable() {
@@ -18,6 +18,8 @@ export default function MarkEntryOverviewTable() {
   const bulkSave = useBulkSaveMarks();
 
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const [selectedClass, setSelectedClass] = useState(searchParams.get('class') ?? '');
   const [selectedSubject, setSelectedSubject] = useState(searchParams.get('subject') ?? '');
   const [selectedEvalPlan, setSelectedEvalPlan] = useState(searchParams.get('eval') ?? '');
@@ -145,8 +147,26 @@ export default function MarkEntryOverviewTable() {
     updateOutcomeMark(studentId, evalId, outcomeName, { regularMark: num });
   };
 
-  const handleClassChange = (value: string) => { setSelectedClass(value); setSelectedSubject(''); setSelectedEvalPlan(''); };
-  const handleSubjectChange = (value: string) => { setSelectedSubject(value); setSelectedEvalPlan(''); };
+  const updateURL = (c: string, s: string, e: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (c) params.set('class', c); else params.delete('class');
+    if (s) params.set('subject', s); else params.delete('subject');
+    if (e) params.set('eval', e); else params.delete('eval');
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  const handleClassChange = (value: string) => { 
+    setSelectedClass(value); setSelectedSubject(''); setSelectedEvalPlan(''); 
+    updateURL(value, '', '');
+  };
+  const handleSubjectChange = (value: string) => { 
+    setSelectedSubject(value); setSelectedEvalPlan(''); 
+    updateURL(selectedClass, value, '');
+  };
+  const handleEvalPlanChange = (value: string) => {
+    setSelectedEvalPlan(value);
+    updateURL(selectedClass, selectedSubject, value);
+  };
 
   // Build outcome columns: one per template
   const outcomeColumns = useMemo(() => evaluations.map(t => ({
@@ -182,7 +202,7 @@ export default function MarkEntryOverviewTable() {
           </div>
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Select Evaluation Plan</label>
-            <Select value={selectedEvalPlan} onValueChange={setSelectedEvalPlan} disabled={!selectedSubject || evalPlans.length === 0}>
+            <Select value={selectedEvalPlan} onValueChange={handleEvalPlanChange} disabled={!selectedSubject || evalPlans.length === 0}>
               <SelectTrigger className="w-full text-sm"><SelectValue placeholder={!selectedSubject ? 'Select a subject first' : evalPlans.length === 0 ? 'No plans available' : 'Select a plan...'} /></SelectTrigger>
               <SelectContent>
                 {evalPlans.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
