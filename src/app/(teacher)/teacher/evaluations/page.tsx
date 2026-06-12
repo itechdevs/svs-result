@@ -116,10 +116,13 @@ export default function TeacherEvaluationsPage() {
     });
   }, [templatesData, assignedSubjectIds, selectedSubject]);
 
-  const setCurrentTab = (tab: string) => {
+  const setCurrentTab = (tab: string, extraParams?: Record<string, string>) => {
     const params = new URLSearchParams();
     if (selectedClass) params.set("class", selectedClass);
     if (selectedSubject) params.set("subject", selectedSubject);
+    if (extraParams) {
+      Object.entries(extraParams).forEach(([k, v]) => params.set(k, v));
+    }
     const suffix = params.toString() ? `?${params}` : "";
     if (tab === "create-evaluation") router.push(`/teacher/create-evaluation${suffix}`);
     else if (tab === "mark-entry") router.push(`/teacher/mark-entry${suffix}`);
