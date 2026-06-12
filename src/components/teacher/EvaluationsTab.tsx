@@ -27,7 +27,7 @@ import {
 interface EvaluationsTabProps {
   evaluations: EvaluationPlan[];
   setSelectedEvaluationId: (id: string) => void;
-  setCurrentTab: (tab: 'dashboard' | 'evaluations' | 'mark-entry' | 'student-records' | 'allocations' | 'result-compilation' | 're-exam-portal' | 'create-evaluation') => void;
+  setCurrentTab: (tab: 'dashboard' | 'evaluations' | 'mark-entry' | 'student-records' | 'allocations' | 'result-compilation' | 're-exam-portal' | 'create-evaluation', extraParams?: Record<string, string>) => void;
   setNewEvalTitle: (title: string) => void;
   setNewEvalSubject: (subject: string) => void;
   newEvalSubject: string;
@@ -202,7 +202,7 @@ export default function EvaluationsTab({
               <button
                 onClick={() => {
                   setSelectedEvaluationId(evalPlan.id);
-                  setCurrentTab('mark-entry');
+                  setCurrentTab('mark-entry', { eval: evalPlan.title });
                 }}
                 className="flex-1 bg-[#002045] text-white hover:bg-opacity-95 font-bold py-2 rounded text-xs transition-all text-center cursor-pointer"
               >

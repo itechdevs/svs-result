@@ -20,6 +20,7 @@ export default function MarkEntryOverviewTable() {
   const searchParams = useSearchParams();
   const [selectedClass, setSelectedClass] = useState(searchParams.get('class') ?? '');
   const [selectedSubject, setSelectedSubject] = useState(searchParams.get('subject') ?? '');
+  const [selectedEvalPlan, setSelectedEvalPlan] = useState(searchParams.get('eval') ?? '');
   const [saved, setSaved] = useState(false);
   const [localMarks, setLocalMarks] = useState<StudentOutcomeMark[]>([]);
 
@@ -43,10 +44,32 @@ export default function MarkEntryOverviewTable() {
     return profile?.syncedTeacher?.subjects.find(s => s.name === selectedSubject && s.gradeLevel === selectedClass);
   }, [selectedClass, selectedSubject, profile]);
 
-  const evaluations = useMemo(() => {
+  const allSubjectTemplates = useMemo(() => {
     if (!subjectObj) return [];
     return templatesData.filter(t => t.syncedSubjectId === subjectObj.id);
   }, [subjectObj, templatesData]);
+
+  const evalPlans = useMemo(() => {
+    const plans = new Set<string>();
+    for (const t of allSubjectTemplates) {
+      const evalTitleMatch = t.name.match(/^\[([^\]]+)\]\[/);
+      const rawEvalPart = evalTitleMatch ? evalTitleMatch[1] : '';
+      const evalTitle = rawEvalPart.split('|')[0];
+      plans.add(evalTitle || selectedSubject);
+    }
+    return Array.from(plans);
+  }, [allSubjectTemplates, selectedSubject]);
+
+  const evaluations = useMemo(() => {
+    if (!selectedEvalPlan) return [];
+    return allSubjectTemplates.filter(t => {
+      const evalTitleMatch = t.name.match(/^\[([^\]]+)\]\[/);
+      const rawEvalPart = evalTitleMatch ? evalTitleMatch[1] : '';
+      const evalTitle = rawEvalPart.split('|')[0];
+      const planTitle = evalTitle || selectedSubject;
+      return planTitle === selectedEvalPlan;
+    });
+  }, [allSubjectTemplates, selectedEvalPlan, selectedSubject]);
 
   // Students for selected class
   const classStudents = useMemo(() =>
@@ -122,7 +145,8 @@ export default function MarkEntryOverviewTable() {
     updateOutcomeMark(studentId, evalId, outcomeName, { regularMark: num });
   };
 
-  const handleClassChange = (value: string) => { setSelectedClass(value); setSelectedSubject(''); };
+  const handleClassChange = (value: string) => { setSelectedClass(value); setSelectedSubject(''); setSelectedEvalPlan(''); };
+  const handleSubjectChange = (value: string) => { setSelectedSubject(value); setSelectedEvalPlan(''); };
 
   // Build outcome columns: one per template
   const outcomeColumns = useMemo(() => evaluations.map(t => ({
@@ -137,7 +161,7 @@ export default function MarkEntryOverviewTable() {
       {/* Filters */}
       <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-border shadow-sm p-5">
         <h1 className="text-lg font-bold text-[#002045] dark:text-white mb-4">Mark Entry</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Select Class</label>
             <Select value={selectedClass} onValueChange={handleClassChange}>
@@ -149,26 +173,35 @@ export default function MarkEntryOverviewTable() {
           </div>
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Select Subject</label>
-            <Select value={selectedSubject} onValueChange={setSelectedSubject} disabled={!selectedClass}>
+            <Select value={selectedSubject} onValueChange={handleSubjectChange} disabled={!selectedClass}>
               <SelectTrigger className="w-full text-sm"><SelectValue placeholder={selectedClass ? 'Select a subject...' : 'Select a class first'} /></SelectTrigger>
               <SelectContent>
                 {subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Select Evaluation Plan</label>
+            <Select value={selectedEvalPlan} onValueChange={setSelectedEvalPlan} disabled={!selectedSubject || evalPlans.length === 0}>
+              <SelectTrigger className="w-full text-sm"><SelectValue placeholder={!selectedSubject ? 'Select a subject first' : evalPlans.length === 0 ? 'No plans available' : 'Select a plan...'} /></SelectTrigger>
+              <SelectContent>
+                {evalPlans.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
-      {(!selectedClass || !selectedSubject) && (
+      {(!selectedClass || !selectedSubject || !selectedEvalPlan) && (
         <div className="bg-white dark:bg-card rounded-xl border border-dashed border-slate-300 dark:border-border p-12 text-center">
-          <p className="text-sm text-slate-500 dark:text-slate-400">Select a class and subject to view the mark entry table.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Select a class, subject, and evaluation plan to view the mark entry table.</p>
         </div>
       )}
 
-      {selectedClass && selectedSubject && evaluations.length === 0 && (
+      {selectedClass && selectedSubject && selectedEvalPlan && evaluations.length === 0 && (
         <div className="bg-white dark:bg-card rounded-xl border border-dashed border-slate-300 dark:border-border p-12 text-center">
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            No evaluation plan found for <strong>{selectedSubject}</strong> in <strong>{selectedClass}</strong>.
+            No evaluation plan found for <strong>{selectedEvalPlan}</strong> in <strong>{selectedSubject}</strong>.
           </p>
         </div>
       )}
