@@ -17,6 +17,15 @@ import {
 import { useReExamSchedules } from "@/hooks/use-re-exams";
 import { useProfile } from "@/hooks/use-profile";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const KPI_ICONS = [ClipboardList, AlertTriangle, CalendarClock];
 
@@ -164,64 +173,68 @@ export default function TeacherDashboardClient() {
                 Your latest evaluation plans
               </p>
             </div>
-            <Link
-              href="/teacher/evaluations"
-              className="text-xs font-semibold text-primary bg-primary/10 px-3 py-1.5 rounded-lg border border-primary/20 hover:bg-primary/20 transition-colors"
-            >
-              View all →
-            </Link>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/teacher/evaluations">View all →</Link>
+            </Button>
           </div>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left text-xs text-muted-foreground uppercase tracking-wide pb-3 font-semibold">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-b border-border">
+                <TableHead className="text-left text-xs text-muted-foreground uppercase tracking-wide font-semibold">
                   Evaluation Title
-                </th>
-                <th className="text-left text-xs text-muted-foreground uppercase tracking-wide pb-3 font-semibold">
+                </TableHead>
+                <TableHead className="text-left text-xs text-muted-foreground uppercase tracking-wide font-semibold">
                   Subject
-                </th>
-                <th className="text-center text-xs text-muted-foreground uppercase tracking-wide pb-3 font-semibold">
+                </TableHead>
+                <TableHead className="text-center text-xs text-muted-foreground uppercase tracking-wide font-semibold">
                   Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {recentEvaluations.length === 0 ? (
-                <tr>
-                  <td
+                <TableRow>
+                  <TableCell
                     colSpan={3}
                     className="py-8 text-center text-muted-foreground text-sm"
                   >
                     No evaluations found.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : (
                 recentEvaluations.map((ev) => (
-                  <tr
+                  <TableRow
                     key={ev.id}
                     className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors"
                   >
-                    <td className="py-3 text-foreground font-medium">
+                    <TableCell className="py-3 text-foreground font-medium">
                       {ev.name}
-                    </td>
-                    <td className="py-3">
+                    </TableCell>
+                    <TableCell className="py-3">
                       <span className="text-xs bg-muted text-muted-foreground rounded-md px-2 py-1">
                         {ev.syncedSubject?.name ?? "—"}
                       </span>
-                    </td>
-                    <td className="py-3 text-center">
-                      <Link
-                        href="/teacher/mark-entry"
-                        className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-colors"
+                    </TableCell>
+                    <TableCell className="py-3 text-center">
+                      <Button
+                        variant="link"
+                        size="sm"
+                        asChild
+                        className="text-xs text-primary hover:text-primary/80 font-medium p-0 h-auto"
                       >
-                        Details <ChevronRight className="w-3 h-3" />
-                      </Link>
-                    </td>
-                  </tr>
+                        <Link
+                          href="/teacher/mark-entry"
+                          className="inline-flex items-center gap-1"
+                        >
+                          Details <ChevronRight className="w-3 h-3" />
+                        </Link>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
                 ))
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         {/* Re-exam alerts */}
@@ -251,12 +264,9 @@ export default function TeacherDashboardClient() {
                     <span className="text-sm font-medium text-foreground">
                       {s.evaluationTemplate?.name ?? "Re-Exam"}
                     </span>
-                    <Link
-                      href="/teacher/re-exam-portal"
-                      className="text-xs bg-background border border-border rounded-md px-3 py-1 hover:bg-muted transition-colors text-foreground"
-                    >
-                      Schedule
-                    </Link>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href="/teacher/re-exam-portal">Schedule</Link>
+                    </Button>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <span className="w-1.5 h-1.5 rounded-full bg-destructive inline-block" />
@@ -269,12 +279,14 @@ export default function TeacherDashboardClient() {
           </div>
 
           <hr className="my-4 border-border" />
-          <Link
-            href="/teacher/re-exam-portal"
-            className="text-xs text-primary hover:text-primary/80 font-medium w-full text-center block transition-colors"
+          <Button
+            variant="link"
+            size="sm"
+            asChild
+            className="text-xs text-primary hover:text-primary/80 font-medium w-full text-center block p-0 h-auto"
           >
-            View all re-exams →
-          </Link>
+            <Link href="/teacher/re-exam-portal">View all re-exams →</Link>
+          </Button>
         </div>
       </div>
     </motion.div>
