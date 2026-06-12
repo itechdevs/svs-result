@@ -13,9 +13,22 @@ export interface LearningOutcome {
   taskType?: string;
 }
 
+export interface SubEvaluation {
+  id: string;
+  name: string;
+  fullMarks: number;
+  passMarks: number;
+  weightage: number;
+  scheduledDate?: string;
+  taskType?: string;
+}
+
 export interface EvaluationPlan {
   id: string;
   title: string;
+  /** Teacher-defined topic/chapter title — independent of the assigned subject */
+  subjectTitle?: string;
+  /** The synced subject name from school DB (for allocation/filtering only) */
   subject: string;
   status: string;
   testTypes: string;
@@ -25,6 +38,12 @@ export interface EvaluationPlan {
   date: string;
   unit: string;
   learningOutcomes: LearningOutcome[];
+  /** All sub-evaluations belonging to this parent group */
+  subEvaluations?: SubEvaluation[];
+  syncedSubjectId?: string;
+  gradeLevel?: string;
+  /** All real EvaluationTemplate IDs in this group — used for bulk delete */
+  templateIds?: string[];
 }
 
 /** Per-student, per-outcome mark record */

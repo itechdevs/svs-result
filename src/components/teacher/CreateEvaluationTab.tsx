@@ -23,6 +23,9 @@ interface CreateEvaluationTabProps {
   setNewEvalTitle: (val: string) => void;
   newEvalSubject: string;
   setNewEvalSubject: (val: string) => void;
+  /** Teacher-defined topic/chapter title — independent of assigned subject */
+  newSubjectTitle?: string;
+  setNewSubjectTitle?: (val: string) => void;
   targetMarks: number;
   setTargetMarks: (val: number) => void;
   newOutcomes: TaskGroup[];
@@ -37,6 +40,8 @@ export default function CreateEvaluationTab({
   setNewEvalTitle,
   newEvalSubject,
   setNewEvalSubject,
+  newSubjectTitle = '',
+  setNewSubjectTitle,
   targetMarks,
   setTargetMarks,
   newOutcomes,
@@ -156,10 +161,14 @@ export default function CreateEvaluationTab({
               </label>
               <input
                 type="text"
-                value={newEvalSubject}
-                onChange={e => setNewEvalSubject(e.target.value)}
+                placeholder="e.g. Algebra, Grammar Unit 3, Photosynthesis…"
+                value={newSubjectTitle}
+                onChange={e => setNewSubjectTitle?.(e.target.value)}
                 className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-border rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-[#002045] focus:outline-none text-slate-900 dark:text-white"
               />
+              <p className="text-[9px] text-slate-400 mt-1">
+                Teacher-defined topic/chapter title — independent of the assigned subject below.
+              </p>
             </div>
           </div>
         </div>

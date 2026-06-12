@@ -130,7 +130,7 @@ export default function EvaluationsTab({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem asChild>
-                        <Link href={`/teacher/edit-evaluation/${evalPlan.id}${suffix}`} className="flex items-center gap-2 cursor-pointer">
+                        <Link href={`/teacher/edit-evaluation/${evalPlan.subEvaluations?.[0]?.id ?? evalPlan.id}${suffix}`} className="flex items-center gap-2 cursor-pointer">
                           <Pencil className="w-3.5 h-3.5" />
                           Edit
                         </Link>
@@ -159,10 +159,10 @@ export default function EvaluationsTab({
 
               <div>
                 <label className="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">
-                  Subject Title
+                  Unit Title
                 </label>
                 <div className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-border rounded-lg p-2.5 text-xs text-slate-900 dark:text-white font-medium">
-                  {evalPlan.subject}
+                  {evalPlan.unit}
                 </div>
               </div>
 
