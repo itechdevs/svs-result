@@ -6,7 +6,7 @@ export const cuidParam = z.string().cuid();
 
 export const paginationSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
+  limit: z.coerce.number().int().min(1).max(1000).default(20),
 });
 
 export const gradeLevels = [
@@ -167,7 +167,7 @@ export const createEvaluationTemplateSchema = z.object({
   syncedSubjectId: z.string().cuid(),
   name: z.string().min(1).max(100),
   fullMarks: z.number().positive(),
-  passMarks: z.number().positive(),
+  passMarks: z.number().nonnegative(),
   weightage: z.number().positive().max(100),
   scheduledDate: z.coerce.date().optional(),
   displayOrder: z.number().int().min(0).default(0),

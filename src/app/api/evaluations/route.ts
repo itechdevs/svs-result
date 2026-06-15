@@ -24,27 +24,27 @@ export const GET = withHandler(async (req: NextRequest, { user }) => {
     Object.fromEntries(searchParams),
   );
 
-  // Teachers can only see results for their assigned templates
+  // Teachers can only see results for their assigned subjects
   let allowedTemplateIds: string[] | undefined;
   if (user.role === "TEACHER") {
-    const assignments = await prisma.teacherAssignment.findMany({
-      where: { userId: user.id },
-      select: { gradeLevel: true, syncedSubjectId: true, academicYearId: true },
+    const currentUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { syncedTeacherId: true },
     });
 
-    const templates = await prisma.evaluationTemplate.findMany({
-      where: {
-        OR: assignments.map((a) => ({
-          gradeConfig: {
-            gradeLevel: a.gradeLevel,
-            academicYearId: a.academicYearId,
-          },
-          ...(a.syncedSubjectId && { syncedSubjectId: a.syncedSubjectId }),
-        })),
-      },
-      select: { id: true },
-    });
-    allowedTemplateIds = templates.map((t) => t.id);
+    if (currentUser?.syncedTeacherId) {
+      const templates = await prisma.evaluationTemplate.findMany({
+        where: {
+          syncedSubject: { teacherId: currentUser.syncedTeacherId },
+          isActive: true,
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+      allowedTemplateIds = templates.map((t) => t.id);
+    } else {
+      allowedTemplateIds = [];
+    }
   }
 
   const results = await prisma.studentEvaluationResult.findMany({
@@ -101,19 +101,23 @@ export const POST = withHandler(async (req: NextRequest, { user }) => {
 
   // Teacher permission check
   if (user.role === "TEACHER") {
-    const hasAccess = await prisma.teacherAssignment.findFirst({
-      where: {
-        userId: user.id,
-        gradeLevel: template.gradeConfig.gradeLevel,
-        academicYearId: template.gradeConfig.academicYearId,
-        OR: [
-          { syncedSubjectId: template.syncedSubjectId },
-          { syncedSubjectId: null }, // class teacher gets all subjects
-        ],
-      },
+    const currentUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { syncedTeacherId: true },
     });
-    if (!hasAccess)
-      return forbidden("You are not assigned to this grade/subject");
+
+    if (!currentUser?.syncedTeacherId) {
+      return forbidden("Teacher account not linked to a synced teacher");
+    }
+
+    const subject = await prisma.syncedSubject.findUnique({
+      where: { id: template.syncedSubjectId },
+      select: { teacherId: true },
+    });
+
+    if (subject?.teacherId !== currentUser.syncedTeacherId) {
+      return forbidden("You are not assigned to this subject");
+    }
   }
 
   // Prevent writes to already-locked results

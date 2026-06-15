@@ -1,4 +1,4 @@
-import { PrismaClient, UserRole } from "@prisma/client";
+import { PrismaClient, UserRole, GradeType } from "@prisma/client";
 import { hash } from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -24,7 +24,7 @@ async function main() {
   const syncedTeacher = await prisma.syncedTeacher.create({
     data: {
       sourceId: "T1",
-      name: "Teacher User",
+      name: "Dipak Giri",
       isActive: true,
     },
   });
@@ -35,10 +35,22 @@ async function main() {
       email: "teacher@school.com",
       passwordHash,
       role: UserRole.TEACHER,
-      name: "Teacher User",
+      name: "Dipak Giri",
       isActive: true,
       emailVerified: new Date(),
       syncedTeacherId: syncedTeacher.id,
+    },
+  });
+
+  // Synced Subject (mathematics) assigned to the teacher
+  const mathSubject = await prisma.syncedSubject.create({
+    data: {
+      sourceId: "S1",
+      name: "mathematics",
+      code: "MATH",
+      gradeLevel: "Giraffe (U.K.G.)",
+      teacherId: syncedTeacher.id,
+      isActive: true,
     },
   });
 
