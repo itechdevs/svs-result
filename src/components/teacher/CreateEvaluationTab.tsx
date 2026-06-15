@@ -2,7 +2,9 @@
 
 import React from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, CheckCircle, AlertTriangle, Plus } from 'lucide-react';
+import { ArrowLeft, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 interface OutcomeRow {
   name: string;
@@ -94,10 +96,6 @@ export default function CreateEvaluationTab({
     setNewOutcomes(copy);
   };
 
-  const calculatedSum = newOutcomes.reduce((acc, currGroup) =>
-    acc + currGroup.outcomes.reduce((sum, curr) => sum + Number(curr.max), 0)
-    , 0);
-
   return (
     <motion.div
       key="create-evaluation-view"
@@ -106,65 +104,66 @@ export default function CreateEvaluationTab({
       exit={{ opacity: 0, y: -15 }}
       className="space-y-6"
     >
-      <div className="flex items-center gap-4 bg-white dark:bg-card p-4 rounded-xl border border-slate-200 dark:border-border justify-between">
+      <div className="flex items-center gap-4 bg-card p-4 rounded-xl border border-border justify-between">
         <div className="flex items-center gap-3">
-          <button
+          <Button
+            variant="outline"
+            size="icon"
             onClick={() => setCurrentTab('evaluations')}
-            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors flex items-center justify-center border border-slate-200 dark:border-border cursor-pointer"
+            className="rounded-full shrink-0"
           >
-            <ArrowLeft className="w-4 h-4 text-[#002045] dark:text-blue-300" />
-          </button>
+            <ArrowLeft className="w-4 h-4 text-foreground" />
+          </Button>
           <div>
-            <h2 className="font-bold text-sm text-[#002045] dark:text-white mt-0.5">
+            <h2 className="font-bold text-sm text-foreground">
               {isEditMode ? 'Edit Evaluation Rubric' : 'Create New Evaluation Rubric'}
             </h2>
           </div>
         </div>
 
         <div className="flex gap-2">
-          <button
+          <Button
             onClick={() => {
               handleCreateEvaluation();
               setCurrentTab('evaluations');
             }}
-            className="bg-[#0b6c44] text-white hover:bg-opacity-95 text-xs font-bold py-2 px-5 rounded-lg active:scale-95 transition-all cursor-pointer"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold"
           >
             {isEditMode ? 'Update Evaluation' : 'Save Evaluation Plan'}
-          </button>
+          </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
         {/* Basic Metadata Info */}
-        <div className="lg:col-span-2 bg-white dark:bg-card border border-slate-200 dark:border-border p-6 rounded-xl space-y-4 shadow-sm">
-          <h3 className="font-bold text-xs text-[#002045] dark:text-white tracking-wider uppercase border-b dark:border-border pb-2">
+        <div className="lg:col-span-2 bg-card border border-border p-6 rounded-xl space-y-4 shadow-sm">
+          <h3 className="font-bold text-xs text-foreground tracking-wider uppercase border-b border-border pb-2">
             Rubric Definition
           </h3>
 
           <div className="space-y-4">
             <div>
-              <label className="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">
+              <label className="text-[10px] font-extrabold text-muted-foreground uppercase block mb-1">
                 Evaluation Title
               </label>
-              <input
+              <Input
                 type="text"
                 value={newEvalTitle}
                 onChange={e => setNewEvalTitle(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-border rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-[#002045] focus:outline-none text-slate-900 dark:text-white"
+                className="w-full text-xs"
               />
             </div>
 
             <div>
-              <label className="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">
+              <label className="text-[10px] font-extrabold text-muted-foreground uppercase block mb-1">
                 Unit Title
               </label>
-              <input
+              <Input
                 type="text"
                 placeholder="e.g. Algebra, Grammar Unit 3, Photosynthesis…"
                 value={newSubjectTitle}
                 onChange={e => setNewSubjectTitle?.(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-border rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-[#002045] focus:outline-none text-slate-900 dark:text-white"
+                className="w-full text-xs"
               />
             </div>
           </div>
@@ -172,25 +171,26 @@ export default function CreateEvaluationTab({
       </div>
 
       {/* Task Types Array Entries List */}
-      <div className="bg-white dark:bg-card border border-slate-200 dark:border-border rounded-xl overflow-hidden shadow-sm">
-        <div className="p-4 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-border flex justify-between items-center">
-          <h3 className="font-bold text-xs text-[#002045] dark:text-white uppercase tracking-wider">Evaluation Task Types</h3>
-          <button
+      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+        <div className="p-4 bg-muted/30 border-b border-border flex justify-between items-center">
+          <h3 className="font-bold text-xs text-foreground uppercase tracking-wider">Evaluation Task Types</h3>
+          <Button
+            variant="ghost"
             onClick={addNewTaskGroup}
-            className="text-xs font-bold text-[#0b6c44] dark:text-[#9ff5c1] hover:underline flex items-center gap-1 cursor-pointer"
+            className="text-xs font-bold text-primary hover:text-primary/80 flex items-center gap-1"
           >
             <Plus className="w-4 h-4" />
             <span>Add Task Type</span>
-          </button>
+          </Button>
         </div>
         <div className="p-6 space-y-8">
           {newOutcomes.map((group, groupIndex) => (
-            <div key={groupIndex} className="space-y-4 border border-slate-200 dark:border-border rounded-xl p-4 bg-slate-50/50 dark:bg-slate-900/10 relative">
-              <div className="flex items-center justify-between border-b border-slate-200 dark:border-border pb-3">
+            <div key={groupIndex} className="space-y-4 border border-border rounded-xl p-4 bg-muted/10 relative">
+              <div className="flex items-center justify-between border-b border-border pb-3">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
-                    <label className="text-[10px] font-extrabold text-slate-500 uppercase">Task Type Name</label>
-                    <input
+                    <label className="text-[10px] font-extrabold text-muted-foreground uppercase">Task Type Name</label>
+                    <Input
                       type="text"
                       value={group.taskType}
                       onChange={e => {
@@ -198,35 +198,41 @@ export default function CreateEvaluationTab({
                         copy[groupIndex].taskType = e.target.value;
                         setNewOutcomes(copy);
                       }}
-                      className="w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-border rounded px-2.5 py-1.5 text-xs font-bold text-[#002045] dark:text-white focus:ring-1 focus:ring-[#002045]"
+                      className="w-48 text-xs font-bold text-foreground"
                     />
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
+                  <Button
+                    variant="outline"
+                    size="xs"
                     onClick={() => duplicateTaskGroup(groupIndex)}
-                    className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded"
+                    className="text-[10px] font-bold text-blue-600 dark:text-blue-400"
                   >
                     <span>Duplicate</span>
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="xs"
                     onClick={() => addNewOutcomeRow(groupIndex)}
-                    className="text-[10px] font-bold text-[#0b6c44] dark:text-[#9ff5c1] hover:underline flex items-center gap-1 cursor-pointer bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded"
+                    className="text-[10px] font-bold text-primary"
                   >
                     <Plus className="w-3 h-3" />
                     <span>Add Criteria</span>
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="xs"
                     onClick={() => deleteTaskGroup(groupIndex)}
-                    className="text-[10px] font-bold text-[#ba1a1a] dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 px-2 py-1 rounded cursor-pointer"
+                    className="text-[10px] font-bold"
                   >
                     Delete Group
-                  </button>
+                  </Button>
                 </div>
               </div>
 
               <div className="space-y-3">
-                <div className="grid grid-cols-12 gap-4 font-bold text-slate-500 text-[10px] uppercase pb-1 px-2">
+                <div className="grid grid-cols-12 gap-4 font-bold text-muted-foreground text-[10px] uppercase pb-1 px-2">
                   <div className="col-span-4">Sub Learning outcome criteria</div>
                   <div className="col-span-2">Assessment Date</div>
                   <div className="col-span-2 text-center">Full Marks</div>
@@ -235,9 +241,9 @@ export default function CreateEvaluationTab({
                 </div>
 
                 {group.outcomes.map((item, idx) => (
-                  <div key={idx} className="grid grid-cols-12 gap-4 items-center bg-white dark:bg-card p-2.5 rounded-lg border border-slate-100 dark:border-border shadow-sm">
+                  <div key={idx} className="grid grid-cols-12 gap-4 items-center bg-card p-2.5 rounded-lg border border-border shadow-sm">
                     <div className="col-span-4">
-                      <input
+                      <Input
                         type="text"
                         value={item.name}
                         onChange={e => {
@@ -245,11 +251,11 @@ export default function CreateEvaluationTab({
                           copy[groupIndex].outcomes[idx].name = e.target.value;
                           setNewOutcomes(copy);
                         }}
-                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-border rounded px-2.5 py-1.5 text-xs text-slate-900 dark:text-white focus:ring-1 focus:ring-[#002045]"
+                        className="w-full text-xs text-foreground"
                       />
                     </div>
                     <div className="col-span-2">
-                      <input
+                      <Input
                         type="date"
                         value={item.date}
                         onChange={e => {
@@ -257,11 +263,11 @@ export default function CreateEvaluationTab({
                           copy[groupIndex].outcomes[idx].date = e.target.value;
                           setNewOutcomes(copy);
                         }}
-                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-border rounded px-2.5 py-1.5 text-xs text-center text-slate-900 dark:text-white focus:ring-1 focus:ring-[#002045]"
+                        className="w-full text-xs text-center text-foreground"
                       />
                     </div>
                     <div className="col-span-2">
-                      <input
+                      <Input
                         type="number"
                         value={item.max}
                         onChange={e => {
@@ -269,11 +275,11 @@ export default function CreateEvaluationTab({
                           copy[groupIndex].outcomes[idx].max = Number(e.target.value);
                           setNewOutcomes(copy);
                         }}
-                        className="w-full text-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-border rounded px-2.5 py-1.5 text-xs font-mono text-slate-900 dark:text-white focus:ring-1 focus:ring-[#002045]"
+                        className="w-full text-center text-xs font-mono text-foreground"
                       />
                     </div>
                     <div className="col-span-2">
-                      <input
+                      <Input
                         type="number"
                         value={item.pass}
                         onChange={e => {
@@ -281,16 +287,18 @@ export default function CreateEvaluationTab({
                           copy[groupIndex].outcomes[idx].pass = Number(e.target.value);
                           setNewOutcomes(copy);
                         }}
-                        className="w-full text-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-border rounded px-2.5 py-1.5 text-xs font-mono text-slate-900 dark:text-white focus:ring-1 focus:ring-[#002045]"
+                        className="w-full text-center text-xs font-mono text-foreground"
                       />
                     </div>
                     <div className="col-span-2 text-center flex items-center justify-center gap-2">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="xs"
                         onClick={() => deleteOutcomeRow(groupIndex, idx)}
-                        className="p-1 px-3 text-[10px] font-bold text-[#ba1a1a] dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 rounded cursor-pointer transition-colors"
+                        className="text-[10px] font-bold text-destructive hover:text-destructive"
                       >
                         Remove
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ))}

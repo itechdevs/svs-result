@@ -6,7 +6,9 @@ import { useTable } from '@/hooks/use-table';
 import { DataTable } from '@/components/shared/common/data-table';
 import { EvaluationPlan, Student } from '@/types/academic';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/shared/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Eye } from 'lucide-react';
 
 interface StudentMark extends Student {
@@ -59,7 +61,7 @@ export function TableStudentDetails({ evaluation, students, onUpdateMarks, onVie
       {
         accessorKey: 'name',
         header: 'Student Name',
-        cell: ({ row }) => <div className="font-medium">{row.original.name}</div>,
+        cell: ({ row }) => <div className="font-medium text-foreground">{row.original.name}</div>,
       },
     ];
 
@@ -71,7 +73,7 @@ export function TableStudentDetails({ evaluation, students, onUpdateMarks, onVie
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="cursor-help font-bold">L{index + 1}</div>
+              <div className="cursor-help font-bold text-foreground">L{index + 1}</div>
             </TooltipTrigger>
             <TooltipContent>
               <p className="max-w-xs">{outcome.name}</p>
@@ -82,14 +84,14 @@ export function TableStudentDetails({ evaluation, students, onUpdateMarks, onVie
       cell: ({ row }) => {
         const mark = row.original.marks[`L${index + 1}`];
         return (
-          <input
+          <Input
             type="number"
             min="0"
             max={outcome.regularRating || 4}
             value={mark}
             onChange={(e) => onUpdateMarks?.(row.original.id, index, Number(e.target.value))}
             className={cn(
-              "w-16 px-2 py-1 text-center text-xs font-semibold rounded border",
+              "w-16 text-center text-xs font-semibold border-2 mx-auto",
               mark >= 3 ? "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900" :
               mark >= 2 ? "bg-amber-50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-900" :
               "bg-red-50 dark:bg-red-950/20 text-red-800 dark:text-red-300 border-red-200 dark:border-red-900"
@@ -102,21 +104,21 @@ export function TableStudentDetails({ evaluation, students, onUpdateMarks, onVie
     const summaryColumns: ColumnDef<StudentMark>[] = [
       {
         accessorKey: 'obtainedMarks',
-        header: () => <div className="text-center">Total /{evaluation.fullMarks}</div>,
+        header: () => <div className="text-center text-foreground font-semibold">Total /{evaluation.fullMarks}</div>,
         cell: ({ row }) => (
-          <div className="text-center font-bold text-sm">{row.original.obtainedMarks.toFixed(1)}</div>
+          <div className="text-center font-bold text-sm text-foreground">{row.original.obtainedMarks.toFixed(1)}</div>
         ),
       },
       {
         accessorKey: 'percentage',
-        header: () => <div className="text-center">Score %</div>,
+        header: () => <div className="text-center text-foreground font-semibold">Score %</div>,
         cell: ({ row }) => (
-          <div className="text-center font-semibold text-xs">{row.original.percentage.toFixed(1)}%</div>
+          <div className="text-center font-semibold text-xs text-foreground">{row.original.percentage.toFixed(1)}%</div>
         ),
       },
       {
         accessorKey: 'status',
-        header: () => <div className="text-center">Achieved</div>,
+        header: () => <div className="text-center text-foreground font-semibold">Achieved</div>,
         cell: ({ row }) => (
           <div className={cn(
             "text-center font-bold text-xs px-3 py-1 rounded-full inline-block",
@@ -130,15 +132,17 @@ export function TableStudentDetails({ evaluation, students, onUpdateMarks, onVie
       },
       {
         id: 'actions',
-        header: () => <div className="text-center">Actions</div>,
+        header: () => <div className="text-center text-foreground font-semibold">Actions</div>,
         cell: ({ row }) => (
-          <button 
+          <Button 
+            variant="outline"
+            size="sm"
             onClick={() => onViewStudent?.(row.original.id)}
-            className="mx-auto flex items-center gap-1 px-3 py-1 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded border border-slate-200 dark:border-border transition-colors"
+            className="mx-auto flex items-center gap-1 text-xs"
           >
             <Eye className="w-3 h-3" />
             View
-          </button>
+          </Button>
         ),
       },
     ];
@@ -154,15 +158,15 @@ export function TableStudentDetails({ evaluation, students, onUpdateMarks, onVie
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="text-xs text-slate-500">
+        <div className="text-xs text-muted-foreground">
           <span className="font-semibold">Calculation Logic:</span> Achieved % = (Total obtained marks ÷ ({learningOutcomes.length} × 4 × 5)) × 100
         </div>
         <div className="flex gap-4 text-xs">
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-1 text-muted-foreground">
             <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
             Proficient (≥3)
           </span>
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-1 text-muted-foreground">
             <span className="w-3 h-3 rounded-full bg-amber-500"></span>
             Needs Support (&lt;2)
           </span>

@@ -42,8 +42,8 @@ function LoginForm() {
     setError("");
 
     const credentials = {
-      teacher: { email: "teacher@school.com", password: "password" },
-      admin: { email: "admin@school.com", password: "password" },
+      teacher: { email: "teacher@school.com", password: "password123" },
+      admin: { email: "admin@school.com", password: "password123" },
     }[role];
 
     try {
