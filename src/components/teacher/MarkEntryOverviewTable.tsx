@@ -1,16 +1,12 @@
 "use client";
 
-import React, { useState, useMemo, useCallback, useEffect } from "react";
+import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Eye, CheckCircle } from "lucide-react";
-import { motion } from "motion/react";
+import { Eye, CheckCircle, AlertTriangle, Save, Calendar } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useProfile } from "@/hooks/use-profile";
-import {
-  useEvaluationTemplates,
-  useStudentEvaluationResults,
-  useBulkSaveMarks,
-} from "@/hooks/use-evaluations";
+import { useEvaluationTemplates, useStudentEvaluationResults } from "@/hooks/use-evaluations";
 import { useStudents } from "@/hooks/use-students";
 import {
   Select,
@@ -20,30 +16,39 @@ import {
   SelectValue,
 } from "@/components/shared/ui/select";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { StudentOutcomeMark, OutcomeMark } from "@/types/academic";
+import { useMarksContext } from "@/contexts/marks-context";
 
 export default function MarkEntryOverviewTable() {
   const { data: profile } = useProfile();
   const { data: templatesData = [] } = useEvaluationTemplates();
-  const bulkSave = useBulkSaveMarks();
+
+  const {
+    getStudentMark,
+    updateOutcomeMark,
+    outcomeColumns,
+    handleSaveAll,
+    isSaving,
+    saveError,
+    saved,
+    setEvaluations,
+  } = useMarksContext();
 
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+
   const [selectedClass, setSelectedClass] = useState(
-    searchParams.get("class") ?? "",
+    searchParams.get("class") ?? ""
   );
   const [selectedSubject, setSelectedSubject] = useState(
-    searchParams.get("subject") ?? "",
+    searchParams.get("subject") ?? ""
   );
   const [selectedEvalPlan, setSelectedEvalPlan] = useState(
-    searchParams.get("eval") ?? "",
+    searchParams.get("eval") ?? ""
   );
-  const [saved, setSaved] = useState(false);
-  const [localMarks, setLocalMarks] = useState<StudentOutcomeMark[]>([]);
 
   const { data: studentsData } = useStudents(
-    selectedClass ? { grade: selectedClass, limit: 9999 } : { limit: 1 },
+    selectedClass ? { grade: selectedClass, limit: 9999 } : { limit: 1 }
   );
 
   // Assigned classes from syncedTeacher.subjects
@@ -60,11 +65,10 @@ export default function MarkEntryOverviewTable() {
       .map((s) => s.name);
   }, [selectedClass, profile]);
 
-  // All evaluation templates for selected class+subject (multiple per subject)
   const subjectObj = useMemo(() => {
     if (!selectedClass || !selectedSubject) return undefined;
     return profile?.syncedTeacher?.subjects.find(
-      (s) => s.name === selectedSubject && s.gradeLevel === selectedClass,
+      (s) => s.name === selectedSubject && s.gradeLevel === selectedClass
     );
   }, [selectedClass, selectedSubject, profile]);
 
@@ -95,132 +99,35 @@ export default function MarkEntryOverviewTable() {
     });
   }, [allSubjectTemplates, selectedEvalPlan, selectedSubject]);
 
-  // Students for selected class
+  // Push current evaluations to the shared context so it fetches & syncs DB results.
+  // Use a ref to compare by ID string — avoids infinite loop from useMemo creating new
+  // array references on every render even when the data hasn't changed.
+  const prevEvalIdsRef = useRef<string>('');
+  useEffect(() => {
+    const nextIds = evaluations.map(e => e.id).join(',');
+    if (nextIds !== prevEvalIdsRef.current) {
+      prevEvalIdsRef.current = nextIds;
+      setEvaluations(evaluations);
+    }
+  }, [evaluations, setEvaluations]);
+
+  // Fetch DB results for other checks if needed, but DO NOT hide failed students
+  const evalIds = useMemo(() => evaluations.map(e => e.id), [evaluations]);
+  const { data: resultsData = [] } = useStudentEvaluationResults(
+    evalIds.length > 0 ? { limit: 1000 } : {}
+  );
+
   const classStudents = useMemo(
     () => studentsData?.students ?? [],
-    [studentsData],
+    [studentsData]
   );
-
-  // Fetch results for all evaluations in this subject
-  const evalIds = evaluations.map((e) => e.id);
-  const { data: resultsData = [] } = useStudentEvaluationResults(
-    evalIds.length > 0 ? { evaluationTemplateId: evalIds[0], limit: 1000 } : {},
-  );
-
-  // Sync DB results into local marks once
-  useEffect(() => {
-    if (evaluations.length === 0 || resultsData.length === 0) return;
-    const t = evaluations[0];
-    const mapped: StudentOutcomeMark[] = resultsData.map((r) => ({
-      studentId: r.syncedStudentId,
-      evaluationId: r.evaluationTemplateId,
-      outcomeMarks: {
-        [t.name]: {
-          regularMark: r.marksObtained,
-          regularDate: r.submittedAt
-            ? new Date(r.submittedAt).toISOString().split("T")[0]
-            : "",
-          supportMark: null,
-          supportDate: "",
-          reExamMark: null,
-          reExamDate: "",
-          remarks: r.remarks ?? "",
-        },
-      },
-    }));
-    setLocalMarks(mapped);
-  }, [resultsData, evaluations.length > 0 ? evaluations[0].id : null]);
-
-  const getStudentMark = useCallback(
-    (studentId: string, evalId: string) =>
-      localMarks.find(
-        (m) => m.studentId === studentId && m.evaluationId === evalId,
-      ),
-    [localMarks],
-  );
-
-  const updateOutcomeMark = useCallback(
-    (
-      studentId: string,
-      evalId: string,
-      outcomeName: string,
-      patch: Partial<OutcomeMark>,
-    ) => {
-      setLocalMarks((prev) => {
-        const idx = prev.findIndex(
-          (m) => m.studentId === studentId && m.evaluationId === evalId,
-        );
-        if (idx === -1) {
-          return [
-            ...prev,
-            {
-              studentId,
-              evaluationId: evalId,
-              outcomeMarks: {
-                [outcomeName]: {
-                  regularMark: null,
-                  regularDate: "",
-                  supportMark: null,
-                  supportDate: "",
-                  reExamMark: null,
-                  reExamDate: "",
-                  remarks: "",
-                  ...patch,
-                },
-              },
-            },
-          ];
-        }
-        const updated = [...prev];
-        const existing = updated[idx].outcomeMarks[outcomeName] ?? {
-          regularMark: null,
-          regularDate: "",
-          supportMark: null,
-          supportDate: "",
-          reExamMark: null,
-          reExamDate: "",
-          remarks: "",
-        };
-        updated[idx] = {
-          ...updated[idx],
-          outcomeMarks: {
-            ...updated[idx].outcomeMarks,
-            [outcomeName]: { ...existing, ...patch },
-          },
-        };
-        return updated;
-      });
-    },
-    [],
-  );
-
-  const handleSaveAll = async () => {
-    if (evaluations.length === 0) return;
-    for (const t of evaluations) {
-      const relevantMarks = localMarks.filter((m) => m.evaluationId === t.id);
-      if (relevantMarks.length === 0) continue;
-      await bulkSave.mutateAsync({
-        evaluationTemplateId: t.id,
-        results: relevantMarks.map((m) => ({
-          syncedStudentId: m.studentId,
-          marksObtained: m.outcomeMarks[t.name]?.regularMark ?? undefined,
-          isAbsent:
-            m.outcomeMarks[t.name]?.regularMark === null ||
-            m.outcomeMarks[t.name]?.regularMark === undefined,
-          remarks: m.outcomeMarks[t.name]?.remarks || undefined,
-        })),
-      });
-    }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
-  };
 
   const handleMarkChange = (
     studentId: string,
     evalId: string,
     outcomeName: string,
     raw: string,
-    max: number,
+    max: number
   ) => {
     const num = raw === "" ? null : Math.min(Math.max(0, Number(raw)), max);
     updateOutcomeMark(studentId, evalId, outcomeName, { regularMark: num });
@@ -228,12 +135,9 @@ export default function MarkEntryOverviewTable() {
 
   const updateURL = (c: string, s: string, e: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (c) params.set("class", c);
-    else params.delete("class");
-    if (s) params.set("subject", s);
-    else params.delete("subject");
-    if (e) params.set("eval", e);
-    else params.delete("eval");
+    if (c) params.set("class", c); else params.delete("class");
+    if (s) params.set("subject", s); else params.delete("subject");
+    if (e) params.set("eval", e); else params.delete("eval");
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
@@ -253,25 +157,13 @@ export default function MarkEntryOverviewTable() {
     updateURL(selectedClass, selectedSubject, value);
   };
 
-  // Build outcome columns: one per template
-  const outcomeColumns = useMemo(
-    () =>
-      evaluations.map((t) => ({
-        evalId: t.id,
-        name: t.name,
-        fullMarks: Number(t.fullMarks),
-        passMarks: Number(t.passMarks),
-      })),
-    [evaluations],
-  );
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6"
     >
-      {/* Filters */}
+      {/* ── Filters ─────────────────────────────────────────────── */}
       <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-border shadow-sm p-5">
         <h1 className="text-lg font-bold text-[#002045] dark:text-white mb-4">
           Mark Entry
@@ -287,9 +179,7 @@ export default function MarkEntryOverviewTable() {
               </SelectTrigger>
               <SelectContent>
                 {assignedClasses.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -305,18 +195,12 @@ export default function MarkEntryOverviewTable() {
             >
               <SelectTrigger className="w-full text-sm">
                 <SelectValue
-                  placeholder={
-                    selectedClass
-                      ? "Select a subject..."
-                      : "Select a class first"
-                  }
+                  placeholder={selectedClass ? "Select a subject..." : "Select a class first"}
                 />
               </SelectTrigger>
               <SelectContent>
                 {subjects.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -343,9 +227,7 @@ export default function MarkEntryOverviewTable() {
               </SelectTrigger>
               <SelectContent>
                 {evalPlans.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    {p}
-                  </SelectItem>
+                  <SelectItem key={p} value={p}>{p}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -353,44 +235,57 @@ export default function MarkEntryOverviewTable() {
         </div>
       </div>
 
+      {/* ── Empty states ────────────────────────────────────────── */}
       {(!selectedClass || !selectedSubject || !selectedEvalPlan) && (
         <div className="bg-white dark:bg-card rounded-xl border border-dashed border-slate-300 dark:border-border p-12 text-center">
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Select a class, subject, and evaluation plan to view the mark entry
-            table.
+            Select a class, subject, and evaluation plan to view the mark entry table.
           </p>
         </div>
       )}
 
-      {selectedClass &&
-        selectedSubject &&
-        selectedEvalPlan &&
-        evaluations.length === 0 && (
-          <div className="bg-white dark:bg-card rounded-xl border border-dashed border-slate-300 dark:border-border p-12 text-center">
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              No evaluation plan found for <strong>{selectedEvalPlan}</strong>{" "}
-              in <strong>{selectedSubject}</strong>.
-            </p>
-          </div>
-        )}
+      {selectedClass && selectedSubject && selectedEvalPlan && evaluations.length === 0 && (
+        <div className="bg-white dark:bg-card rounded-xl border border-dashed border-slate-300 dark:border-border p-12 text-center">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            No evaluation plan found for <strong>{selectedEvalPlan}</strong>{" "}
+            in <strong>{selectedSubject}</strong>.
+          </p>
+        </div>
+      )}
 
+      {/* ── Main table ──────────────────────────────────────────── */}
       {evaluations.length > 0 && (
         <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-border shadow-sm overflow-hidden">
+          {/* Table header bar */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-border">
             <div>
               <p className="font-bold text-sm text-[#002045] dark:text-white">
                 {selectedSubject}
               </p>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                {selectedClass} · {selectedSubject} · {classStudents.length}{" "}
+                {selectedClass} · {selectedEvalPlan} · {classStudents.length}{" "}
                 student{classStudents.length !== 1 ? "s" : ""}
               </p>
             </div>
             <button
               onClick={handleSaveAll}
-              className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm"
+              disabled={isSaving}
+              className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed rounded-lg transition-colors shadow-sm flex items-center gap-2"
             >
-              Save All
+              {isSaving ? (
+                <>
+                  <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-3.5 h-3.5" />
+                  Save All
+                </>
+              )}
             </button>
           </div>
 
@@ -415,18 +310,20 @@ export default function MarkEntryOverviewTable() {
                         className="px-2 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center whitespace-nowrap"
                       >
                         <div
-                          className="max-w-[120px] truncate"
-                          title={col.name}
+                          className="max-w-[120px] truncate font-bold text-[#002045] dark:text-blue-300"
+                          title={col.outcomeName}
                         >
-                          {col.name}
+                          {col.taskType}
                         </div>
-                        <div className="text-[9px] font-normal text-slate-400 normal-case">
-                          /{col.fullMarks} · pass {col.passMarks}
-                        </div>
+
+
                       </th>
                     ))}
                     <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center whitespace-nowrap">
-                      Total
+                      Obtained Marks
+                    </th>
+                    <th className="px-4 py-3 text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider text-center whitespace-nowrap">
+                      Percentage(%)
                     </th>
                     <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">
                       Result
@@ -438,35 +335,51 @@ export default function MarkEntryOverviewTable() {
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-border">
                   {classStudents.map((student) => {
+                    // ── Per-student calculations ────────────────
                     const totalObtained = outcomeColumns.reduce((sum, col) => {
                       const mark = getStudentMark(student.id, col.evalId);
-                      return (
-                        sum + (mark?.outcomeMarks[col.name]?.regularMark ?? 0)
-                      );
+                      const val = mark?.outcomeMarks[col.name]?.regularMark;
+                      return val !== null && val !== undefined ? sum + val : sum;
                     }, 0);
+
                     const totalFull = outcomeColumns.reduce(
                       (sum, col) => sum + col.fullMarks,
-                      0,
+                      0
                     );
-                    const anyFail = outcomeColumns.some((col) => {
+
+                    const enteredCount = outcomeColumns.filter((col) => {
                       const mark = getStudentMark(student.id, col.evalId);
                       const val = mark?.outcomeMarks[col.name]?.regularMark;
-                      return (
-                        val !== null && val !== undefined && val < col.passMarks
-                      );
-                    });
-                    const hasMarks = outcomeColumns.some((col) => {
+                      return val !== null && val !== undefined;
+                    }).length;
+
+                    const percentage =
+                      totalFull > 0 && enteredCount > 0
+                        ? Number(((totalObtained * 100) / totalFull).toFixed(2))
+                        : null;
+
+                    // A column fails if mark entered AND below passMarks
+                    const failedCols = outcomeColumns.filter((col) => {
                       const mark = getStudentMark(student.id, col.evalId);
-                      return (
-                        mark?.outcomeMarks[col.name]?.regularMark !== null &&
-                        mark?.outcomeMarks[col.name]?.regularMark !== undefined
-                      );
+                      const val = mark?.outcomeMarks[col.name]?.regularMark;
+                      return val !== null && val !== undefined && val < col.passMarks;
                     });
-                    const status = !hasMarks ? "—" : anyFail ? "Fail" : "Pass";
+
+                    const hasMarks = enteredCount > 0;
+                    const anyFail = failedCols.length > 0;
+
+                    let status: "Pass" | "Fail" | "—" = "—";
+                    if (hasMarks) {
+                      status = anyFail ? "Fail" : "Pass";
+                    }
+
                     return (
                       <tr
                         key={student.id}
-                        className="hover:bg-slate-50/70 dark:hover:bg-slate-800/20 transition-colors"
+                        className={cn(
+                          "hover:bg-slate-50/70 dark:hover:bg-slate-800/20 transition-colors",
+                          anyFail && hasMarks && "bg-red-50/40 dark:bg-red-950/10"
+                        )}
                       >
                         <td className="px-4 py-3 font-mono text-xs font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">
                           {student.rollNumber}
@@ -474,18 +387,16 @@ export default function MarkEntryOverviewTable() {
                         <td className="px-4 py-3 font-medium text-[#002045] dark:text-white whitespace-nowrap">
                           {student.name}
                         </td>
+
+                        {/* ── Mark input cells ── */}
                         {outcomeColumns.map((col) => {
                           const mark = getStudentMark(student.id, col.evalId);
                           const val = mark?.outcomeMarks[col.name]?.regularMark;
                           const isFail =
-                            val !== null &&
-                            val !== undefined &&
-                            val < col.passMarks;
+                            val !== null && val !== undefined && val < col.passMarks;
+
                           return (
-                            <td
-                              key={col.evalId}
-                              className="px-2 py-3 text-center"
-                            >
+                            <td key={col.evalId} className="px-2 py-2 text-center align-middle">
                               <input
                                 type="number"
                                 min={0}
@@ -499,22 +410,47 @@ export default function MarkEntryOverviewTable() {
                                     col.evalId,
                                     col.name,
                                     e.target.value,
-                                    col.fullMarks,
+                                    col.fullMarks
                                   )
                                 }
                                 className={cn(
-                                  "w-16 px-2 py-1.5 text-center text-xs font-bold rounded border-2 focus:outline-none focus:ring-2",
+                                  "w-16 px-2 py-1.5 text-center text-xs font-bold rounded border-2 focus:outline-none focus:ring-2 transition-colors",
                                   isFail
                                     ? "bg-red-50 dark:bg-red-950/20 border-red-300 dark:border-red-800 text-red-900 dark:text-red-300 focus:ring-red-400"
-                                    : "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-300 focus:ring-emerald-400",
+                                    : val !== null && val !== undefined
+                                      ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-300 focus:ring-emerald-400"
+                                      : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 focus:ring-blue-400"
                                 )}
                               />
                             </td>
                           );
                         })}
+
+                        {/* ── Total ── */}
                         <td className="px-4 py-3 text-center font-bold text-sm text-[#002045] dark:text-white whitespace-nowrap">
-                          {totalObtained} / {totalFull}
+                          {hasMarks ? `${totalObtained} / ${totalFull}` : "—"}
                         </td>
+
+                        {/* ── Percentage ── */}
+                        <td className="px-4 py-3 text-center whitespace-nowrap">
+                          {percentage !== null ? (
+                            <span
+                              className={cn(
+                                "inline-block px-2.5 py-0.5 rounded-full text-xs font-extrabold",
+                                percentage >= 80
+                                  ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300"
+                                  : percentage >= 50
+                                    ? "bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300"
+                                    : "bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-300"
+                              )}
+                            >
+                              {percentage}%
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 text-xs">—</span>
+                          )}
+                        </td>
+
                         <td className="px-4 py-3 text-center">
                           <span
                             className={cn(
@@ -523,12 +459,14 @@ export default function MarkEntryOverviewTable() {
                                 ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300"
                                 : status === "Fail"
                                   ? "bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-300"
-                                  : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400",
+                                  : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
                             )}
                           >
                             {status}
                           </span>
                         </td>
+
+                        {/* ── Detail link ── */}
                         <td className="px-4 py-3 text-center">
                           <Link
                             href={`/teacher/mark-entry/${student.id}?evalId=${evaluations[0].id}`}
@@ -548,16 +486,33 @@ export default function MarkEntryOverviewTable() {
         </div>
       )}
 
-      {saved && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="fixed top-4 right-4 p-4 bg-emerald-500 text-white font-semibold text-sm rounded-lg shadow-lg flex items-center gap-2 z-50"
-        >
-          <CheckCircle className="w-5 h-5" />
-          Marks saved successfully!
-        </motion.div>
-      )}
+      {/* ── Toast notifications ─────────────────────────────────── */}
+      <AnimatePresence>
+        {saved && !saveError && (
+          <motion.div
+            key="saved-toast"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="fixed top-4 right-4 p-4 bg-emerald-500 text-white font-semibold text-sm rounded-lg shadow-lg flex items-center gap-2 z-50"
+          >
+            <CheckCircle className="w-5 h-5" />
+            Marks saved successfully!
+          </motion.div>
+        )}
+        {saveError && (
+          <motion.div
+            key="error-toast"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="fixed top-4 right-4 p-4 bg-red-500 text-white font-semibold text-sm rounded-lg shadow-lg flex items-center gap-2 z-50 max-w-sm"
+          >
+            <AlertTriangle className="w-5 h-5 shrink-0" />
+            {saveError}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

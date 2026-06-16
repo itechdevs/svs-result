@@ -102,9 +102,9 @@ export default function CreateEvaluationTab({
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -15 }}
-      className="space-y-6"
+      className="space-y-6 relative"
     >
-      <div className="flex items-center gap-4 bg-card p-4 rounded-xl border border-border justify-between">
+      <div className="sticky top-4 z-50 flex items-center gap-4 bg-card/95 backdrop-blur-sm p-4 rounded-xl border border-border justify-between shadow-md">
         <div className="flex items-center gap-3">
           <Button
             variant="outline"
@@ -116,7 +116,7 @@ export default function CreateEvaluationTab({
           </Button>
           <div>
             <h2 className="font-bold text-sm text-foreground">
-              {isEditMode ? 'Edit Evaluation Rubric' : 'Create New Evaluation Rubric'}
+              {isEditMode ? 'Edit Evaluation' : 'Create New Evaluation'}
             </h2>
           </div>
         </div>

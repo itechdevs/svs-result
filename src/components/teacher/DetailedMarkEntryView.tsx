@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import Link from 'next/link';
-import { ArrowLeft, CheckCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, CheckCircle, AlertTriangle, Calendar, Save } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { Student, EvaluationPlan, StudentOutcomeMark, OutcomeMark } from '@/types/academic';
@@ -17,15 +17,18 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
+
 // ── Pure calculation helpers (exported for reuse) ─────────────────────────────
 
 export function calcObtainedMarks(
-  studentMarks: StudentOutcomeMark | undefined,
-  outcomes: { name: string }[]
+  studentId: string,
+  outcomes: { name: string; templateId?: string }[],
+  getStudentMark: (studentId: string, evalId: string) => StudentOutcomeMark | undefined
 ): number {
-  if (!studentMarks) return 0;
   return outcomes.reduce((sum, lo) => {
-    const m = studentMarks.outcomeMarks[lo.name];
+    if (!lo.templateId) return sum;
+    const mark = getStudentMark(studentId, lo.templateId);
+    const m = mark?.outcomeMarks[lo.name];
     return sum + (m?.regularMark ?? 0);
   }, 0);
 }
@@ -35,21 +38,35 @@ export function calcFullMarks(outcomes: { fullMarks?: number }[]): number {
 }
 
 export function calcPassFail(
-  studentMarks: StudentOutcomeMark | undefined,
-  outcomes: { name: string; passMarks?: number }[]
+  studentId: string,
+  outcomes: { name: string; passMarks?: number; templateId?: string }[],
+  getStudentMark: (studentId: string, evalId: string) => StudentOutcomeMark | undefined
 ): 'Pass' | 'Fail' | 'Pending' {
-  if (!studentMarks) return 'Pending';
-  const allEntered = outcomes.every(lo => {
-    const m = studentMarks.outcomeMarks[lo.name];
+  const allEntered = outcomes.every((lo) => {
+    if (!lo.templateId) return false;
+    const mark = getStudentMark(studentId, lo.templateId);
+    const m = mark?.outcomeMarks[lo.name];
     return m?.regularMark !== null && m?.regularMark !== undefined;
   });
-  if (!allEntered) return 'Pending';
-  const anyFail = outcomes.some(lo => {
-    const m = studentMarks.outcomeMarks[lo.name];
-    const finalMark = m?.reExamMark ?? m?.regularMark ?? 0;
-    return finalMark < (lo.passMarks ?? 0);
+  const anyEntered = outcomes.some((lo) => {
+    if (!lo.templateId) return false;
+    const mark = getStudentMark(studentId, lo.templateId);
+    const m = mark?.outcomeMarks[lo.name];
+    return m?.regularMark !== null && m?.regularMark !== undefined;
   });
-  return anyFail ? 'Fail' : 'Pass';
+  if (!anyEntered) return 'Pending';
+
+  const anyFail = outcomes.some((lo) => {
+    if (!lo.templateId) return false;
+    const mark = getStudentMark(studentId, lo.templateId);
+    const m = mark?.outcomeMarks[lo.name];
+    if (m?.regularMark === null || m?.regularMark === undefined) return false;
+    return m.regularMark < (lo.passMarks ?? 0);
+  });
+
+  if (anyFail) return 'Fail';
+  if (!allEntered) return 'Pending';
+  return 'Pass';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -64,9 +81,11 @@ interface Props {
     outcomeName: string,
     patch: Partial<OutcomeMark>
   ) => void;
+  handleSaveAll: () => Promise<void>;
 }
 
-export default function DetailedMarkEntryView({ student, evaluation, getStudentMark, updateOutcomeMark }: Props) {
+export default function DetailedMarkEntryView({ student, evaluation, getStudentMark, updateOutcomeMark, handleSaveAll }: Props) {
+  const router = useRouter();
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -78,11 +97,16 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
       clearTimeout(autoSaveTimerRef.current);
     }
     setAutoSaveStatus('saving');
-    autoSaveTimerRef.current = setTimeout(() => {
-      setAutoSaveStatus('saved');
-      setTimeout(() => setAutoSaveStatus('idle'), 2000);
+    autoSaveTimerRef.current = setTimeout(async () => {
+      try {
+        await handleSaveAll();
+        setAutoSaveStatus('saved');
+        setTimeout(() => setAutoSaveStatus('idle'), 2000);
+      } catch (err) {
+        setAutoSaveStatus('idle');
+      }
     }, 700);
-  }, []);
+  }, [handleSaveAll]);
 
   useEffect(() => {
     return () => {
@@ -92,7 +116,7 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
     };
   }, []);
 
-  // Group outcomes by taskType for the SN column
+  // Group outcomes by taskType for row-spanning
   const grouped = outcomes.reduce<Record<string, typeof outcomes>>((acc, lo) => {
     const key = lo.taskType ?? 'General';
     if (!acc[key]) acc[key] = [];
@@ -100,64 +124,75 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
     return acc;
   }, {});
 
-  const handleRegular = (outcomeName: string, field: 'regularMark' | 'regularDate', value: string, max: number) => {
+  const handleRegular = (outcomeName: string, templateId: string, field: 'regularMark' | 'regularDate', value: string, max: number) => {
     if (field === 'regularMark') {
       const num = value === '' ? null : Math.min(Math.max(0, Number(value)), max);
-      updateOutcomeMark(student.id, evaluation.id, outcomeName, { regularMark: num });
+      updateOutcomeMark(student.id, templateId, outcomeName, { regularMark: num });
     } else {
-      updateOutcomeMark(student.id, evaluation.id, outcomeName, { regularDate: value });
+      updateOutcomeMark(student.id, templateId, outcomeName, { regularDate: value });
     }
     triggerAutoSave();
   };
 
-  const handleSupport = (outcomeName: string, field: 'supportMark' | 'supportDate', value: string, max: number) => {
+  const handleSupport = (outcomeName: string, templateId: string, field: 'supportMark' | 'supportDate', value: string, max: number) => {
     if (field === 'supportMark') {
       const num = value === '' ? null : Math.min(Math.max(0, Number(value)), max);
-      updateOutcomeMark(student.id, evaluation.id, outcomeName, { supportMark: num });
+      updateOutcomeMark(student.id, templateId, outcomeName, { supportMark: num });
     } else {
-      updateOutcomeMark(student.id, evaluation.id, outcomeName, { supportDate: value });
+      updateOutcomeMark(student.id, templateId, outcomeName, { supportDate: value });
     }
     triggerAutoSave();
   };
 
-  const handleRemarks = (outcomeName: string, value: string) => {
-    updateOutcomeMark(student.id, evaluation.id, outcomeName, { remarks: value });
+  const handleRemarks = (outcomeName: string, templateId: string, value: string) => {
+    updateOutcomeMark(student.id, templateId, outcomeName, { remarks: value });
     triggerAutoSave();
   };
 
-  const obtained = calcObtainedMarks(marks, outcomes);
+  const obtained = calcObtainedMarks(student.id, outcomes, getStudentMark);
   const fullTotal = calcFullMarks(outcomes);
-  const status = calcPassFail(marks, outcomes);
+  const status = calcPassFail(student.id, outcomes, getStudentMark);
 
-  let sn = 0;
+  const isPending = status === 'Pending';
+  const isPass = status === 'Pass';
+
+  const statusStyles = {
+    Pass: 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300',
+    Pending: 'bg-muted text-muted-foreground',
+    Fail: 'bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-300',
+  };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 relative">
 
-      {/* Header */}
-      <div className="flex items-center justify-between bg-card p-4 rounded-xl border border-border shadow-sm">
+      {/* ── Sticky Header ───────────────────────────────────────────────────── */}
+      <div className="sticky top-4 z-40 flex items-center justify-between bg-card/95 backdrop-blur-sm p-4 rounded-xl border border-border shadow-md">
         <div className="flex items-center gap-3">
           <Button
             variant="outline"
             size="icon"
-            asChild
+            onClick={() => router.back()}
             className="rounded-full shrink-0"
           >
-            <Link href="/teacher/mark-entry">
-              <ArrowLeft className="w-4 h-4" />
-            </Link>
+            <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
             <h2 className="font-bold text-sm text-foreground">{student.name}</h2>
-            <p className="text-[11px] text-muted-foreground">{student.rollNo} · {evaluation.subject} · {evaluation.title}</p>
+            <p className="text-[11px] text-muted-foreground">
+              {student.rollNo} · {evaluation.subject} · {evaluation.title}
+              {evaluation.date && evaluation.date !== 'TBD' && (
+                <span className="ml-2 inline-flex items-center gap-1 text-[10px] text-blue-600 dark:text-blue-400">
+                  <Calendar className="w-3 h-3" />
+                  {evaluation.date}
+                </span>
+              )}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <span className={cn(
             'px-3 py-1 rounded-full text-xs font-bold uppercase',
-            status === 'Pass' ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300'
-              : status === 'Fail' ? 'bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-300'
-              : 'bg-muted text-muted-foreground'
+            statusStyles[status]
           )}>
             {status}
           </span>
@@ -174,7 +209,9 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
         </div>
       </div>
 
-      {/* Table */}
+
+
+      {/* ── Marks Table ─────────────────────────────────────────────────────── */}
       <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
         <Table>
           <TableHeader>
@@ -191,47 +228,94 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
               <TableHead className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Remarks</TableHead>
             </TableRow>
             <TableRow className="bg-muted/40 border-t border-border text-[9px] font-semibold text-muted-foreground uppercase">
-              <TableHead className="border-r border-border"></TableHead>
-              <TableHead className="border-r border-border"></TableHead>
-              <TableHead className="border-r border-border"></TableHead>
+              <TableHead className="border-r border-border" />
+              <TableHead className="border-r border-border" />
+              <TableHead className="border-r border-border" />
               <TableHead className="text-center border-r border-border">Date</TableHead>
               <TableHead className="text-center border-r border-border">Marks</TableHead>
               <TableHead className="text-center border-r border-border">Date</TableHead>
               <TableHead className="text-center border-r border-border">Marks</TableHead>
-              <TableHead></TableHead>
+              <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {Object.entries(grouped).map(([taskType, los]) =>
+            {Object.entries(grouped).map(([taskType, los], groupIdx) =>
               los.map((lo, idx) => {
-                sn++;
-                const m = marks?.outcomeMarks[lo.name];
+                const markObj = lo.templateId ? getStudentMark(student.id, lo.templateId) : undefined;
+                const m = markObj?.outcomeMarks[lo.name];
                 const max = lo.fullMarks ?? 100;
                 const pass = lo.passMarks ?? 0;
-                const regFail = m?.regularMark !== null && m?.regularMark !== undefined && m.regularMark < pass;
-                const isFailed = regFail; // eligible for support assessment
-                const rowSn = sn;
+                const regFail =
+                  m?.regularMark !== null &&
+                  m?.regularMark !== undefined &&
+                  m.regularMark < pass;
+                const rowSn = groupIdx + 1;
 
                 return (
-                  <TableRow key={lo.name} className="hover:bg-muted/20 transition-colors">
-                    <TableCell className="text-center font-mono text-xs font-semibold text-muted-foreground border-r border-border">{rowSn}</TableCell>
-                    <TableCell className="text-xs font-bold text-primary border-r border-border">
-                      {idx === 0 ? taskType : <span className="text-muted-foreground font-normal">↳</span>}
-                    </TableCell>
+                  <TableRow
+                    key={lo.name}
+                    className={cn(
+                      'hover:bg-muted/20 transition-colors',
+                      regFail && 'bg-red-50/30 dark:bg-red-950/10'
+                    )}
+                  >
+                    {idx === 0 && (
+                      <>
+                        <TableCell
+                          rowSpan={los.length}
+                          className="text-center font-mono text-xs font-semibold text-muted-foreground border-r border-b border-border bg-slate-50 dark:bg-slate-900/50 align-top pt-4 shadow-inner"
+                        >
+                          {rowSn}
+                        </TableCell>
+                        <TableCell
+                          rowSpan={los.length}
+                          className="text-sm font-extrabold text-[#002045] dark:text-blue-300 border-r border-b border-border bg-slate-50 dark:bg-slate-900/50 align-top pt-4 shadow-inner"
+                        >
+                          {taskType}
+                        </TableCell>
+                      </>
+                    )}
+
+                    {/* Sub-outcome label */}
                     <TableCell className="border-r border-border whitespace-normal max-w-xs">
-                      <p className="text-xs font-semibold text-foreground">{lo.name}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">{lo.text}</p>
-                      <p className="text-[9px] text-muted-foreground mt-1 font-mono">Full: {max} · Pass: {pass}</p>
+                      <div className="flex items-start gap-2">
+                        {regFail && (
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                        )}
+                        <div>
+                          <p className="text-xs font-semibold text-foreground">{lo.text}</p>
+                          <p className="text-[9px] text-muted-foreground mt-1 font-mono">
+                            Full: {max} · Pass: {pass}
+                          </p>
+                          {regFail && (
+                            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-red-700 dark:text-red-400 bg-red-100 dark:bg-red-950/40 px-1.5 py-0.5 rounded-full mt-1">
+                              Failed
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </TableCell>
 
-                    {/* Regular: Date */}
+                    {/* Regular: Date — shows assignment date from template (read-only) */}
                     <TableCell className="text-center border-r border-border">
-                      <Input
-                        type="date"
-                        value={m?.regularDate ?? ''}
-                        onChange={e => handleRegular(lo.name, 'regularDate', e.target.value, max)}
-                        className="w-28 text-xs text-center mx-auto"
-                      />
+                      {lo.regularDate ? (
+                        <div className="flex items-center justify-center gap-1.5 bg-blue-50/50 dark:bg-blue-950/20 py-1 px-2 rounded-md border border-blue-100 dark:border-blue-900/50 w-fit mx-auto">
+                          <Calendar className="w-3 h-3 text-blue-500 shrink-0" />
+                          <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400">
+                            {new Date(
+                              Number(lo.regularDate.split('-')[0]),
+                              Number(lo.regularDate.split('-')[1]) - 1,
+                              Number(lo.regularDate.split('-')[2])
+                            ).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: '2-digit',
+                              year: 'numeric',
+                            })}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground/40">—</span>
+                      )}
                     </TableCell>
 
                     {/* Regular: Marks */}
@@ -243,33 +327,35 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
                         step="any"
                         value={m?.regularMark ?? ''}
                         placeholder="—"
-                        onChange={e => handleRegular(lo.name, 'regularMark', e.target.value, max)}
+                        onChange={(e) => handleRegular(lo.name, lo.templateId!, 'regularMark', e.target.value, max)}
                         className={cn(
                           'w-16 text-center text-sm font-bold mx-auto border-2',
                           regFail
                             ? 'bg-red-50 dark:bg-red-950/20 border-red-300 dark:border-red-800 text-red-900 dark:text-red-300'
-                            : 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-300'
+                            : m?.regularMark !== null && m?.regularMark !== undefined
+                              ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-300'
+                              : 'border-muted-foreground/20'
                         )}
                       />
                     </TableCell>
 
                     {/* Support: Date */}
                     <TableCell className="text-center border-r border-border">
-                      {isFailed ? (
+                      {regFail ? (
                         <Input
                           type="date"
                           value={m?.supportDate ?? ''}
-                          onChange={e => handleSupport(lo.name, 'supportDate', e.target.value, max)}
+                          onChange={(e) => handleSupport(lo.name, lo.templateId!, 'supportDate', e.target.value, max)}
                           className="w-28 text-xs text-center mx-auto"
                         />
                       ) : (
-                        <span className="text-[10px] text-muted-foreground/40">—</span>
+                        <span className="text-muted-foreground/30">—</span>
                       )}
                     </TableCell>
 
                     {/* Support: Marks */}
                     <TableCell className="text-center border-r border-border">
-                      {isFailed ? (
+                      {regFail ? (
                         <Input
                           type="number"
                           min={0}
@@ -277,11 +363,11 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
                           step="any"
                           value={m?.supportMark ?? ''}
                           placeholder="—"
-                          onChange={e => handleSupport(lo.name, 'supportMark', e.target.value, max)}
-                          className="w-16 text-center text-sm font-bold mx-auto border-2 bg-purple-50 dark:bg-purple-950/20 border-purple-300 dark:border-purple-800 text-purple-900 dark:text-purple-300"
+                          onChange={(e) => handleSupport(lo.name, lo.templateId!, 'supportMark', e.target.value, max)}
+                          className="w-16 text-center text-sm font-bold mx-auto bg-amber-50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-300"
                         />
                       ) : (
-                        <span className="text-[10px] text-muted-foreground/40">—</span>
+                        <span className="text-muted-foreground/30">—</span>
                       )}
                     </TableCell>
 
@@ -291,8 +377,8 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
                         type="text"
                         value={m?.remarks ?? ''}
                         placeholder="Add remarks..."
-                        onChange={e => handleRemarks(lo.name, e.target.value)}
-                        className="w-full text-xs"
+                        onChange={(e) => handleRemarks(lo.name, lo.templateId!, e.target.value)}
+                        className="w-full text-xs min-w-[140px]"
                       />
                     </TableCell>
                   </TableRow>
@@ -303,7 +389,7 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
         </Table>
       </div>
 
-      {/* Footer summary */}
+      {/* ── Footer Summary ───────────────────────────────────────────────────── */}
       <div className="bg-muted/30 rounded-xl border border-border p-5 flex flex-wrap items-center gap-8">
         <div>
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Total Obtained</p>
@@ -312,16 +398,31 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
           </p>
         </div>
         <div className="border-l border-border pl-8">
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Percentage</p>
+          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+            {fullTotal > 0 ? ((obtained / fullTotal) * 100).toFixed(2) : 0}%
+          </p>
+        </div>
+        <div className="border-l border-border pl-8">
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Result</p>
           <span className={cn(
-            'px-3 py-1 rounded-full text-sm font-bold uppercase',
-            status === 'Pass' ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300'
-              : status === 'Fail' ? 'bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-300'
-              : 'bg-muted text-muted-foreground'
+            'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold',
+            statusStyles[status]
           )}>
+            {status === 'Fail' && <AlertTriangle className="w-4 h-4" />}
+            {isPass && <CheckCircle className="w-4 h-4" />}
             {status}
           </span>
         </div>
+        {evaluation.date && evaluation.date !== 'TBD' && (
+          <div className="border-l border-border pl-8">
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Scheduled Date</p>
+            <p className="text-sm font-semibold text-foreground flex items-center gap-1">
+              <Calendar className="w-4 h-4 text-blue-500" />
+              {evaluation.date}
+            </p>
+          </div>
+        )}
       </div>
     </motion.div>
   );
