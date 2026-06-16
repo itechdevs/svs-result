@@ -11,6 +11,8 @@ export interface LearningOutcome {
   passMarks?: number;
   /** Task type group this outcome belongs to */
   taskType?: string;
+  /** Reference to the source EvaluationTemplate ID */
+  templateId?: string;
 }
 
 export interface SubEvaluation {
