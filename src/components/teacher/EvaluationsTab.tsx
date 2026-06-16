@@ -180,17 +180,19 @@ export default function EvaluationsTab({
               {/* Preview of what is inside */}
               {evalPlan.learningOutcomes && evalPlan.learningOutcomes.length > 0 && (
                 <div className="pt-2">
-                  <span className="text-[9px] font-bold text-muted-foreground uppercase block mb-1.5">Criteria Preview</span>
+                  <span className="text-[9px] font-bold text-muted-foreground uppercase block mb-1.5">Task Types Preview</span>
                   <ul className="text-[10px] text-muted-foreground space-y-1">
-                    {evalPlan.learningOutcomes.slice(0, 3).map((lo, idx) => (
-                      <li key={idx} className="truncate flex items-center gap-1.5">
-                        <span className="w-1 h-1 rounded-full bg-foreground shrink-0" />
-                        {lo.name}
-                      </li>
-                    ))}
-                    {evalPlan.learningOutcomes.length > 3 && (
+                    {Array.from(new Set(evalPlan.learningOutcomes.map(lo => lo.taskType || 'Standard')))
+                      .slice(0, 3)
+                      .map((tt, idx) => (
+                        <li key={idx} className="truncate flex items-center gap-1.5">
+                          <span className="w-1 h-1 rounded-full bg-foreground shrink-0" />
+                          <span className="font-semibold text-foreground">{tt}</span>
+                        </li>
+                      ))}
+                    {Array.from(new Set(evalPlan.learningOutcomes.map(lo => lo.taskType))).length > 3 && (
                       <li className="text-[9px] text-muted-foreground italic mt-1 pl-2.5">
-                        + {evalPlan.learningOutcomes.length - 3} more criteria
+                        + {Array.from(new Set(evalPlan.learningOutcomes.map(lo => lo.taskType))).length - 3} more
                       </li>
                     )}
                   </ul>

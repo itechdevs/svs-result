@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
@@ -67,6 +68,7 @@ interface Props {
 }
 
 export default function DetailedMarkEntryView({ student, evaluation, getStudentMark, updateOutcomeMark }: Props) {
+  const router = useRouter();
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -140,12 +142,10 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
           <Button
             variant="outline"
             size="icon"
-            asChild
+            onClick={() => router.back()}
             className="rounded-full shrink-0"
           >
-            <Link href="/teacher/mark-entry">
-              <ArrowLeft className="w-4 h-4" />
-            </Link>
+            <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
             <h2 className="font-bold text-sm text-foreground">{student.name}</h2>
@@ -157,7 +157,7 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
             'px-3 py-1 rounded-full text-xs font-bold uppercase',
             status === 'Pass' ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300'
               : status === 'Fail' ? 'bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-300'
-              : 'bg-muted text-muted-foreground'
+                : 'bg-muted text-muted-foreground'
           )}>
             {status}
           </span>
@@ -202,25 +202,30 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
             </TableRow>
           </TableHeader>
           <TableBody>
-            {Object.entries(grouped).map(([taskType, los]) =>
+            {Object.entries(grouped).map(([taskType, los], groupIdx) =>
               los.map((lo, idx) => {
-                sn++;
                 const m = marks?.outcomeMarks[lo.name];
                 const max = lo.fullMarks ?? 100;
                 const pass = lo.passMarks ?? 0;
                 const regFail = m?.regularMark !== null && m?.regularMark !== undefined && m.regularMark < pass;
                 const isFailed = regFail; // eligible for support assessment
-                const rowSn = sn;
+                const rowSn = groupIdx + 1;
 
                 return (
                   <TableRow key={lo.name} className="hover:bg-muted/20 transition-colors">
-                    <TableCell className="text-center font-mono text-xs font-semibold text-muted-foreground border-r border-border">{rowSn}</TableCell>
-                    <TableCell className="text-xs font-bold text-primary border-r border-border">
-                      {idx === 0 ? taskType : <span className="text-muted-foreground font-normal">↳</span>}
-                    </TableCell>
+                    {idx === 0 && (
+                      <>
+                        <TableCell rowSpan={los.length} className="text-center font-mono text-xs font-semibold text-muted-foreground border-r border-b border-border bg-slate-50 dark:bg-slate-900/50 align-top pt-4 shadow-inner">
+                          {rowSn}
+                        </TableCell>
+                        <TableCell rowSpan={los.length} className="text-sm font-extrabold text-[#002045] dark:text-blue-300 border-r border-b border-border bg-slate-50 dark:bg-slate-900/50 align-top pt-4 shadow-inner">
+                          {taskType}
+                        </TableCell>
+                      </>
+                    )}
                     <TableCell className="border-r border-border whitespace-normal max-w-xs">
-                      <p className="text-xs font-semibold text-foreground">{lo.name}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">{lo.text}</p>
+                      <p className="text-xs font-semibold text-foreground">{lo.text}</p>
+
                       <p className="text-[9px] text-muted-foreground mt-1 font-mono">Full: {max} · Pass: {pass}</p>
                     </TableCell>
 
@@ -312,12 +317,18 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
           </p>
         </div>
         <div className="border-l border-border pl-8">
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Percentage</p>
+          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+            {fullTotal > 0 ? ((obtained / fullTotal) * 100).toFixed(2) : 0}%
+          </p>
+        </div>
+        <div className="border-l border-border pl-8">
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Result</p>
           <span className={cn(
             'px-3 py-1 rounded-full text-sm font-bold uppercase',
             status === 'Pass' ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300'
               : status === 'Fail' ? 'bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-300'
-              : 'bg-muted text-muted-foreground'
+                : 'bg-muted text-muted-foreground'
           )}>
             {status}
           </span>

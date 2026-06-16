@@ -40,6 +40,7 @@ export default function MarkEntryOverviewTable() {
     searchParams.get("eval") ?? "",
   );
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [localMarks, setLocalMarks] = useState<StudentOutcomeMark[]>([]);
 
   const { data: studentsData } = useStudents(
@@ -101,35 +102,54 @@ export default function MarkEntryOverviewTable() {
     [studentsData],
   );
 
-  // Fetch results for all evaluations in this subject
-  const evalIds = evaluations.map((e) => e.id);
+  // All template IDs in this evaluation group (Listening, Speaking, Reading, Writing…)
+  const evalIds = useMemo(() => evaluations.map((e) => e.id), [evaluations]);
+
+  // Fetch results for ALL templates in this evaluation group (not just the first one)
+  // No templateId filter — fetch all, then filter client-side by evalIds
   const { data: resultsData = [] } = useStudentEvaluationResults(
-    evalIds.length > 0 ? { evaluationTemplateId: evalIds[0], limit: 1000 } : {},
+    evalIds.length > 0 ? { limit: 1000 } : {},
   );
 
-  // Sync DB results into local marks once
+  // Sync DB results into local marks for ALL sub-criteria templates
   useEffect(() => {
     if (evaluations.length === 0 || resultsData.length === 0) return;
-    const t = evaluations[0];
-    const mapped: StudentOutcomeMark[] = resultsData.map((r) => ({
-      studentId: r.syncedStudentId,
-      evaluationId: r.evaluationTemplateId,
-      outcomeMarks: {
-        [t.name]: {
-          regularMark: r.marksObtained,
-          regularDate: r.submittedAt
-            ? new Date(r.submittedAt).toISOString().split("T")[0]
-            : "",
-          supportMark: null,
-          supportDate: "",
-          reExamMark: null,
-          reExamDate: "",
-          remarks: r.remarks ?? "",
+
+    // Build a map of templateId -> template for fast lookup
+    const evalMap = new Map(evaluations.map((e) => [e.id, e]));
+    const evalIdSet = new Set(evalIds);
+
+    // Map each result row to a StudentOutcomeMark entry keyed by studentId + templateId
+    const mapped: StudentOutcomeMark[] = [];
+    for (const r of resultsData) {
+      if (!evalIdSet.has(r.evaluationTemplateId)) continue;
+      const template = evalMap.get(r.evaluationTemplateId);
+      if (!template) continue;
+      mapped.push({
+        studentId: r.syncedStudentId,
+        evaluationId: r.evaluationTemplateId,
+        outcomeMarks: {
+          [template.name]: {
+            regularMark:
+              r.marksObtained !== null && r.marksObtained !== undefined
+                ? Number(r.marksObtained)
+                : null,
+            regularDate: r.submittedAt
+              ? new Date(r.submittedAt).toISOString().split("T")[0]
+              : "",
+            supportMark: null,
+            supportDate: "",
+            reExamMark: null,
+            reExamDate: "",
+            remarks: r.remarks ?? "",
+          },
         },
-      },
-    }));
+      });
+    }
+
     setLocalMarks(mapped);
-  }, [resultsData, evaluations.length > 0 ? evaluations[0].id : null]);
+  }, [resultsData, evalIds.join(",")]);
+
 
   const getStudentMark = useCallback(
     (studentId: string, evalId: string) =>
@@ -196,23 +216,32 @@ export default function MarkEntryOverviewTable() {
 
   const handleSaveAll = async () => {
     if (evaluations.length === 0) return;
-    for (const t of evaluations) {
-      const relevantMarks = localMarks.filter((m) => m.evaluationId === t.id);
-      if (relevantMarks.length === 0) continue;
-      await bulkSave.mutateAsync({
-        evaluationTemplateId: t.id,
-        results: relevantMarks.map((m) => ({
-          syncedStudentId: m.studentId,
-          marksObtained: m.outcomeMarks[t.name]?.regularMark ?? undefined,
-          isAbsent:
-            m.outcomeMarks[t.name]?.regularMark === null ||
-            m.outcomeMarks[t.name]?.regularMark === undefined,
-          remarks: m.outcomeMarks[t.name]?.remarks || undefined,
-        })),
-      });
+    setSaveError(null);
+    try {
+      for (const t of evaluations) {
+        const relevantMarks = localMarks.filter((m) => m.evaluationId === t.id);
+        if (relevantMarks.length === 0) continue;
+        await bulkSave.mutateAsync({
+          evaluationTemplateId: t.id,
+          results: relevantMarks.map((m) => {
+            const obtained = m.outcomeMarks[t.name]?.regularMark;
+            return {
+              syncedStudentId: m.studentId,
+              marksObtained:
+                obtained !== null && obtained !== undefined ? obtained : undefined,
+              isAbsent: false,
+              remarks: m.outcomeMarks[t.name]?.remarks || undefined,
+            };
+          }),
+        });
+      }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Save failed. Please try again.';
+      setSaveError(msg);
+      setTimeout(() => setSaveError(null), 4000);
     }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
   };
 
   const handleMarkChange = (
@@ -253,15 +282,33 @@ export default function MarkEntryOverviewTable() {
     updateURL(selectedClass, selectedSubject, value);
   };
 
-  // Build outcome columns: one per template
+  // Build outcome columns: one per template in the evaluation group
+  // Parse task type and outcome label from the template name pattern:
+  //   [EvalTitle|UnitTitle][TaskType] OutcomeName  →  taskType = "Listening" etc.
   const outcomeColumns = useMemo(
     () =>
-      evaluations.map((t) => ({
-        evalId: t.id,
-        name: t.name,
-        fullMarks: Number(t.fullMarks),
-        passMarks: Number(t.passMarks),
-      })),
+      evaluations.map((t) => {
+        const newFormat = t.name.match(/^\[[^\]]+\]\[([^\]]+)\]\s*(.+)$/);
+        const legacyFormat = t.name.match(/^\[([^\]]+)\]\s*(.+)$/);
+        const taskType = newFormat
+          ? newFormat[1]
+          : legacyFormat
+            ? legacyFormat[1]
+            : t.name;
+        const outcomeName = newFormat
+          ? newFormat[2]
+          : legacyFormat
+            ? legacyFormat[2]
+            : t.name;
+        return {
+          evalId: t.id,
+          name: t.name,       // full key used for outcomeMarks lookup
+          taskType,            // shown in column header
+          outcomeName,         // shown in tooltip
+          fullMarks: Number(t.fullMarks),
+          passMarks: Number(t.passMarks),
+        };
+      }),
     [evaluations],
   );
 
@@ -388,9 +435,20 @@ export default function MarkEntryOverviewTable() {
             </div>
             <button
               onClick={handleSaveAll}
-              className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm"
+              disabled={bulkSave.isPending}
+              className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed rounded-lg transition-colors shadow-sm flex items-center gap-2"
             >
-              Save All
+              {bulkSave.isPending ? (
+                <>
+                  <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  Saving...
+                </>
+              ) : (
+                'Save All'
+              )}
             </button>
           </div>
 
@@ -414,19 +472,23 @@ export default function MarkEntryOverviewTable() {
                         key={col.evalId}
                         className="px-2 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center whitespace-nowrap"
                       >
+                        {/* Show Task Type (e.g. Listening) as the column header */}
                         <div
-                          className="max-w-[120px] truncate"
-                          title={col.name}
+                          className="max-w-[120px] truncate font-bold text-[#002045] dark:text-blue-300"
+                          title={col.outcomeName}
                         >
-                          {col.name}
+                          {col.taskType}
                         </div>
-                        <div className="text-[9px] font-normal text-slate-400 normal-case">
+                        {/* <div className="text-[9px] font-normal text-slate-400 normal-case">
                           /{col.fullMarks} · pass {col.passMarks}
-                        </div>
+                        </div> */}
                       </th>
                     ))}
                     <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center whitespace-nowrap">
                       Total
+                    </th>
+                    <th className="px-4 py-3 text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider text-center whitespace-nowrap">
+                      % (Percentage)
                     </th>
                     <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">
                       Result
@@ -438,16 +500,27 @@ export default function MarkEntryOverviewTable() {
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-border">
                   {classStudents.map((student) => {
+                    // Only count entered (non-null) marks in the numerator
                     const totalObtained = outcomeColumns.reduce((sum, col) => {
                       const mark = getStudentMark(student.id, col.evalId);
-                      return (
-                        sum + (mark?.outcomeMarks[col.name]?.regularMark ?? 0)
-                      );
+                      const val = mark?.outcomeMarks[col.name]?.regularMark;
+                      return val !== null && val !== undefined ? sum + val : sum;
                     }, 0);
                     const totalFull = outcomeColumns.reduce(
                       (sum, col) => sum + col.fullMarks,
                       0,
                     );
+                    // Count how many sub-criteria have marks entered
+                    const enteredCount = outcomeColumns.filter((col) => {
+                      const mark = getStudentMark(student.id, col.evalId);
+                      const val = mark?.outcomeMarks[col.name]?.regularMark;
+                      return val !== null && val !== undefined;
+                    }).length;
+                    // Percentage = (Total Obtained × 100) ÷ (Total Full Marks of ALL sub-criteria)
+                    const percentage =
+                      totalFull > 0 && enteredCount > 0
+                        ? Number(((totalObtained * 100) / totalFull).toFixed(2))
+                        : null;
                     const anyFail = outcomeColumns.some((col) => {
                       const mark = getStudentMark(student.id, col.evalId);
                       const val = mark?.outcomeMarks[col.name]?.regularMark;
@@ -455,13 +528,7 @@ export default function MarkEntryOverviewTable() {
                         val !== null && val !== undefined && val < col.passMarks
                       );
                     });
-                    const hasMarks = outcomeColumns.some((col) => {
-                      const mark = getStudentMark(student.id, col.evalId);
-                      return (
-                        mark?.outcomeMarks[col.name]?.regularMark !== null &&
-                        mark?.outcomeMarks[col.name]?.regularMark !== undefined
-                      );
-                    });
+                    const hasMarks = enteredCount > 0;
                     const status = !hasMarks ? "—" : anyFail ? "Fail" : "Pass";
                     return (
                       <tr
@@ -513,7 +580,24 @@ export default function MarkEntryOverviewTable() {
                           );
                         })}
                         <td className="px-4 py-3 text-center font-bold text-sm text-[#002045] dark:text-white whitespace-nowrap">
-                          {totalObtained} / {totalFull}
+                          {hasMarks ? `${totalObtained} / ${totalFull}` : '—'}
+                        </td>
+                        {/* Percentage column */}
+                        <td className="px-4 py-3 text-center whitespace-nowrap">
+                          {percentage !== null ? (
+                            <span className={cn(
+                              "inline-block px-2.5 py-0.5 rounded-full text-xs font-extrabold",
+                              percentage >= 80
+                                ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300"
+                                : percentage >= 50
+                                  ? "bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300"
+                                  : "bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-300"
+                            )}>
+                              {percentage}%
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 text-xs">—</span>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-center">
                           <span
@@ -548,7 +632,7 @@ export default function MarkEntryOverviewTable() {
         </div>
       )}
 
-      {saved && (
+      {saved && !saveError && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -556,6 +640,19 @@ export default function MarkEntryOverviewTable() {
         >
           <CheckCircle className="w-5 h-5" />
           Marks saved successfully!
+        </motion.div>
+      )}
+
+      {saveError && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="fixed top-4 right-4 p-4 bg-red-500 text-white font-semibold text-sm rounded-lg shadow-lg flex items-center gap-2 z-50 max-w-sm"
+        >
+          <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          {saveError}
         </motion.div>
       )}
     </motion.div>

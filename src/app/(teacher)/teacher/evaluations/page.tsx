@@ -84,17 +84,24 @@ export default function TeacherEvaluationsPage() {
           ? latestDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
           : 'TBD',
         unit: unitTitle,
-        learningOutcomes: group.map(t => ({
-          name: t.name,
-          text: `Evaluate outcome competence for ${t.name}.`,
-          regularRating: 0,
-          afterSupportRating: null,
-          regularDate: t.scheduledDate ? new Date(t.scheduledDate).toISOString().split('T')[0] : '',
-          supportDate: '',
-          fullMarks: Number(t.fullMarks),
-          passMarks: Number(t.passMarks),
-          taskType: 'Standard',
-        })),
+        learningOutcomes: group.map(t => {
+          const newFormat = t.name.match(/^\[[^\]]+\]\[([^\]]+)\]\s*(.+)$/);
+          const legacyFormat = t.name.match(/^\[([^\]]+)\]\s*(.+)$/);
+          const taskType = newFormat ? newFormat[1] : (legacyFormat ? legacyFormat[1] : 'Standard');
+          const outcomeName = newFormat ? newFormat[2] : (legacyFormat ? legacyFormat[2] : t.name);
+
+          return {
+            name: t.name,
+            text: outcomeName,
+            regularRating: 0,
+            afterSupportRating: null,
+            regularDate: t.scheduledDate ? new Date(t.scheduledDate).toISOString().split('T')[0] : '',
+            supportDate: '',
+            fullMarks: Number(t.fullMarks),
+            passMarks: Number(t.passMarks),
+            taskType: taskType,
+          };
+        }),
         subEvaluations: group.map(t => {
           // Supports both [EvalTitle][TaskType] OutcomeName and legacy [TaskType] OutcomeName
           const newFormat = t.name.match(/^\[[^\]]+\]\[([^\]]+)\]\s*(.+)$/);

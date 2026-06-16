@@ -1,13 +1,11 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useStudents } from '@/hooks/use-students';
-import { useEvaluationTemplates } from '@/hooks/use-evaluations';
-import { useStudentEvaluationResults, useBulkSaveMarks } from '@/hooks/use-evaluations';
+import { useEvaluationTemplates, useStudentEvaluationResults } from '@/hooks/use-evaluations';
 import DetailedMarkEntryView from '@/components/teacher/DetailedMarkEntryView';
 import { Student, EvaluationPlan, StudentOutcomeMark, OutcomeMark } from '@/types/academic';
-import { useState, useEffect, useCallback } from 'react';
 
 export default function StudentMarkEntryPage() {
   const { studentId } = useParams<{ studentId: string }>();
@@ -16,31 +14,65 @@ export default function StudentMarkEntryPage() {
 
   const { data: studentsData } = useStudents({ limit: 500 });
   const { data: templatesData = [] } = useEvaluationTemplates();
+  
+  // Find the base template
+  const baseTemplate = templatesData.find(t => t.id === evalId);
+  
+  // Find all templates in the same group (same Eval Title)
+  const groupTemplates = useMemo(() => {
+    if (!baseTemplate) return [];
+    
+    const newFormatMatch = baseTemplate.name.match(/^\[([^\]]+)\]\[/);
+    const rawEvalPart = newFormatMatch ? newFormatMatch[1] : '';
+    const [evalTitle] = rawEvalPart.split('|');
+
+    return templatesData.filter(t => {
+      if (t.gradeConfigId !== baseTemplate.gradeConfigId) return false;
+      if (t.syncedSubjectId !== baseTemplate.syncedSubjectId) return false;
+      if (evalTitle) return t.name.startsWith(`[${evalTitle}|`) || t.name.startsWith(`[${evalTitle}][`);
+      return !t.name.match(/^\[[^\]]+\]\[/); // Fallback for legacy
+    });
+  }, [baseTemplate, templatesData]);
+
+  const groupTemplateIds = useMemo(() => groupTemplates.map(t => t.id), [groupTemplates]);
+
+  // Fetch results for all templates in the group
   const { data: resultsData = [] } = useStudentEvaluationResults({
     syncedStudentId: studentId,
-    evaluationTemplateId: evalId || undefined,
+    limit: 1000
   });
-  const bulkSave = useBulkSaveMarks();
 
   const [localMarks, setLocalMarks] = useState<StudentOutcomeMark[]>([]);
 
   // Sync DB results into local state
   useEffect(() => {
-    if (resultsData.length === 0) return;
+    if (resultsData.length === 0 || groupTemplateIds.length === 0) return;
+    
+    const groupSet = new Set(groupTemplateIds);
+    const relevantResults = resultsData.filter(r => groupSet.has(r.evaluationTemplateId));
+    
+    if (relevantResults.length === 0) return;
+
     const outcomeMarks: Record<string, OutcomeMark> = {};
-    resultsData.forEach(r => {
-      const name = r.evaluationTemplate?.name ?? 'Mark';
-      outcomeMarks[name] = {
-        regularMark: r.marksObtained,
+    
+    relevantResults.forEach(r => {
+      // Find the template for this result to get its full name
+      const template = groupTemplates.find(t => t.id === r.evaluationTemplateId);
+      if (!template) return;
+      
+      outcomeMarks[template.name] = {
+        regularMark: r.marksObtained !== null && r.marksObtained !== undefined ? Number(r.marksObtained) : null,
         regularDate: r.submittedAt ? new Date(r.submittedAt).toISOString().split('T')[0] : '',
-        supportMark: null, supportDate: '',
+        supportMark: null, 
+        supportDate: '',
         reExamMark: null,
         reExamDate: '',
         remarks: r.remarks ?? '',
       };
     });
+    
     setLocalMarks([{ studentId, evaluationId: evalId, outcomeMarks }]);
-  }, [resultsData, studentId, evalId]);
+  }, [resultsData, studentId, evalId, groupTemplateIds, groupTemplates]);
 
   const getStudentMark = useCallback(
     (sId: string, eId: string) => localMarks.find(m => m.studentId === sId && m.evaluationId === eId),
@@ -79,22 +111,47 @@ export default function StudentMarkEntryPage() {
   }, [studentsData, studentId]);
 
   const evaluation: EvaluationPlan | undefined = useMemo(() => {
-    const t = templatesData.find(t => t.id === evalId);
-    if (!t) return undefined;
+    if (!baseTemplate || groupTemplates.length === 0) return undefined;
+    
+    const newFormatMatch = baseTemplate.name.match(/^\[([^\]]+)\]\[/);
+    const rawEvalPart = newFormatMatch ? newFormatMatch[1] : '';
+    const [evalTitle, unitTitle = ''] = rawEvalPart.split('|');
+
+    const totalFullMarks = groupTemplates.reduce((s, t) => s + Number(t.fullMarks), 0);
+    const totalPassMarks = groupTemplates.reduce((s, t) => s + Number(t.passMarks), 0);
+
     return {
-      id: t.id, title: t.name, subject: t.syncedSubject?.name ?? 'Unknown',
-      status: t.isActive ? 'Active' : 'Inactive', testTypes: 'Standard', outcomes: '1 Outcomes',
-      fullMarks: Number(t.fullMarks), passMarks: Number(t.passMarks),
-      date: t.scheduledDate ? new Date(t.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'TBD',
-      unit: t.name,
-      learningOutcomes: [{
-        name: t.name, text: `Evaluate outcome competence for ${t.name}.`,
-        regularRating: 0, afterSupportRating: null,
-        regularDate: t.scheduledDate ? new Date(t.scheduledDate).toISOString().split('T')[0] : '',
-        supportDate: '', fullMarks: Number(t.fullMarks), passMarks: Number(t.passMarks), taskType: 'Standard',
-      }],
+      id: baseTemplate.id, 
+      title: evalTitle || baseTemplate.syncedSubject?.name || baseTemplate.name, 
+      subject: baseTemplate.syncedSubject?.name ?? 'Unknown',
+      status: baseTemplate.isActive ? 'Active' : 'Inactive', 
+      testTypes: `${groupTemplates.length} Task Types`, 
+      outcomes: `${groupTemplates.length} Outcomes`,
+      fullMarks: totalFullMarks, 
+      passMarks: totalPassMarks,
+      date: baseTemplate.scheduledDate ? new Date(baseTemplate.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'TBD',
+      unit: unitTitle,
+      learningOutcomes: groupTemplates.map(t => {
+        const newFmt = t.name.match(/^\[[^\]]+\]\[([^\]]+)\]\s*(.+)$/);
+        const legacyFmt = t.name.match(/^\[([^\]]+)\]\s*(.+)$/);
+        const taskType = newFmt ? newFmt[1] : (legacyFmt ? legacyFmt[1] : 'Standard');
+        const outcomeName = newFmt ? newFmt[2] : (legacyFmt ? legacyFmt[2] : t.name);
+
+        return {
+          name: t.name, 
+          text: outcomeName,
+          regularRating: 0, 
+          afterSupportRating: null,
+          regularDate: t.scheduledDate ? new Date(t.scheduledDate).toISOString().split('T')[0] : '',
+          supportDate: '', 
+          fullMarks: Number(t.fullMarks), 
+          passMarks: Number(t.passMarks), 
+          taskType,
+          templateId: t.id
+        };
+      }),
     };
-  }, [templatesData, evalId]);
+  }, [baseTemplate, groupTemplates]);
 
   if (!student || !evaluation) {
     return (
