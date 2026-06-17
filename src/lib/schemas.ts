@@ -84,7 +84,7 @@ export const resetPasswordSchema = z
     path: ["confirmPassword"],
   });
 
-// ─── Users (Admin) ────────────────────────────────────────────────────────────
+// ─── Users (Admin)
 
 export const createUserSchema = z.object({
   email: z.string().email(),
