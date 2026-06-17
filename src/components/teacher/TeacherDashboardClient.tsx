@@ -82,7 +82,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6"
@@ -109,9 +109,8 @@ export default function DashboardPage() {
                   {kpi.label}
                 </p>
                 <p
-                  className={`text-3xl font-extrabold ${
-                    kpi.danger ? "text-destructive" : "text-foreground"
-                  }`}
+                  className={`text-3xl font-extrabold ${kpi.danger ? "text-destructive" : "text-foreground"
+                    }`}
                 >
                   {kpi.value}
                 </p>
@@ -162,12 +161,12 @@ export default function DashboardPage() {
                 {recentEvaluations.map((ev) => {
                   const newFmt = ev.name.match(/^\[([^\]]+)\]\[([^\]]+)\]\s*(.+)$/);
                   const legacyFmt = ev.name.match(/^\[([^\]]+)\]\s*(.+)$/);
-                  
+
                   const evalTitleRaw = newFmt ? newFmt[1] : legacyFmt ? legacyFmt[1] : "";
                   const evalTitle = evalTitleRaw.split("|")[0] || ev.name;
                   const taskType = newFmt ? newFmt[2] : legacyFmt ? legacyFmt[1] : "Standard";
                   const subTask = newFmt ? newFmt[3] : legacyFmt ? legacyFmt[2] : ev.name;
-                  
+
                   const gradeLevel = ev.gradeConfig?.gradeLevel ?? "";
                   const subjectName = ev.syncedSubject?.name ?? "";
                   const query = new URLSearchParams({ class: gradeLevel, subject: subjectName, eval: evalTitle });
@@ -178,9 +177,9 @@ export default function DashboardPage() {
                       className="hover:bg-muted/30 transition-colors group"
                     >
                       <td className="px-5 py-4">
-                        <div className="font-semibold text-sm text-foreground">{evalTitle}</div>
+                        <div className="font-semibold text-sm text-foreground">{taskType}</div>
                         <div className="text-[10px] text-muted-foreground mt-0.5 max-w-[250px] truncate" title={`${taskType}: ${subTask}`}>
-                          <span className="font-medium text-slate-500 dark:text-slate-400">{taskType}</span>: {subTask}
+                          <span className="font-medium text-slate-500 dark:text-slate-400"></span> {subTask}
                         </div>
                       </td>
                       <td className="px-5 py-4">
@@ -228,7 +227,7 @@ export default function DashboardPage() {
               {reExamAlerts.map((s) => {
                 const newFmt = s.evaluationTemplate?.name.match(/^\[([^\]]+)\]\[([^\]]+)\]\s*(.+)$/);
                 const legacyFmt = s.evaluationTemplate?.name.match(/^\[([^\]]+)\]\s*(.+)$/);
-                
+
                 const evalTitleRaw = newFmt ? newFmt[1] : legacyFmt ? legacyFmt[1] : "";
                 const evalTitle = evalTitleRaw.split("|")[0] || (s.evaluationTemplate?.name ?? "Re-Exam");
                 const taskType = newFmt ? newFmt[2] : legacyFmt ? legacyFmt[1] : "Standard";
