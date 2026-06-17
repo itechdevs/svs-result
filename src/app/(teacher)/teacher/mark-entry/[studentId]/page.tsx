@@ -103,10 +103,10 @@ export default function StudentMarkEntryPage() {
       passMarks: totalPassMarks,
       date: baseTemplate.scheduledDate
         ? new Date(baseTemplate.scheduledDate).toLocaleDateString('en-US', {
-            month: 'short',
-            day: '2-digit',
-            year: 'numeric',
-          })
+          month: 'short',
+          day: '2-digit',
+          year: 'numeric',
+        })
         : 'TBD',
       unit: unitTitle,
       learningOutcomes: groupTemplates.map((t) => {
@@ -115,13 +115,13 @@ export default function StudentMarkEntryPage() {
         const taskType = newFmt
           ? newFmt[1]
           : legacyFmt
-          ? legacyFmt[1]
-          : 'Standard';
+            ? legacyFmt[1]
+            : 'Standard';
         const outcomeName = newFmt
           ? newFmt[2]
           : legacyFmt
-          ? legacyFmt[2]
-          : t.name;
+            ? legacyFmt[2]
+            : t.name;
 
         return {
           name: t.name,

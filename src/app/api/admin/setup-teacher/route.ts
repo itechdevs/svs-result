@@ -33,20 +33,20 @@ export async function POST(req: NextRequest) {
         name: syncedTeacher.name,
         role: "TEACHER",
         syncedTeacherId,
+        emailVerified: new Date(),
       },
     });
 
-    // Create assignments if provided
+    // Create assignments by updating SyncedSubject records
     if (assignments && assignments.length > 0) {
-      await prisma.teacherAssignment.createMany({
-        data: assignments.map((a: any) => ({
-          userId: user.id,
-          gradeLevel: a.gradeLevel,
-          syncedSubjectId: a.subjectId,
-          academicYearId: a.academicYearId,
-          assignedBy: "admin", // TODO: Get from session
-        })),
-      });
+      const subjectIds = assignments.map((a: any) => a.subjectId).filter(Boolean);
+      
+      if (subjectIds.length > 0) {
+        await prisma.syncedSubject.updateMany({
+          where: { id: { in: subjectIds } },
+          data: { teacherId: syncedTeacherId },
+        });
+      }
     }
 
     return NextResponse.json({

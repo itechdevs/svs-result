@@ -1,12 +1,12 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useStudents } from '@/hooks/use-students';
 import { useEvaluationTemplates } from '@/hooks/use-evaluations';
-import ReExamDetailedView from '@/components/admin/ReExamDetailedView';
-import { AnimatePresence } from 'motion/react';
+import DetailedMarkEntryView from '@/components/teacher/DetailedMarkEntryView';
 import { Student, EvaluationPlan } from '@/types/academic';
+import { useMarksContext } from '@/contexts/marks-context';
 
 export default function ReExamDetailPage() {
   const params = useParams();
@@ -16,50 +16,131 @@ export default function ReExamDetailPage() {
   const { data: studentsData } = useStudents({ limit: 500 });
   const { data: templatesData = [] } = useEvaluationTemplates();
 
+  // Pull shared marks state from context
+  const { getStudentMark, updateOutcomeMark, setEvaluations, handleSaveAll } = useMarksContext();
+
+  // Find the base template
+  const baseTemplate = templatesData.find((t) => t.id === evalId);
+
+  // Find all templates in the same evaluation group
+  const groupTemplates = useMemo(() => {
+    if (!baseTemplate) return [];
+
+    const newFormatMatch = baseTemplate.name.match(/^\[([^\]]+)\]\[/);
+    const rawEvalPart = newFormatMatch ? newFormatMatch[1] : '';
+    const [evalTitle] = rawEvalPart.split('|');
+
+    return templatesData.filter((t) => {
+      if (t.gradeConfigId !== baseTemplate.gradeConfigId) return false;
+      if (t.syncedSubjectId !== baseTemplate.syncedSubjectId) return false;
+      if (evalTitle)
+        return (
+          t.name.startsWith(`[${evalTitle}|`) ||
+          t.name.startsWith(`[${evalTitle}][`)
+        );
+      return !t.name.match(/^\[[^\]]+\]\[/);
+    });
+  }, [baseTemplate, templatesData]);
+
+  // Sync group templates into the shared context
+  useEffect(() => {
+    if (groupTemplates.length > 0) {
+      setEvaluations(groupTemplates);
+    }
+  }, [groupTemplates, setEvaluations]);
+
+  // Build Student shape
   const student: Student | undefined = useMemo(() => {
-    const s = studentsData?.students.find(s => s.id === studentId);
+    const s = studentsData?.students.find((s) => s.id === studentId);
     if (!s) return undefined;
     return {
-      id: s.id, name: s.name, rollNo: s.rollNumber,
+      id: s.id,
+      name: s.name,
+      rollNo: s.rollNumber,
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80',
-      status: s.isActive ? 'Active' : 'Inactive', class: s.grade,
-      attendance: '96%', department: 'Primary', overallTotal: '—',
-      overallPercent: 0, grade: '—', resultStatus: 'PENDING', remarks: '', scores: [], dist: {},
+      status: s.isActive ? 'Active' : 'Inactive',
+      class: s.grade,
+      attendance: '96%',
+      department: 'Primary',
+      overallTotal: '—',
+      overallPercent: 0,
+      grade: '—',
+      resultStatus: 'PENDING',
+      remarks: '',
+      scores: [],
+      dist: {},
     };
   }, [studentsData, studentId]);
 
+  // Build EvaluationPlan shape
   const evaluation: EvaluationPlan | undefined = useMemo(() => {
-    const t = templatesData.find(t => t.id === evalId);
-    if (!t) return undefined;
+    if (!baseTemplate || groupTemplates.length === 0) return undefined;
+
+    const newFormatMatch = baseTemplate.name.match(/^\[([^\]]+)\]\[/);
+    const rawEvalPart = newFormatMatch ? newFormatMatch[1] : '';
+    const [evalTitle, unitTitle = ''] = rawEvalPart.split('|');
+
+    const totalFullMarks = groupTemplates.reduce((s, t) => s + Number(t.fullMarks), 0);
+    const totalPassMarks = groupTemplates.reduce((s, t) => s + Number(t.passMarks), 0);
+
     return {
-      id: t.id, title: t.name, subject: t.syncedSubject?.name ?? 'Unknown',
-      status: t.isActive ? 'Active' : 'Inactive', testTypes: 'Standard', outcomes: '1 Outcomes',
-      fullMarks: Number(t.fullMarks), passMarks: Number(t.passMarks),
-      date: t.scheduledDate ? new Date(t.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'TBD',
-      unit: t.name,
-      learningOutcomes: [{
-        name: t.name, text: `Evaluate outcome competence for ${t.name}.`,
-        regularRating: 0, afterSupportRating: null,
-        regularDate: t.scheduledDate ? new Date(t.scheduledDate).toISOString().split('T')[0] : '',
-        supportDate: '', fullMarks: Number(t.fullMarks), passMarks: Number(t.passMarks), taskType: 'Standard',
-      }],
+      id: baseTemplate.id,
+      title: evalTitle || baseTemplate.syncedSubject?.name || baseTemplate.name,
+      subject: baseTemplate.syncedSubject?.name ?? 'Unknown',
+      status: baseTemplate.isActive ? 'Active' : 'Inactive',
+      testTypes: `${groupTemplates.length} Task Types`,
+      outcomes: `${groupTemplates.length} Outcomes`,
+      fullMarks: totalFullMarks,
+      passMarks: totalPassMarks,
+      date: baseTemplate.scheduledDate
+        ? new Date(baseTemplate.scheduledDate).toLocaleDateString('en-US', {
+            month: 'short',
+            day: '2-digit',
+            year: 'numeric',
+          })
+        : 'TBD',
+      unit: unitTitle,
+      learningOutcomes: groupTemplates.map((t) => {
+        const newFmt = t.name.match(/^\[[^\]]+\]\[([^\]]+)\]\s*(.+)$/);
+        const legacyFmt = t.name.match(/^\[([^\]]+)\]\s*(.+)$/);
+        const taskType = newFmt ? newFmt[1] : legacyFmt ? legacyFmt[1] : 'Standard';
+        const outcomeName = newFmt ? newFmt[2] : legacyFmt ? legacyFmt[2] : t.name;
+
+        return {
+          name: t.name,
+          text: outcomeName,
+          regularRating: 0,
+          afterSupportRating: null,
+          regularDate: t.scheduledDate ? new Date(t.scheduledDate).toISOString().split('T')[0] : '',
+          supportDate: '',
+          fullMarks: Number(t.fullMarks),
+          passMarks: Number(t.passMarks),
+          taskType,
+          templateId: t.id,
+        };
+      }),
     };
-  }, [templatesData, evalId]);
+  }, [baseTemplate, groupTemplates]);
 
   if (!student || !evaluation) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <h2 className="text-xl font-bold text-slate-700 dark:text-slate-300">Student or Evaluation not found</h2>
-          <p className="text-sm text-slate-500 mt-2">Please check the URL and try again.</p>
-        </div>
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          {!student
+            ? `Student "${studentId}" not found.`
+            : `Evaluation "${evalId}" not found.`}
+        </p>
       </div>
     );
   }
 
   return (
-    <AnimatePresence mode="wait">
-      <ReExamDetailedView student={student} evaluation={evaluation} />
-    </AnimatePresence>
+    <DetailedMarkEntryView
+      student={student}
+      evaluation={evaluation}
+      getStudentMark={getStudentMark}
+      updateOutcomeMark={updateOutcomeMark}
+      handleSaveAll={handleSaveAll}
+    />
   );
 }

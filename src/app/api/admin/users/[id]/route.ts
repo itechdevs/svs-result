@@ -19,15 +19,7 @@ export const GET = withHandler(
         createdAt: true,
         updatedAt: true,
         syncedTeacher: { select: { id: true, name: true, sourceId: true } },
-        teacherAssignments: {
-          select: {
-            id: true,
-            gradeLevel: true,
-            syncedSubjectId: true,
-            academicYearId: true,
-            academicYear: { select: { name: true } },
-          },
-        },
+
       },
     });
     if (!user) return notFound("User not found");

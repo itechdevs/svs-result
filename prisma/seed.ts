@@ -42,17 +42,7 @@ async function main() {
     },
   });
 
-  // Synced Subject (mathematics) assigned to the teacher
-  const mathSubject = await prisma.syncedSubject.create({
-    data: {
-      sourceId: "S1",
-      name: "mathematics",
-      code: "MATH",
-      gradeLevel: "Giraffe (U.K.G.)",
-      teacherId: syncedTeacher.id,
-      isActive: true,
-    },
-  });
+
 
   console.log("✅ Seed complete!");
   console.log("\nLogin credentials:");

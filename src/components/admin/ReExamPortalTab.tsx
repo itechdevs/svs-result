@@ -16,7 +16,7 @@ import { buttonVariants } from '@/components/shared/ui/button';
 export default function ReExamPortalTab() {
   const { data: profile } = useProfile();
   const { data: studentsData } = useStudents({ limit: 500 });
-  const { data: resultsData = [] } = useStudentEvaluationResults({ limit: 2000 });
+  const { data: resultsData = [] } = useStudentEvaluationResults({ limit: 1000 });
   const { data: subjectsData = [] } = useSubjects();
 
   const [selectedClass, setSelectedClass] = useState('_all');
@@ -53,20 +53,21 @@ export default function ReExamPortalTab() {
   const failedItems = useMemo(() => {
     return resultsData
       .filter(r => {
-        if (r.marksObtained === null || r.marksObtained === undefined) return false;
-        const passMarks = r.evaluationTemplate?.passMarks ?? 0;
-        return r.marksObtained < passMarks;
+        if (r.marksObtained === null) return false;
+        const passMarks = Number(r.evaluationTemplate?.passMarks ?? 0);
+        return Number(r.marksObtained) < passMarks;
       })
       .map(r => ({
         studentId: r.syncedStudentId,
         studentName: r.syncedStudent?.name ?? studentsMap[r.syncedStudentId]?.name ?? 'Unknown',
         rollNumber: r.syncedStudent?.rollNumber ?? studentsMap[r.syncedStudentId]?.rollNumber ?? '—',
         grade: r.syncedStudent?.grade ?? studentsMap[r.syncedStudentId]?.grade ?? '—',
-        subject: r.evaluationTemplate ? r.evaluationTemplate.name : '—',
+        subject: r.evaluationTemplate?.syncedSubject?.name ?? '—',
+        templateName: r.evaluationTemplate ? r.evaluationTemplate.name : '—',
         evaluationId: r.evaluationTemplateId,
         resultId: r.id,
-        marksObtained: r.marksObtained,
-        passMarks: r.evaluationTemplate?.passMarks ?? 0,
+        marksObtained: Number(r.marksObtained),
+        passMarks: Number(r.evaluationTemplate?.passMarks ?? 0),
         hasReExam: false,
       }));
   }, [resultsData, studentsMap]);
@@ -176,27 +177,33 @@ export default function ReExamPortalTab() {
           {filteredItems.length === 0 ? (
             <div className="p-8 text-center text-xs text-muted-foreground">No failed students found.</div>
           ) : (
-            filteredItems.map(item => (
-              <div
-                key={`${item.studentId}-${item.evaluationId}`}
-                className="p-4 hover:bg-muted/30 transition-colors flex items-center justify-between"
-              >
-                <div>
-                  <div className="font-bold text-xs text-foreground">{item.studentName}</div>
-                  <div className="text-[10px] text-muted-foreground font-mono mt-1">{item.rollNumber} · {item.grade}</div>
-                  <div className="text-[11px] text-primary font-semibold mt-1">
-                    {item.subject} · {item.marksObtained}/{item.passMarks} (Failed)
-                  </div>
-                </div>
-                <Link
-                  href={`/teacher/mark-entry/${item.studentId}?evalId=${item.evaluationId}`}
-                  className={cn(buttonVariants({ size: 'sm', variant: 'default' }), "h-8 text-xs")}
+            filteredItems.map(item => {
+              const viewHref = profile?.role === 'ADMIN'
+                ? `/admin/re-exam-portal/${item.studentId}/${item.evaluationId}`
+                : `/teacher/mark-entry/${item.studentId}?evalId=${item.evaluationId}`;
+
+              return (
+                <div
+                  key={`${item.studentId}-${item.evaluationId}`}
+                  className="p-4 hover:bg-muted/30 transition-colors flex items-center justify-between"
                 >
-                  <Eye className="w-3.5 h-3.5 mr-1" />
-                  View
-                </Link>
-              </div>
-            ))
+                  <div>
+                    <div className="font-bold text-xs text-foreground">{item.studentName}</div>
+                    <div className="text-[10px] text-muted-foreground font-mono mt-1">{item.rollNumber} · {item.grade}</div>
+                    <div className="text-[11px] text-primary font-semibold mt-1">
+                      {item.subject} ({item.templateName}) · {item.marksObtained}/{item.passMarks} (Failed)
+                    </div>
+                  </div>
+                  <Link
+                    href={viewHref}
+                    className={cn(buttonVariants({ size: 'sm', variant: 'default' }), "h-8 text-xs")}
+                  >
+                    <Eye className="w-3.5 h-3.5 mr-1" />
+                    View
+                  </Link>
+                </div>
+              );
+            })
           )}
         </div>
       </div>

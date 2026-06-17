@@ -76,6 +76,9 @@ export const GET = withHandler(async (req: NextRequest, { user }) => {
           fullMarks: true,
           passMarks: true,
           weightage: true,
+          syncedSubject: {
+            select: { name: true }
+          }
         },
       },
       enteredBy: { select: { id: true, name: true } },

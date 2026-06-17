@@ -57,6 +57,9 @@ export interface StudentEvaluationResult {
     fullMarks: number;
     passMarks: number;
     weightage: number;
+    syncedSubject?: {
+      name: string;
+    };
   };
   enteredBy?: { id: string; name: string };
   verifiedBy?: { id: string; name: string } | null;
