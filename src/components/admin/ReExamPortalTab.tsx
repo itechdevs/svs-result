@@ -57,18 +57,30 @@ export default function ReExamPortalTab() {
         const passMarks = r.evaluationTemplate?.passMarks ?? 0;
         return r.marksObtained < passMarks;
       })
-      .map(r => ({
-        studentId: r.syncedStudentId,
-        studentName: r.syncedStudent?.name ?? studentsMap[r.syncedStudentId]?.name ?? 'Unknown',
-        rollNumber: r.syncedStudent?.rollNumber ?? studentsMap[r.syncedStudentId]?.rollNumber ?? '—',
-        grade: r.syncedStudent?.grade ?? studentsMap[r.syncedStudentId]?.grade ?? '—',
-        subject: r.evaluationTemplate ? r.evaluationTemplate.name : '—',
-        evaluationId: r.evaluationTemplateId,
-        resultId: r.id,
-        marksObtained: r.marksObtained,
-        passMarks: r.evaluationTemplate?.passMarks ?? 0,
-        hasReExam: false,
-      }));
+      .map(r => {
+        // Parse subject name and template display name from the raw template name
+        const rawName = r.evaluationTemplate?.name ?? '';
+        const newFmt = rawName.match(/^\[([^\]]+)\]\[([^\]]+)\]\s*(.+)$/);
+        const legacyFmt = rawName.match(/^\[([^\]]+)\]\s*(.+)$/);
+        const taskType = newFmt ? newFmt[2] : legacyFmt ? legacyFmt[1] : rawName;
+        const subTask = newFmt ? newFmt[3] : legacyFmt ? legacyFmt[2] : rawName;
+        // Get subject name from the nested relation (added to API response)
+        const subjectName = (r.evaluationTemplate as unknown as { syncedSubject?: { name: string } })?.syncedSubject?.name ?? '—';
+
+        return {
+          studentId: r.syncedStudentId,
+          studentName: r.syncedStudent?.name ?? studentsMap[r.syncedStudentId]?.name ?? 'Unknown',
+          rollNumber: r.syncedStudent?.rollNumber ?? studentsMap[r.syncedStudentId]?.rollNumber ?? '—',
+          grade: r.syncedStudent?.grade ?? studentsMap[r.syncedStudentId]?.grade ?? '—',
+          subject: subjectName,
+          templateName: `${taskType}: ${subTask}`,
+          evaluationId: r.evaluationTemplateId,
+          resultId: r.id,
+          marksObtained: r.marksObtained,
+          passMarks: r.evaluationTemplate?.passMarks ?? 0,
+          hasReExam: false,
+        };
+      });
   }, [resultsData, studentsMap]);
 
   // Apply class + subject filters
@@ -176,27 +188,36 @@ export default function ReExamPortalTab() {
           {filteredItems.length === 0 ? (
             <div className="p-8 text-center text-xs text-muted-foreground">No failed students found.</div>
           ) : (
-            filteredItems.map(item => (
-              <div
-                key={`${item.studentId}-${item.evaluationId}`}
-                className="p-4 hover:bg-muted/30 transition-colors flex items-center justify-between"
-              >
-                <div>
-                  <div className="font-bold text-xs text-foreground">{item.studentName}</div>
-                  <div className="text-[10px] text-muted-foreground font-mono mt-1">{item.rollNumber} · {item.grade}</div>
-                  <div className="text-[11px] text-primary font-semibold mt-1">
-                    {item.subject} · {item.marksObtained}/{item.passMarks} (Failed)
-                  </div>
-                </div>
-                <Link
-                  href={`/teacher/mark-entry/${item.studentId}?evalId=${item.evaluationId}`}
-                  className={cn(buttonVariants({ size: 'sm', variant: 'default' }), "h-8 text-xs")}
+            filteredItems.map(item => {
+              const viewHref = profile?.role === 'ADMIN'
+                ? `/admin/re-exam-portal/${item.studentId}/${item.evaluationId}`
+                : `/teacher/mark-entry/${item.studentId}?evalId=${item.evaluationId}`;
+
+              return (
+                <div
+                  key={`${item.studentId}-${item.evaluationId}`}
+                  className="p-4 hover:bg-muted/30 transition-colors flex items-center justify-between gap-4"
                 >
-                  <Eye className="w-3.5 h-3.5 mr-1" />
-                  View
-                </Link>
-              </div>
-            ))
+                  <div className="min-w-0">
+                    <div className="font-bold text-sm text-foreground">{item.studentName}</div>
+                    <div className="text-[10px] text-muted-foreground font-mono mt-0.5">{item.rollNumber} · {item.grade}</div>
+                    <div className="text-[11px] text-primary font-semibold mt-1 truncate" title={item.templateName}>
+                      {item.subject} · {item.templateName}
+                    </div>
+                    <div className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-destructive/10 text-destructive text-[10px] font-bold">
+                      ✗ {item.marksObtained} / {item.passMarks} — Failed
+                    </div>
+                  </div>
+                  <Link
+                    href={viewHref}
+                    className={cn(buttonVariants({ size: 'sm', variant: 'default' }), "h-8 text-xs shrink-0")}
+                  >
+                    <Eye className="w-3.5 h-3.5 mr-1" />
+                    View
+                  </Link>
+                </div>
+              );
+            })
           )}
         </div>
       </div>
