@@ -68,7 +68,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className={cn(inter.variable, lora.variable, sourceCodePro.variable, "font-sans antialiased")}>
+      <body suppressHydrationWarning className={cn(inter.variable, lora.variable, sourceCodePro.variable, "font-sans antialiased")}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
