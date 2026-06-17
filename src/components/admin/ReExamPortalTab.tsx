@@ -4,14 +4,12 @@ import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { motion } from 'motion/react';
 import { AlertCircle, Clock, CalendarCheck, Eye } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { useStudentEvaluationResults } from '@/hooks/use-evaluations';
 import { useStudents } from '@/hooks/use-students';
 import { useProfile } from '@/hooks/use-profile';
 import { useSubjects } from '@/hooks/use-subjects';
 import { SyncedStudent } from '@/hooks/use-students';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/shared/ui/select';
-import { buttonVariants } from '@/components/shared/ui/button';
 
 export default function ReExamPortalTab() {
   const { data: profile } = useProfile();
@@ -179,47 +177,84 @@ export default function ReExamPortalTab() {
       </div>
 
       {/* Failed Students Registry */}
-      <div className="bg-card text-card-foreground border border-border rounded-xl shadow-sm overflow-hidden flex flex-col">
-        <div className="p-4 border-b border-border bg-muted/40">
-          <h3 className="font-bold text-xs text-foreground uppercase tracking-wider">Failed Students Registry</h3>
-          <p className="text-[10px] text-muted-foreground mt-1">Click View to enter re-exam marks for each student</p>
+      <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-border shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-border">
+          <div>
+            <p className="font-bold text-sm text-[#002045] dark:text-white uppercase tracking-wider">Failed Students Registry</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Click View to enter re-exam marks for each student</p>
+          </div>
+          <span className="text-xs font-bold text-destructive">{filteredItems.length} student{filteredItems.length !== 1 ? 's' : ''}</span>
         </div>
-        <div className="divide-y divide-border max-h-[500px] overflow-y-auto">
-          {filteredItems.length === 0 ? (
-            <div className="p-8 text-center text-xs text-muted-foreground">No failed students found.</div>
-          ) : (
-            filteredItems.map(item => {
-              const viewHref = profile?.role === 'ADMIN'
-                ? `/admin/re-exam-portal/${item.studentId}/${item.evaluationId}`
-                : `/teacher/mark-entry/${item.studentId}?evalId=${item.evaluationId}`;
 
-              return (
-                <div
-                  key={`${item.studentId}-${item.evaluationId}`}
-                  className="p-4 hover:bg-muted/30 transition-colors flex items-center justify-between gap-4"
-                >
-                  <div className="min-w-0">
-                    <div className="font-bold text-sm text-foreground">{item.studentName}</div>
-                    <div className="text-[10px] text-muted-foreground font-mono mt-0.5">{item.rollNumber} · {item.grade}</div>
-                    <div className="text-[11px] text-primary font-semibold mt-1 truncate" title={item.templateName}>
-                      {item.subject} · {item.templateName}
-                    </div>
-                    <div className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-destructive/10 text-destructive text-[10px] font-bold">
-                      ✗ {item.marksObtained} / {item.passMarks} — Failed
-                    </div>
-                  </div>
-                  <Link
-                    href={viewHref}
-                    className={cn(buttonVariants({ size: 'sm', variant: 'default' }), "h-8 text-xs shrink-0")}
-                  >
-                    <Eye className="w-3.5 h-3.5 mr-1" />
-                    View
-                  </Link>
-                </div>
-              );
-            })
-          )}
-        </div>
+        {filteredItems.length === 0 ? (
+          <div className="p-8 text-center text-sm text-slate-400">No failed students found.</div>
+        ) : (
+          <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+            <table className="w-full text-left border-collapse text-sm">
+              <thead className="sticky top-0 z-10">
+                <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-border">
+                  <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Roll No</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Student Name</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Class</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Subject</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Evaluation</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center whitespace-nowrap">Marks</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Status</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-border">
+                {filteredItems.map(item => {
+                  const viewHref = profile?.role === 'ADMIN'
+                    ? `/admin/re-exam-portal/${item.studentId}/${item.evaluationId}`
+                    : `/teacher/mark-entry/${item.studentId}?evalId=${item.evaluationId}`;
+
+                  return (
+                    <tr
+                      key={`${item.studentId}-${item.evaluationId}`}
+                      className="bg-red-50/40 dark:bg-red-950/10 hover:bg-slate-50/70 dark:hover:bg-slate-800/20 transition-colors"
+                    >
+                      <td className="px-4 py-3 font-mono text-xs font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                        {item.rollNumber}
+                      </td>
+                      <td className="px-4 py-3 font-medium text-[#002045] dark:text-white whitespace-nowrap">
+                        {item.studentName}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                        {item.grade}
+                      </td>
+                      <td className="px-4 py-3 text-xs font-semibold text-primary whitespace-nowrap">
+                        {item.subject}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-400 max-w-[200px] truncate" title={item.templateName}>
+                        {item.templateName}
+                      </td>
+                      <td className="px-4 py-3 text-center whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-destructive/10 text-destructive text-[10px] font-bold">
+                          {item.marksObtained} / {item.passMarks}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-300">
+                          Failed
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <Link
+                          href={viewHref}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded border border-slate-200 dark:border-border transition-colors"
+                        >
+                          <Eye className="w-3 h-3" />
+                          View
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </motion.div>
   );
