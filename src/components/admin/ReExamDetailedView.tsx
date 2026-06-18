@@ -5,10 +5,12 @@ import Link from 'next/link';
 import { ArrowLeft, CheckCircle, Calendar } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
-import { useStudentEvaluationResults, useBulkSaveMarks } from '@/hooks/use-evaluations';
+import { useStudentEvaluationResults } from '@/hooks/use-evaluations';
+import { useReExamAssessment } from '@/hooks/use-re-exams';
 import { calcObtainedMarks, calcFullMarks, calcPassFail } from '@/components/teacher/DetailedMarkEntryView';
 import { Student, EvaluationPlan, StudentOutcomeMark, OutcomeMark } from '@/types/academic';
 import { Input } from '@/components/shared/ui/input';
+import SanskarLoader from '@/components/shared/SanskarLoader';
 import {
   Table,
   TableHeader,
@@ -24,13 +26,13 @@ interface Props {
 }
 
 export default function ReExamDetailedView({ student, evaluation }: Props) {
-  const { data: resultsData = [] } = useStudentEvaluationResults({
+  const { data: resultsData = [], isLoading } = useStudentEvaluationResults({
     syncedStudentId: student.id,
     evaluationTemplateId: evaluation.id,
   });
-  const bulkSave = useBulkSaveMarks();
+  const reExamAssessment = useReExamAssessment();
   const [localMarks, setLocalMarks] = useState<StudentOutcomeMark | undefined>(undefined);
-  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Sync DB results into local state once
@@ -44,13 +46,13 @@ export default function ReExamDetailedView({ student, evaluation }: Props) {
         regularDate: r.submittedAt ? new Date(r.submittedAt).toISOString().split('T')[0] : '',
         supportMark: null,
         supportDate: '',
-        reExamMark: null,
-        reExamDate: '',
-        remarks: r.remarks ?? '',
+        reExamMark: r.reExamResult?.marksObtained ?? null,
+        reExamDate: r.reExamResult?.createdAt ? new Date(r.reExamResult.createdAt).toISOString().split('T')[0] : '',
+        remarks: r.reExamResult?.remarks ?? r.remarks ?? '',
       };
     });
     setLocalMarks({ studentId: student.id, evaluationId: evaluation.id, outcomeMarks });
-  }, [resultsData]);
+  }, [resultsData, student.id, evaluation.id, evaluation.learningOutcomes]);
 
   const updateMark = useCallback((outcomeName: string, patch: Partial<OutcomeMark>) => {
     setLocalMarks(prev => {
@@ -70,10 +72,38 @@ export default function ReExamDetailedView({ student, evaluation }: Props) {
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     setAutoSaveStatus('saving');
     autoSaveTimerRef.current = setTimeout(() => {
-      setAutoSaveStatus('saved');
-      setTimeout(() => setAutoSaveStatus('idle'), 2000);
-    }, 700);
-  }, []);
+      // Save to backend
+      if (localMarks) {
+        const outcomes = evaluation.learningOutcomes;
+        const firstFailedOutcome = outcomes.find(lo => {
+          const m = localMarks.outcomeMarks[lo.name];
+          return m?.reExamMark !== null && m?.reExamMark !== undefined;
+        });
+        
+        if (firstFailedOutcome) {
+          const m = localMarks.outcomeMarks[firstFailedOutcome.name];
+          if (m?.reExamMark !== null && m?.reExamMark !== undefined) {
+            reExamAssessment.mutate({
+              evaluationTemplateId: evaluation.id,
+              syncedStudentId: student.id,
+              marksObtained: m.reExamMark,
+              scheduledDate: m.reExamDate || new Date().toISOString(),
+              remarks: m.remarks,
+            }, {
+              onSuccess: () => {
+                setAutoSaveStatus('saved');
+                setTimeout(() => setAutoSaveStatus('idle'), 2000);
+              },
+              onError: () => {
+                setAutoSaveStatus('error');
+                setTimeout(() => setAutoSaveStatus('idle'), 3000);
+              },
+            });
+          }
+        }
+      }
+    }, 1000);
+  }, [localMarks, evaluation, student.id, reExamAssessment]);
 
   useEffect(() => () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); }, []);
 
@@ -101,6 +131,10 @@ export default function ReExamDetailedView({ student, evaluation }: Props) {
     return m?.regularMark !== null && m?.regularMark !== undefined && m.regularMark < (lo.passMarks ?? 0);
   });
 
+  if (isLoading) {
+    return <SanskarLoader message="Loading re-exam details..." />;
+  }
+
   return (
     <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       {/* Header */}
@@ -125,6 +159,11 @@ export default function ReExamDetailedView({ student, evaluation }: Props) {
           {autoSaveStatus === 'saved' && (
             <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
               <CheckCircle className="w-3 h-3" />Saved
+            </span>
+          )}
+          {autoSaveStatus === 'error' && (
+            <span className="text-xs text-destructive flex items-center gap-1">
+              ✗ Save failed
             </span>
           )}
         </div>

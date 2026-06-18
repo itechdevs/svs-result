@@ -3,6 +3,7 @@
 import { motion } from 'motion/react';
 import { TrendingUp, TrendingDown, Users, Award, AlertTriangle, FileText, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import SyncManagementClient from '@/components/admin/SyncManagementClient';
 
 const classPerformance = [
   { grade: 'Grade 10', gpa: 3.2, color: 'bg-gradient-to-t from-indigo-600 to-indigo-400 dark:from-indigo-500 dark:to-indigo-300' },
@@ -230,6 +231,9 @@ export default function AdminDashboardClient() {
         </div>
 
       </div>
+
+      {/* Data Synchronization */}
+      <SyncManagementClient />
     </motion.div>
   );
 }

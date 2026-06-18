@@ -60,6 +60,14 @@ export interface StudentEvaluationResult {
   };
   enteredBy?: { id: string; name: string };
   verifiedBy?: { id: string; name: string } | null;
+  reExamResult?: {
+    id: string;
+    marksObtained: number;
+    isPassed: boolean;
+    remarks: string | null;
+    createdAt: string;
+    updatedAt: string;
+  } | null;
 }
 
 export interface ListTemplatesFilters {

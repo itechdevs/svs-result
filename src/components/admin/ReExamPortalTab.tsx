@@ -10,6 +10,7 @@ import { useStudents } from '@/hooks/use-students';
 import { useProfile } from '@/hooks/use-profile';
 import { useSubjects } from '@/hooks/use-subjects';
 import { SyncedStudent } from '@/hooks/use-students';
+import SanskarLoader from '@/components/shared/SanskarLoader';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/shared/ui/select';
 import { buttonVariants } from '@/components/shared/ui/button';
 import {
@@ -25,9 +26,9 @@ const PAGE_SIZE = 10;
 
 export default function ReExamPortalTab() {
   const { data: profile } = useProfile();
-  const { data: studentsData } = useStudents({ limit: 500 });
-  const { data: resultsData = [] } = useStudentEvaluationResults({ limit: 2000 });
-  const { data: subjectsData = [] } = useSubjects();
+  const { data: studentsData, isLoading: studentsLoading } = useStudents({ limit: 500 });
+  const { data: resultsData = [], isLoading: resultsLoading } = useStudentEvaluationResults({ limit: 2000 });
+  const { data: subjectsData = [], isLoading: subjectsLoading } = useSubjects();
 
   const [selectedClass, setSelectedClass] = useState('_all');
   const [selectedSubject, setSelectedSubject] = useState('_all');
@@ -35,6 +36,7 @@ export default function ReExamPortalTab() {
 
   // Assigned classes from teacher profile (or all classes if ADMIN)
   const assignedClasses = useMemo(() => {
+    if (!profile || !subjectsData) return [];
     if (profile?.role === 'ADMIN') {
       return Array.from(new Set(subjectsData.map(s => s.gradeLevel)));
     }
@@ -44,7 +46,7 @@ export default function ReExamPortalTab() {
 
   // Subjects for the selected class
   const subjectsForSelectedClass = useMemo(() => {
-    if (selectedClass === '_all') return [];
+    if (selectedClass === '_all' || !subjectsData) return [];
     if (profile?.role === 'ADMIN') {
       return subjectsData.filter(s => s.gradeLevel === selectedClass).map(s => s.name);
     }
@@ -115,6 +117,12 @@ export default function ReExamPortalTab() {
     setSelectedSubject(value);
     setPage(1);
   };
+
+  const isLoading = studentsLoading || resultsLoading || subjectsLoading;
+
+  if (isLoading) {
+    return <SanskarLoader message="Loading re-exam portal..." />;
+  }
 
   return (
     <motion.div
