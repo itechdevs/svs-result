@@ -177,9 +177,9 @@ export default function DashboardPage() {
                       className="hover:bg-muted/30 transition-colors group"
                     >
                       <td className="px-5 py-4">
-                        <div className="font-semibold text-sm text-foreground">{taskType}</div>
-                        <div className="text-[10px] text-muted-foreground mt-0.5 max-w-[250px] truncate" title={`${taskType}: ${subTask}`}>
-                          <span className="font-medium text-slate-500 dark:text-slate-400"></span> {subTask}
+                        <div className="font-semibold text-sm text-foreground">{evalTitle}</div>
+                        <div className="text-[10px] text-muted-foreground mt-0.5 max-w-[250px] truncate" title={subTask}>
+                          {subTask}
                         </div>
                       </td>
                       <td className="px-5 py-4">
@@ -190,7 +190,7 @@ export default function DashboardPage() {
                       <td className="px-5 py-4 text-center">
                         <Link
                           href={`/teacher/mark-entry?${query.toString()}`}
-                          className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                          className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
                         >
                           Details
                         </Link>
