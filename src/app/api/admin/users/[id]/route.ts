@@ -18,20 +18,30 @@ export const GET = withHandler(
         lastLoginAt: true,
         createdAt: true,
         updatedAt: true,
-        syncedTeacher: { select: { id: true, name: true, sourceId: true } },
-        teacherAssignments: {
+        syncedTeacher: {
           select: {
             id: true,
-            gradeLevel: true,
-            syncedSubjectId: true,
-            academicYearId: true,
-            academicYear: { select: { name: true } },
+            name: true,
+            sourceId: true,
+            subjects: {
+              select: { id: true, name: true, code: true, gradeLevel: true },
+            },
           },
         },
       },
     });
     if (!user) return notFound("User not found");
-    return ok(user);
+    const responseUser = {
+      ...user,
+      teacherAssignments: user.syncedTeacher?.subjects.map(s => ({
+        id: s.id,
+        gradeLevel: s.gradeLevel,
+        syncedSubjectId: s.id,
+        academicYearId: "all",
+        academicYear: { name: "All Years" },
+      })) || [],
+    };
+    return ok(responseUser);
   },
   ["ADMIN"],
 );
