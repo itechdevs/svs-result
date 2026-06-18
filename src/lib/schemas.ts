@@ -218,6 +218,7 @@ export const upsertEvaluationResultSchema = upsertEvaluationResultBaseSchema
 
 export const bulkUpsertEvaluationResultsSchema = z.object({
   evaluationTemplateId: z.string().cuid(),
+  submit: z.boolean().optional(), // if true, save as SUBMITTED (publish)
   results: z
     .array(
       upsertEvaluationResultBaseSchema.extend({

@@ -2,7 +2,6 @@
 export type {
   User,
   Session,
-  TeacherAssignment,
   SyncedStudent,
   SyncedTeacher,
   SyncedSubject,

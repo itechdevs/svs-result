@@ -1,12 +1,30 @@
 "use client";
 
-import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
 import Link from "next/link";
-import { Eye, CheckCircle, AlertTriangle, Save, Calendar, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
+import {
+  Eye,
+  CheckCircle,
+  AlertTriangle,
+  Save,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  ArrowLeft,
+} from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useProfile } from "@/hooks/use-profile";
-import { useEvaluationTemplates, useStudentEvaluationResults } from "@/hooks/use-evaluations";
+import {
+  useEvaluationTemplates,
+  useStudentEvaluationResults,
+} from "@/hooks/use-evaluations";
 import { useStudents } from "@/hooks/use-students";
 import {
   Select,
@@ -15,8 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/shared/ui/select";
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { useMarksContext } from "@/contexts/marks-context";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";import { useMarksContext } from "@/contexts/marks-context";
 
 export default function MarkEntryOverviewTable() {
   const { data: profile } = useProfile();
@@ -38,19 +55,19 @@ export default function MarkEntryOverviewTable() {
   const pathname = usePathname();
 
   const [selectedClass, setSelectedClass] = useState(
-    searchParams.get("class") ?? ""
+    searchParams.get("class") ?? "",
   );
   const [selectedSubject, setSelectedSubject] = useState(
-    searchParams.get("subject") ?? ""
+    searchParams.get("subject") ?? "",
   );
   const [selectedEvalPlan, setSelectedEvalPlan] = useState(
-    searchParams.get("eval") ?? ""
+    searchParams.get("eval") ?? "",
   );
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
 
   const { data: studentsData } = useStudents(
-    selectedClass ? { grade: selectedClass, limit: 9999 } : { limit: 1 }
+    selectedClass ? { grade: selectedClass, limit: 9999 } : { limit: 1 },
   );
 
   // Assigned classes from syncedTeacher.subjects
@@ -70,7 +87,7 @@ export default function MarkEntryOverviewTable() {
   const subjectObj = useMemo(() => {
     if (!selectedClass || !selectedSubject) return undefined;
     return profile?.syncedTeacher?.subjects.find(
-      (s) => s.name === selectedSubject && s.gradeLevel === selectedClass
+      (s) => s.name === selectedSubject && s.gradeLevel === selectedClass,
     );
   }, [selectedClass, selectedSubject, profile]);
 
@@ -104,9 +121,9 @@ export default function MarkEntryOverviewTable() {
   // Push current evaluations to the shared context so it fetches & syncs DB results.
   // Use a ref to compare by ID string — avoids infinite loop from useMemo creating new
   // array references on every render even when the data hasn't changed.
-  const prevEvalIdsRef = useRef<string>('');
+  const prevEvalIdsRef = useRef<string>("");
   useEffect(() => {
-    const nextIds = evaluations.map(e => e.id).join(',');
+    const nextIds = evaluations.map((e) => e.id).join(",");
     if (nextIds !== prevEvalIdsRef.current) {
       prevEvalIdsRef.current = nextIds;
       setEvaluations(evaluations);
@@ -114,14 +131,14 @@ export default function MarkEntryOverviewTable() {
   }, [evaluations, setEvaluations]);
 
   // Fetch DB results for other checks if needed, but DO NOT hide failed students
-  const evalIds = useMemo(() => evaluations.map(e => e.id), [evaluations]);
+  const evalIds = useMemo(() => evaluations.map((e) => e.id), [evaluations]);
   const { data: resultsData = [] } = useStudentEvaluationResults(
-    evalIds.length > 0 ? { limit: 1000 } : {}
+    evalIds.length > 0 ? { limit: 1000 } : {},
   );
 
   const classStudents = useMemo(
     () => studentsData?.students ?? [],
-    [studentsData]
+    [studentsData],
   );
 
   const handleMarkChange = (
@@ -129,7 +146,7 @@ export default function MarkEntryOverviewTable() {
     evalId: string,
     outcomeName: string,
     raw: string,
-    max: number
+    max: number,
   ) => {
     const num = raw === "" ? null : Math.min(Math.max(0, Number(raw)), max);
     updateOutcomeMark(studentId, evalId, outcomeName, { regularMark: num });
@@ -137,9 +154,12 @@ export default function MarkEntryOverviewTable() {
 
   const updateURL = (c: string, s: string, e: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (c) params.set("class", c); else params.delete("class");
-    if (s) params.set("subject", s); else params.delete("subject");
-    if (e) params.set("eval", e); else params.delete("eval");
+    if (c) params.set("class", c);
+    else params.delete("class");
+    if (s) params.set("subject", s);
+    else params.delete("subject");
+    if (e) params.set("eval", e);
+    else params.delete("eval");
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
@@ -163,7 +183,10 @@ export default function MarkEntryOverviewTable() {
   };
 
   const totalPages = Math.max(1, Math.ceil(classStudents.length / PAGE_SIZE));
-  const pagedStudents = classStudents.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const pagedStudents = classStudents.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE,
+  );
 
   return (
     <motion.div
@@ -181,9 +204,7 @@ export default function MarkEntryOverviewTable() {
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <h1 className="text-lg font-bold text-foreground">
-            Mark Entry
-          </h1>
+          <h1 className="text-lg font-bold text-foreground">Mark Entry</h1>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-1.5">
@@ -196,7 +217,9 @@ export default function MarkEntryOverviewTable() {
               </SelectTrigger>
               <SelectContent>
                 {assignedClasses.map((c) => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -212,12 +235,18 @@ export default function MarkEntryOverviewTable() {
             >
               <SelectTrigger className="w-full text-sm">
                 <SelectValue
-                  placeholder={selectedClass ? "Select a subject..." : "Select a class first"}
+                  placeholder={
+                    selectedClass
+                      ? "Select a subject..."
+                      : "Select a class first"
+                  }
                 />
               </SelectTrigger>
               <SelectContent>
                 {subjects.map((s) => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -244,7 +273,9 @@ export default function MarkEntryOverviewTable() {
               </SelectTrigger>
               <SelectContent>
                 {evalPlans.map((p) => (
-                  <SelectItem key={p} value={p}>{p}</SelectItem>
+                  <SelectItem key={p} value={p}>
+                    {p}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -256,19 +287,23 @@ export default function MarkEntryOverviewTable() {
       {(!selectedClass || !selectedSubject || !selectedEvalPlan) && (
         <div className="bg-white dark:bg-card rounded-xl border border-dashed border-slate-300 dark:border-border p-12 text-center">
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Select a class, subject, and evaluation plan to view the mark entry table.
+            Select a class, subject, and evaluation plan to view the mark entry
+            table.
           </p>
         </div>
       )}
 
-      {selectedClass && selectedSubject && selectedEvalPlan && evaluations.length === 0 && (
-        <div className="bg-white dark:bg-card rounded-xl border border-dashed border-slate-300 dark:border-border p-12 text-center">
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            No evaluation plan found for <strong>{selectedEvalPlan}</strong>{" "}
-            in <strong>{selectedSubject}</strong>.
-          </p>
-        </div>
-      )}
+      {selectedClass &&
+        selectedSubject &&
+        selectedEvalPlan &&
+        evaluations.length === 0 && (
+          <div className="bg-white dark:bg-card rounded-xl border border-dashed border-slate-300 dark:border-border p-12 text-center">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              No evaluation plan found for <strong>{selectedEvalPlan}</strong>{" "}
+              in <strong>{selectedSubject}</strong>.
+            </p>
+          </div>
+        )}
 
       {/* ── Main table ──────────────────────────────────────────── */}
       {evaluations.length > 0 && (
@@ -285,26 +320,75 @@ export default function MarkEntryOverviewTable() {
                 {totalPages > 1 && ` · Page ${page} of ${totalPages}`}
               </p>
             </div>
-            <button
-              onClick={handleSaveAll}
-              disabled={isSaving}
-              className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed rounded-lg transition-colors shadow-sm flex items-center gap-2"
-            >
-              {isSaving ? (
-                <>
-                  <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={async () => {
+                  await handleSaveAll(false);
+                  router.push("/teacher/evaluations");
+                }}
+                disabled={isSaving}
+                className="px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-60 disabled:cursor-not-allowed rounded-lg transition-colors border border-slate-200 dark:border-slate-700 flex items-center gap-1.5"
+              >
+                {isSaving ? (
+                  <svg
+                    className="animate-spin w-3.5 h-3.5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v8H4z"
+                    />
                   </svg>
-                  Saving...
-                </>
-              ) : (
-                <>
+                ) : (
+                ) : (
                   <Save className="w-3.5 h-3.5" />
-                  Save All
-                </>
-              )}
-            </button>
+                )}
+                Draft
+              </button>
+              <button
+                onClick={async () => {
+                  await handleSaveAll(true);
+                  router.push("/teacher/evaluations");
+                }}
+                disabled={isSaving}
+                className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed rounded-lg transition-colors shadow-sm flex items-center gap-1.5"
+              >
+                {isSaving ? (
+                  <svg
+                    className="animate-spin w-3.5 h-3.5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v8H4z"
+                    />
+                  </svg>
+                ) : (
+                  <Send className="w-3.5 h-3.5" />
+                )}
+                Publish
+              </button>
+            </div>
           </div>
 
           {classStudents.length === 0 ? (
@@ -333,8 +417,6 @@ export default function MarkEntryOverviewTable() {
                         >
                           {col.taskType}
                         </div>
-
-
                       </th>
                     ))}
                     <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center whitespace-nowrap">
@@ -357,12 +439,14 @@ export default function MarkEntryOverviewTable() {
                     const totalObtained = outcomeColumns.reduce((sum, col) => {
                       const mark = getStudentMark(student.id, col.evalId);
                       const val = mark?.outcomeMarks[col.name]?.regularMark;
-                      return val !== null && val !== undefined ? sum + val : sum;
+                      return val !== null && val !== undefined
+                        ? sum + val
+                        : sum;
                     }, 0);
 
                     const totalFull = outcomeColumns.reduce(
                       (sum, col) => sum + col.fullMarks,
-                      0
+                      0,
                     );
 
                     const enteredCount = outcomeColumns.filter((col) => {
@@ -380,7 +464,9 @@ export default function MarkEntryOverviewTable() {
                     const failedCols = outcomeColumns.filter((col) => {
                       const mark = getStudentMark(student.id, col.evalId);
                       const val = mark?.outcomeMarks[col.name]?.regularMark;
-                      return val !== null && val !== undefined && val < col.passMarks;
+                      return (
+                        val !== null && val !== undefined && val < col.passMarks
+                      );
                     });
 
                     const hasMarks = enteredCount > 0;
@@ -396,7 +482,9 @@ export default function MarkEntryOverviewTable() {
                         key={student.id}
                         className={cn(
                           "hover:bg-slate-50/70 dark:hover:bg-slate-800/20 transition-colors",
-                          anyFail && hasMarks && "bg-red-50/40 dark:bg-red-950/10"
+                          anyFail &&
+                            hasMarks &&
+                            "bg-red-50/40 dark:bg-red-950/10",
                         )}
                       >
                         <td className="px-4 py-3 font-mono text-xs font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">
@@ -411,10 +499,15 @@ export default function MarkEntryOverviewTable() {
                           const mark = getStudentMark(student.id, col.evalId);
                           const val = mark?.outcomeMarks[col.name]?.regularMark;
                           const isFail =
-                            val !== null && val !== undefined && val < col.passMarks;
+                            val !== null &&
+                            val !== undefined &&
+                            val < col.passMarks;
 
                           return (
-                            <td key={col.evalId} className="px-2 py-2 text-center align-middle">
+                            <td
+                              key={col.evalId}
+                              className="px-2 py-2 text-center align-middle"
+                            >
                               <input
                                 type="number"
                                 min={0}
@@ -428,7 +521,7 @@ export default function MarkEntryOverviewTable() {
                                     col.evalId,
                                     col.name,
                                     e.target.value,
-                                    col.fullMarks
+                                    col.fullMarks,
                                   )
                                 }
                                 className={cn(
@@ -437,7 +530,7 @@ export default function MarkEntryOverviewTable() {
                                     ? "bg-red-50 dark:bg-red-950/20 border-red-300 dark:border-red-800 text-red-900 dark:text-red-300 focus:ring-red-400"
                                     : val !== null && val !== undefined
                                       ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-300 focus:ring-emerald-400"
-                                      : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 focus:ring-blue-400"
+                                      : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 focus:ring-blue-400",
                                 )}
                               />
                             </td>
@@ -459,7 +552,7 @@ export default function MarkEntryOverviewTable() {
                                   ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300"
                                   : percentage >= 50
                                     ? "bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300"
-                                    : "bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-300"
+                                    : "bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-300",
                               )}
                             >
                               {percentage}%
@@ -477,7 +570,7 @@ export default function MarkEntryOverviewTable() {
                                 ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300"
                                 : status === "Fail"
                                   ? "bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-300"
-                                  : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+                                  : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400",
                             )}
                           >
                             {status}
@@ -505,44 +598,57 @@ export default function MarkEntryOverviewTable() {
           {/* ── Pagination footer (always visible) ── */}
           <div className="px-5 py-3 border-t border-border flex items-center justify-between bg-muted/30">
             <p className="text-[11px] text-muted-foreground">
-              Showing {Math.min((page - 1) * PAGE_SIZE + 1, classStudents.length)}–{Math.min(page * PAGE_SIZE, classStudents.length)} of {classStudents.length} student{classStudents.length !== 1 ? 's' : ''}
+              Showing{" "}
+              {Math.min((page - 1) * PAGE_SIZE + 1, classStudents.length)}–
+              {Math.min(page * PAGE_SIZE, classStudents.length)} of{" "}
+              {classStudents.length} student
+              {classStudents.length !== 1 ? "s" : ""}
             </p>
             {totalPages > 1 && (
               <div className="flex items-center gap-1">
                 <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
                   className="h-7 w-7 flex items-center justify-center rounded-md border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-bold text-sm"
                 >
                   ‹
                 </button>
                 {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
-                  .reduce<(number | '...')[]>((acc, p, i, arr) => {
-                    if (i > 0 && (p as number) - (arr[i - 1] as number) > 1) acc.push('...');
+                  .filter(
+                    (p) =>
+                      p === 1 || p === totalPages || Math.abs(p - page) <= 1,
+                  )
+                  .reduce<(number | "...")[]>((acc, p, i, arr) => {
+                    if (i > 0 && (p as number) - (arr[i - 1] as number) > 1)
+                      acc.push("...");
                     acc.push(p);
                     return acc;
                   }, [])
                   .map((p, i) =>
-                    p === '...' ? (
-                      <span key={`ell-${i}`} className="px-1 text-muted-foreground text-xs">…</span>
+                    p === "..." ? (
+                      <span
+                        key={`ell-${i}`}
+                        className="px-1 text-muted-foreground text-xs"
+                      >
+                        …
+                      </span>
                     ) : (
                       <button
                         key={p}
                         onClick={() => setPage(p as number)}
                         className={cn(
-                          'h-7 min-w-[28px] px-2 flex items-center justify-center rounded-md text-xs font-semibold transition-colors border',
+                          "h-7 min-w-[28px] px-2 flex items-center justify-center rounded-md text-xs font-semibold transition-colors border",
                           page === p
-                            ? 'bg-primary text-primary-foreground border-primary'
-                            : 'border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted'
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted",
                         )}
                       >
                         {p}
                       </button>
-                    )
+                    ),
                   )}
                 <button
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                   className="h-7 w-7 flex items-center justify-center rounded-md border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-bold text-sm"
                 >
@@ -564,7 +670,7 @@ export default function MarkEntryOverviewTable() {
             exit={{ opacity: 0, y: -10 }}
             className="fixed top-4 right-4 p-4 bg-emerald-500 text-white font-semibold text-sm rounded-lg shadow-lg flex items-center gap-2 z-50"
           >
-            <CheckCircle className="w-5 h-5" />
+        <CheckCircle className="w-5 h-5" />
             Marks saved successfully!
           </motion.div>
         )}

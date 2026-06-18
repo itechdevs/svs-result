@@ -46,7 +46,7 @@ interface MarksContextValue {
   ) => void;
 
   // Persistence
-  handleSaveAll: () => Promise<void>;
+  handleSaveAll: (submit?: boolean) => Promise<void>;
   isSaving: boolean;
   saveError: string | null;
   saved: boolean;
@@ -218,7 +218,7 @@ export function MarksProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
-  const handleSaveAll = useCallback(async () => {
+  const handleSaveAll = useCallback(async (submit?: boolean) => {
     if (evaluations.length === 0) return;
     setSaveError(null);
     try {
@@ -229,6 +229,7 @@ export function MarksProvider({ children }: { children: React.ReactNode }) {
         if (relevantMarks.length === 0) continue;
         await bulkSave.mutateAsync({
           evaluationTemplateId: t.id,
+          submit,
           results: relevantMarks.map((m) => {
             const obtained = m.outcomeMarks[t.name]?.regularMark;
             return {

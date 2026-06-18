@@ -56,7 +56,7 @@ export class TeacherSyncService {
             entity: "teacher",
             sourceId: teacher.id,
             action: "sync",
-            payload: teacher,
+            payload: teacher as any,
             status: "success",
           },
         });
@@ -71,7 +71,7 @@ export class TeacherSyncService {
             entity: "teacher",
             sourceId: teacher.id,
             action: "sync",
-            payload: teacher,
+            payload: teacher as any,
             status: "error",
             error: error instanceof Error ? error.message : "Unknown error",
           },

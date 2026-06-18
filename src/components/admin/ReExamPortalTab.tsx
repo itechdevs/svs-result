@@ -1,18 +1,31 @@
-'use client';
+"use client";
 
-import React, { useState, useMemo } from 'react';
-import Link from 'next/link';
-import { motion } from 'motion/react';
-import { AlertCircle, Clock, CalendarCheck, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useStudentEvaluationResults } from '@/hooks/use-evaluations';
-import { useStudents } from '@/hooks/use-students';
-import { useProfile } from '@/hooks/use-profile';
-import { useSubjects } from '@/hooks/use-subjects';
-import { SyncedStudent } from '@/hooks/use-students';
-import SanskarLoader from '@/components/shared/SanskarLoader';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/shared/ui/select';
-import { buttonVariants } from '@/components/shared/ui/button';
+import React, { useState, useMemo } from "react";
+import Link from "next/link";
+import { motion } from "motion/react";
+import {
+  AlertCircle,
+  Clock,
+  CalendarCheck,
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useStudentEvaluationResults } from "@/hooks/use-evaluations";
+import { useStudents } from "@/hooks/use-students";
+import { useProfile } from "@/hooks/use-profile";
+import { useSubjects } from "@/hooks/use-subjects";
+import { SyncedStudent } from "@/hooks/use-students";
+import SanskarLoader from "@/components/shared/SanskarLoader";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/shared/ui/select";
+import { buttonVariants } from "@/components/shared/ui/button";
 import {
   Table,
   TableBody,
@@ -20,69 +33,97 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/shared/ui/table';
+} from "@/components/shared/ui/table";
 
 const PAGE_SIZE = 10;
 
 export default function ReExamPortalTab() {
   const { data: profile } = useProfile();
-  const { data: studentsData, isLoading: studentsLoading } = useStudents({ limit: 500 });
-  const { data: resultsData = [], isLoading: resultsLoading } = useStudentEvaluationResults({ limit: 2000 });
+  const { data: studentsData, isLoading: studentsLoading } = useStudents({
+    limit: 500,
+  });
+  const { data: resultsData = [], isLoading: resultsLoading } =
+    useStudentEvaluationResults({ limit: 2000 });
   const { data: subjectsData = [], isLoading: subjectsLoading } = useSubjects();
 
-  const [selectedClass, setSelectedClass] = useState('_all');
-  const [selectedSubject, setSelectedSubject] = useState('_all');
+  const [selectedClass, setSelectedClass] = useState("_all");
+  const [selectedSubject, setSelectedSubject] = useState("_all");
   const [page, setPage] = useState(1);
 
   // Assigned classes from teacher profile (or all classes if ADMIN)
   const assignedClasses = useMemo(() => {
     if (!profile || !subjectsData) return [];
-    if (profile?.role === 'ADMIN') {
-      return Array.from(new Set(subjectsData.map(s => s.gradeLevel)));
+    if (profile?.role === "ADMIN") {
+      return Array.from(new Set(subjectsData.map((s) => s.gradeLevel)));
     }
     if (!profile?.syncedTeacher?.subjects) return [];
-    return Array.from(new Set(profile.syncedTeacher.subjects.map(s => s.gradeLevel)));
+    return Array.from(
+      new Set(profile.syncedTeacher.subjects.map((s) => s.gradeLevel)),
+    );
   }, [profile, subjectsData]);
 
   // Subjects for the selected class
   const subjectsForSelectedClass = useMemo(() => {
-    if (selectedClass === '_all' || !subjectsData) return [];
-    if (profile?.role === 'ADMIN') {
-      return subjectsData.filter(s => s.gradeLevel === selectedClass).map(s => s.name);
+    if (selectedClass === "_all" || !subjectsData) return [];
+    if (profile?.role === "ADMIN") {
+      return subjectsData
+        .filter((s) => s.gradeLevel === selectedClass)
+        .map((s) => s.name);
     }
     if (!profile?.syncedTeacher?.subjects) return [];
     return profile.syncedTeacher.subjects
-      .filter(s => s.gradeLevel === selectedClass)
-      .map(s => s.name);
+      .filter((s) => s.gradeLevel === selectedClass)
+      .map((s) => s.name);
   }, [selectedClass, profile, subjectsData]);
 
   const studentsMap = useMemo(() => {
     const map: Record<string, SyncedStudent> = {};
-    studentsData?.students.forEach(s => { map[s.id] = s; });
+    studentsData?.students.forEach((s) => {
+      map[s.id] = s;
+    });
     return map;
   }, [studentsData]);
 
   // Compute failed items: results where marksObtained < passMarks on the template
   const failedItems = useMemo(() => {
     return resultsData
-      .filter(r => {
-        if (r.marksObtained === null || r.marksObtained === undefined) return false;
+      .filter((r) => {
+        if (r.marksObtained === null || r.marksObtained === undefined)
+          return false;
         const passMarks = r.evaluationTemplate?.passMarks ?? 0;
         return r.marksObtained < passMarks;
       })
-      .map(r => {
-        const rawName = r.evaluationTemplate?.name ?? '';
+      .map((r) => {
+        const rawName = r.evaluationTemplate?.name ?? "";
         const newFmt = rawName.match(/^\[([^\]]+)\]\[([^\]]+)\]\s*(.+)$/);
         const legacyFmt = rawName.match(/^\[([^\]]+)\]\s*(.+)$/);
-        const taskType = newFmt ? newFmt[2] : legacyFmt ? legacyFmt[1] : rawName;
+        const taskType = newFmt
+          ? newFmt[2]
+          : legacyFmt
+            ? legacyFmt[1]
+            : rawName;
         const subTask = newFmt ? newFmt[3] : legacyFmt ? legacyFmt[2] : rawName;
-        const subjectName = (r.evaluationTemplate as unknown as { syncedSubject?: { name: string } })?.syncedSubject?.name ?? '—';
+        const subjectName =
+          (
+            r.evaluationTemplate as unknown as {
+              syncedSubject?: { name: string };
+            }
+          )?.syncedSubject?.name ?? "—";
 
         return {
           studentId: r.syncedStudentId,
-          studentName: r.syncedStudent?.name ?? studentsMap[r.syncedStudentId]?.name ?? 'Unknown',
-          rollNumber: r.syncedStudent?.rollNumber ?? studentsMap[r.syncedStudentId]?.rollNumber ?? '—',
-          grade: r.syncedStudent?.grade ?? studentsMap[r.syncedStudentId]?.grade ?? '—',
+          studentName:
+            r.syncedStudent?.name ??
+            studentsMap[r.syncedStudentId]?.name ??
+            "Unknown",
+          rollNumber:
+            r.syncedStudent?.rollNumber ??
+            studentsMap[r.syncedStudentId]?.rollNumber ??
+            "—",
+          grade:
+            r.syncedStudent?.grade ??
+            studentsMap[r.syncedStudentId]?.grade ??
+            "—",
           subject: subjectName,
           taskType,
           subTask,
@@ -98,18 +139,23 @@ export default function ReExamPortalTab() {
   // Apply class + subject filters
   const filteredItems = useMemo(() => {
     let items = failedItems;
-    if (selectedClass !== '_all') items = items.filter(f => f.grade === selectedClass);
-    if (selectedSubject !== '_all') items = items.filter(f => f.subject === selectedSubject);
+    if (selectedClass !== "_all")
+      items = items.filter((f) => f.grade === selectedClass);
+    if (selectedSubject !== "_all")
+      items = items.filter((f) => f.subject === selectedSubject);
     return items;
   }, [failedItems, selectedClass, selectedSubject]);
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
-  const pagedItems = filteredItems.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const pagedItems = filteredItems.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE,
+  );
 
   const handleClassChange = (value: string) => {
     setSelectedClass(value);
-    setSelectedSubject('_all');
+    setSelectedSubject("_all");
     setPage(1);
   };
 
@@ -135,9 +181,12 @@ export default function ReExamPortalTab() {
       {/* Header */}
       <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Re-Examination Management</h1>
+          <h1 className="text-3xl font-bold text-foreground">
+            Re-Examination Management
+          </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Coordinate and score supplemental sessions for failed learning outcome targets.
+            Coordinate and score supplemental sessions for failed learning
+            outcome targets.
           </p>
         </div>
       </div>
@@ -155,7 +204,11 @@ export default function ReExamPortalTab() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="_all">All Classes</SelectItem>
-                {assignedClasses.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                {assignedClasses.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -169,7 +222,11 @@ export default function ReExamPortalTab() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="_all">All Subjects</SelectItem>
-                {subjectsForSelectedClass.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                {subjectsForSelectedClass.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -183,8 +240,12 @@ export default function ReExamPortalTab() {
             <AlertCircle className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Total Failed</p>
-            <h4 className="text-2xl font-extrabold text-destructive mt-1">{filteredItems.length} Students</h4>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">
+              Total Failed
+            </p>
+            <h4 className="text-2xl font-extrabold text-destructive mt-1">
+              {filteredItems.length} Students
+            </h4>
           </div>
         </div>
 
@@ -193,7 +254,9 @@ export default function ReExamPortalTab() {
             <Clock className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Pending Grading</p>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">
+              Pending Grading
+            </p>
             <h4 className="text-2xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">
               {filteredItems.length} Pending
             </h4>
@@ -205,7 +268,9 @@ export default function ReExamPortalTab() {
             <CalendarCheck className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Scheduled</p>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">
+              Scheduled
+            </p>
             <h4 className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">
               0 Scheduled
             </h4>
@@ -218,9 +283,13 @@ export default function ReExamPortalTab() {
         {/* Table Header Bar */}
         <div className="px-5 py-4 border-b border-border bg-muted/40 flex items-center justify-between">
           <div>
-            <h3 className="font-bold text-sm text-foreground">Failed Students Registry</h3>
+            <h3 className="font-bold text-sm text-foreground">
+              Failed Students Registry
+            </h3>
             <p className="text-[11px] text-muted-foreground mt-0.5">
-              {filteredItems.length} student{filteredItems.length !== 1 ? 's' : ''} · Click View to enter re-exam marks
+              {filteredItems.length} student
+              {filteredItems.length !== 1 ? "s" : ""} · Click View to enter
+              re-exam marks
             </p>
           </div>
           {totalPages > 1 && (
@@ -261,19 +330,27 @@ export default function ReExamPortalTab() {
           <TableBody>
             {pagedItems.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
+                <TableCell
+                  colSpan={8}
+                  className="py-12 text-center text-sm text-muted-foreground"
+                >
                   No failed students found matching the current filters.
                 </TableCell>
               </TableRow>
             ) : (
               pagedItems.map((item, idx) => {
-                const viewHref = profile?.role === 'ADMIN'
-                  ? `/admin/re-exam-portal/${item.studentId}/${item.evaluationId}`
-                  : `/teacher/mark-entry/${item.studentId}?evalId=${item.evaluationId}`;
+                const viewHref =
+                  profile?.role === "ADMIN"
+                    ? `/admin/re-exam-portal/${item.studentId}/${item.evaluationId}`
+                    : `/teacher/mark-entry/${item.studentId}?evalId=${item.evaluationId}`;
 
-                const percentage = item.fullMarks > 0
-                  ? Math.round((Number(item.marksObtained) / Number(item.fullMarks)) * 100)
-                  : 0;
+                const percentage =
+                  item.fullMarks > 0
+                    ? Math.round(
+                        (Number(item.marksObtained) / Number(item.fullMarks)) *
+                          100,
+                      )
+                    : 0;
 
                 return (
                   <TableRow
@@ -287,8 +364,12 @@ export default function ReExamPortalTab() {
 
                     {/* Student */}
                     <TableCell>
-                      <div className="font-semibold text-sm text-foreground">{item.studentName}</div>
-                      <div className="text-[10px] font-mono text-muted-foreground mt-0.5">{item.rollNumber}</div>
+                      <div className="font-semibold text-sm text-foreground">
+                        {item.studentName}
+                      </div>
+                      <div className="text-[10px] font-mono text-muted-foreground mt-0.5">
+                        {item.rollNumber}
+                      </div>
                     </TableCell>
 
                     {/* Class */}
@@ -298,13 +379,18 @@ export default function ReExamPortalTab() {
                       </span>
                     </TableCell>
 
-
                     {/* Task / Outcome */}
                     <TableCell className="max-w-[200px]">
-                      <div className="text-xs font-semibold text-foreground truncate" title={item.taskType}>
+                      <div
+                        className="text-xs font-semibold text-foreground truncate"
+                        title={item.taskType}
+                      >
                         {item.taskType}
                       </div>
-                      <div className="text-[10px] text-muted-foreground truncate mt-0.5" title={item.subTask}>
+                      <div
+                        className="text-[10px] text-muted-foreground truncate mt-0.5"
+                        title={item.subTask}
+                      >
                         {item.subTask}
                       </div>
                     </TableCell>
@@ -314,7 +400,9 @@ export default function ReExamPortalTab() {
                       <div className="text-sm font-bold text-destructive">
                         {item.marksObtained} / {item.passMarks}
                       </div>
-                      <div className="text-[10px] text-muted-foreground mt-0.5">{percentage}%</div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">
+                        {percentage}%
+                      </div>
                     </TableCell>
 
                     {/* Status */}
@@ -329,8 +417,8 @@ export default function ReExamPortalTab() {
                       <Link
                         href={viewHref}
                         className={cn(
-                          buttonVariants({ size: 'sm', variant: 'default' }),
-                          'h-8 text-xs gap-1.5'
+                          buttonVariants({ size: "sm", variant: "default" }),
+                          "h-8 text-xs gap-1.5",
                         )}
                       >
                         <Eye className="w-3.5 h-3.5" />
@@ -348,43 +436,53 @@ export default function ReExamPortalTab() {
         {totalPages > 1 && (
           <div className="px-5 py-3 border-t border-border flex items-center justify-between bg-muted/20">
             <p className="text-[11px] text-muted-foreground">
-              Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filteredItems.length)} of {filteredItems.length} results
+              Showing {(page - 1) * PAGE_SIZE + 1}–
+              {Math.min(page * PAGE_SIZE, filteredItems.length)} of{" "}
+              {filteredItems.length} results
             </p>
             <div className="flex items-center gap-1">
               <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
                 className="h-7 w-7 flex items-center justify-center rounded-md border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
-                .reduce<(number | '...')[]>((acc, p, i, arr) => {
-                  if (i > 0 && (p as number) - (arr[i - 1] as number) > 1) acc.push('...');
+                .filter(
+                  (p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1,
+                )
+                .reduce<(number | "...")[]>((acc, p, i, arr) => {
+                  if (i > 0 && (p as number) - (arr[i - 1] as number) > 1)
+                    acc.push("...");
                   acc.push(p);
                   return acc;
                 }, [])
                 .map((p, i) =>
-                  p === '...' ? (
-                    <span key={`ellipsis-${i}`} className="px-1 text-muted-foreground text-xs">…</span>
+                  p === "..." ? (
+                    <span
+                      key={`ellipsis-${i}`}
+                      className="px-1 text-muted-foreground text-xs"
+                    >
+                      …
+                    </span>
                   ) : (
                     <button
                       key={p}
                       onClick={() => setPage(p as number)}
                       className={cn(
-                        'h-7 min-w-[28px] px-2 flex items-center justify-center rounded-md text-xs font-semibold transition-colors border',
+                        "h-7 min-w-[28px] px-2 flex items-center justify-center rounded-md text-xs font-semibold transition-colors border",
                         page === p
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted'
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted",
                       )}
                     >
                       {p}
                     </button>
-                  )
+                  ),
                 )}
               <button
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
                 className="h-7 w-7 flex items-center justify-center rounded-md border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >

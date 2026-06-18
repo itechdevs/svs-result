@@ -16,18 +16,31 @@ export const GET = withHandler(
       Object.fromEntries(searchParams),
     );
 
-    const assignments = await prisma.teacherAssignment.findMany({
+    const subjects = await prisma.syncedSubject.findMany({
       where: {
-        ...(query.userId && { userId: query.userId }),
+        teacherId: { not: null },
         ...(query.gradeLevel && { gradeLevel: query.gradeLevel }),
-        ...(query.academicYearId && { academicYearId: query.academicYearId }),
       },
       include: {
-        user: { select: { id: true, name: true, email: true } },
-        academicYear: { select: { id: true, name: true } },
+        teacher: {
+          select: {
+            id: true,
+            name: true,
+            user: { select: { id: true, name: true, email: true } },
+          },
+        },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: { gradeLevel: "asc" },
     });
+
+    const assignments = subjects.map(s => ({
+      id: s.id,
+      userId: s.teacher?.user?.id,
+      gradeLevel: s.gradeLevel,
+      syncedSubjectId: s.id,
+      academicYearId: query.academicYearId || "all",
+      user: s.teacher?.user,
+    })).filter(a => !query.userId || a.userId === query.userId);
 
     return ok(assignments);
   },
@@ -36,10 +49,9 @@ export const GET = withHandler(
 
 // POST /api/admin/teacher-assignments
 export const POST = withHandler(
-  async (req: NextRequest, { user }) => {
+  async (req: NextRequest) => {
     const body = createTeacherAssignmentSchema.parse(await req.json());
 
-    // Ensure the user is a TEACHER
     const targetUser = await prisma.user.findUnique({
       where: { id: body.userId },
     });
@@ -47,27 +59,26 @@ export const POST = withHandler(
     if (targetUser.role !== "TEACHER") {
       return badRequest("Assignments can only be made to TEACHER role users");
     }
+    if (!targetUser.syncedTeacherId) {
+      return badRequest("User must be linked to a teacher");
+    }
+    if (!body.syncedSubjectId) {
+      return badRequest("Subject is required");
+    }
 
-    // Check duplicate
-    const existing = await prisma.teacherAssignment.findFirst({
-      where: {
-        userId: body.userId,
-        gradeLevel: body.gradeLevel,
-        syncedSubjectId: body.syncedSubjectId ?? null,
-        academicYearId: body.academicYearId,
-      },
-    });
-    if (existing) return conflict("This teacher assignment already exists");
-
-    const assignment = await prisma.teacherAssignment.create({
-      data: { ...body, assignedBy: user.id },
-      include: {
-        user: { select: { id: true, name: true } },
-        academicYear: { select: { id: true, name: true } },
-      },
+    const subject = await prisma.syncedSubject.update({
+      where: { id: body.syncedSubjectId },
+      data: { teacherId: targetUser.syncedTeacherId },
+      include: { teacher: { include: { user: true } } },
     });
 
-    return created(assignment, "Teacher assignment created");
+    return created({
+      id: subject.id,
+      userId: targetUser.id,
+      gradeLevel: subject.gradeLevel,
+      syncedSubjectId: subject.id,
+      user: subject.teacher?.user,
+    }, "Teacher assignment created");
   },
   ["ADMIN"],
 );
