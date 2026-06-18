@@ -174,11 +174,7 @@ export default function ReExamDetailedView({ student, evaluation }: Props) {
     const finalMark = m?.reExamMark ?? m?.regularMark ?? 0;
     return sum + finalMark;
   }, 0);
-  const obtained = outcomes.reduce((sum, lo) => {
-    const m = localMarks?.outcomeMarks[lo.name];
-    const finalMark = m?.reExamMark ?? m?.regularMark ?? 0;
-    return sum + finalMark;
-  }, 0);
+
   const fullTotal = calcFullMarks(outcomes);
   const status = (() => {
     const anyEntered = outcomes.some((lo) => {

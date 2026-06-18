@@ -350,7 +350,6 @@ export default function MarkEntryOverviewTable() {
                     />
                   </svg>
                 ) : (
-                ) : (
                   <Save className="w-3.5 h-3.5" />
                 )}
                 Draft
