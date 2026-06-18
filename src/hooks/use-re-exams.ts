@@ -84,6 +84,14 @@ export interface UpsertReExamResultInput {
   remarks?: string;
 }
 
+export interface ReExamAssessmentInput {
+  evaluationTemplateId: string;
+  syncedStudentId: string;
+  marksObtained: number;
+  scheduledDate: Date | string;
+  remarks?: string;
+}
+
 export function useReExamSchedules(status?: "SCHEDULED" | "COMPLETED" | "CANCELLED") {
   return useQuery<ReExamSchedule[]>({
     queryKey: ["re-exam-schedules", status],
@@ -174,6 +182,19 @@ export function useCompleteReExam() {
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ["re-exam-schedules"] });
       queryClient.invalidateQueries({ queryKey: ["re-exam-schedule", id] });
+    },
+  });
+}
+
+export function useReExamAssessment() {
+  const queryClient = useQueryClient();
+  return useMutation<ReExamResult, Error, ReExamAssessmentInput>({
+    mutationFn: async (data) => {
+      return apiClient.post("/admin/re-exam-portal", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["student-evaluation-results"] });
+      queryClient.invalidateQueries({ queryKey: ["re-exam-schedules"] });
     },
   });
 }

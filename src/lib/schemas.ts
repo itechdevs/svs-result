@@ -265,6 +265,14 @@ export const upsertReExamResultSchema = z.object({
   remarks: z.string().max(500).optional(),
 });
 
+export const reExamAssessmentSchema = z.object({
+  evaluationTemplateId: z.string().cuid(),
+  syncedStudentId: z.string().cuid(),
+  marksObtained: z.coerce.number().min(0),
+  scheduledDate: z.coerce.date(),
+  remarks: z.string().max(500).optional().transform(val => val || undefined),
+});
+
 // ─── Aggregation ──────────────────────────────────────────────────────────────
 
 export const aggregateResultsSchema = z.object({

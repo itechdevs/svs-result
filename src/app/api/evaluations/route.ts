@@ -80,6 +80,16 @@ export const GET = withHandler(async (req: NextRequest, { user }) => {
       },
       enteredBy: { select: { id: true, name: true } },
       verifiedBy: { select: { id: true, name: true } },
+      reExamResult: {
+        select: {
+          id: true,
+          marksObtained: true,
+          isPassed: true,
+          remarks: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      },
     },
     skip: (query.page - 1) * query.limit,
     take: query.limit,

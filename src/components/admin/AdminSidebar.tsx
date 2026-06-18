@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutGrid, Grid2X2, ClipboardX, PenLine, Sparkles, RefreshCw } from "lucide-react";
+import { LayoutGrid, Grid2X2, ClipboardX, PenLine, Sparkles } from "lucide-react";
 import { ROUTES } from "@/lib/constants";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -14,7 +14,6 @@ const NAV_ITEMS = [
   { label: "Re-Exam Panel", href: ROUTES.ADMIN_RE_EXAM, icon: ClipboardX },
   { label: "Marking Center", href: ROUTES.ADMIN_MARK_ENTRY, icon: PenLine },
   { label: "Result Compilation", href: ROUTES.ADMIN_RESULT_COMPILATION, icon: Sparkles },
-  { label: "Data Sync", href: ROUTES.ADMIN_SYNC, icon: RefreshCw },
 ] as const;
 
 export function AdminSidebar() {
