@@ -136,8 +136,16 @@ export const POST = withHandler(async (req: NextRequest, { user }) => {
 
   const now = new Date();
 
-  const upserts = body.results.map((r) =>
-    prisma.studentEvaluationResult.upsert({
+  const upserts = body.results.map((r) => {
+    const isPassed = body.submit
+      ? r.isAbsent
+        ? false
+        : r.marksObtained !== undefined && r.marksObtained !== null
+          ? new Decimal(r.marksObtained) >= template.passMarks
+          : false
+      : undefined;
+
+    return prisma.studentEvaluationResult.upsert({
       where: {
         syncedStudentId_evaluationTemplateId: {
           syncedStudentId: r.syncedStudentId,
@@ -151,7 +159,8 @@ export const POST = withHandler(async (req: NextRequest, { user }) => {
         marksObtained: r.isAbsent ? null : new Decimal(r.marksObtained!),
         isAbsent: r.isAbsent,
         remarks: r.remarks,
-        status: "DRAFT",
+        status: body.submit ? "SUBMITTED" : "DRAFT",
+        ...(body.submit && { isPassed, submittedAt: now }),
       },
       update: {
         marksObtained: r.isAbsent ? null : new Decimal(r.marksObtained!),
@@ -159,14 +168,17 @@ export const POST = withHandler(async (req: NextRequest, { user }) => {
         remarks: r.remarks,
         enteredById: user.id,
         updatedAt: now,
+        status: body.submit ? "SUBMITTED" : "DRAFT",
+        ...(body.submit && { isPassed, submittedAt: now }),
       },
-    }),
-  );
+    });
+  });
 
   await prisma.$transaction(upserts);
 
+  const label = body.submit ? "published" : "saved as DRAFT";
   return created(
     { count: body.results.length },
-    `${body.results.length} result(s) saved as DRAFT`,
+    `${body.results.length} result(s) ${label}`,
   );
 });

@@ -111,7 +111,13 @@ export default function EvaluationsTab({
                 <div className="flex flex-col gap-1.5">
                   <span className={cn(
                     "px-2.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider w-fit",
-                    evalPlan.status === 'Active' ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300" : "bg-muted text-muted-foreground"
+                    evalPlan.status === 'Published'
+                      ? "bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300"
+                      : evalPlan.status === 'Draft'
+                        ? "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300"
+                        : evalPlan.status === 'Active'
+                          ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300"
+                          : "bg-muted text-muted-foreground"
                   )}>
                     {evalPlan.status}
                   </span>

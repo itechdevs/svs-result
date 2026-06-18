@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { useEvaluationTemplates } from "@/hooks/use-evaluations";
+import { useEvaluationTemplates, useStudentEvaluationResults } from "@/hooks/use-evaluations";
 import { useProfile } from "@/hooks/use-profile";
 import { useDeleteEvaluationTemplate } from "@/hooks/use-evaluations";
 import EvaluationsTab from "@/components/teacher/EvaluationsTab";
@@ -17,6 +17,21 @@ export default function TeacherEvaluationsPage() {
 
   const { data: templatesData = [] } = useEvaluationTemplates();
   const { data: profile } = useProfile();
+  const { data: resultsData = [] } = useStudentEvaluationResults({ limit: 5000 });
+
+  // Build a map: templateId → highest status in that template
+  const templateStatusMap = useMemo(() => {
+    const map = new Map<string, 'SUBMITTED' | 'DRAFT'>();
+    for (const r of resultsData) {
+      const prev = map.get(r.evaluationTemplateId);
+      if (r.status === 'SUBMITTED' || r.status === 'VERIFIED' || r.status === 'LOCKED') {
+        map.set(r.evaluationTemplateId, 'SUBMITTED');
+      } else if (!prev) {
+        map.set(r.evaluationTemplateId, 'DRAFT');
+      }
+    }
+    return map;
+  }, [resultsData]);
 
   const [selectedEvaluationId, setSelectedEvaluationId] = useState('');
   const [newEvalTitle, setNewEvalTitle] = useState('');
@@ -63,6 +78,18 @@ export default function TeacherEvaluationsPage() {
       const totalFullMarks = group.reduce((s, t) => s + Number(t.fullMarks), 0);
       const totalPassMarks = group.reduce((s, t) => s + Number(t.passMarks), 0);
       const anyActive = group.some(t => t.isActive);
+
+      // Derive marks status: if any template in the group has been submitted → Published
+      // if any has been drafted → Draft, else fall back to Active/Inactive
+      const groupStatuses = group.map(t => templateStatusMap.get(t.id));
+      let marksStatus: string;
+      if (groupStatuses.some(s => s === 'SUBMITTED')) {
+        marksStatus = 'Published';
+      } else if (groupStatuses.some(s => s === 'DRAFT')) {
+        marksStatus = 'Draft';
+      } else {
+        marksStatus = anyActive ? 'Active' : 'Inactive';
+      }
       const latestDate = group
         .map(t => t.scheduledDate ? new Date(t.scheduledDate) : null)
         .filter(Boolean)
@@ -75,7 +102,7 @@ export default function TeacherEvaluationsPage() {
         subject: subjectName,
         gradeLevel,
         syncedSubjectId: first.syncedSubjectId,
-        status: anyActive ? 'Active' : 'Inactive',
+        status: marksStatus,
         testTypes: `${group.length} Task${group.length !== 1 ? 's' : ''}`,
         outcomes: `${group.length} Outcome${group.length !== 1 ? 's' : ''}`,
         fullMarks: totalFullMarks,
@@ -121,7 +148,7 @@ export default function TeacherEvaluationsPage() {
         templateIds: group.map(t => t.id),
       } satisfies EvaluationPlan;
     });
-  }, [templatesData, assignedSubjectIds, selectedSubject]);
+  }, [templatesData, assignedSubjectIds, selectedSubject, templateStatusMap]);
 
   const setCurrentTab = (tab: string, extraParams?: Record<string, string>) => {
     const params = new URLSearchParams();

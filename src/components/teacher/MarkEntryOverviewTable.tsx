@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Eye, CheckCircle, AlertTriangle, Save, Calendar } from "lucide-react";
+import { Eye, CheckCircle, AlertTriangle, Save, Send } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useProfile } from "@/hooks/use-profile";
@@ -15,8 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/shared/ui/select";
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { useMarksContext } from "@/contexts/marks-context";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";import { useMarksContext } from "@/contexts/marks-context";
 
 export default function MarkEntryOverviewTable() {
   const { data: profile } = useProfile();
@@ -267,26 +266,38 @@ export default function MarkEntryOverviewTable() {
                 student{classStudents.length !== 1 ? "s" : ""}
               </p>
             </div>
-            <button
-              onClick={handleSaveAll}
-              disabled={isSaving}
-              className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed rounded-lg transition-colors shadow-sm flex items-center gap-2"
-            >
-              {isSaving ? (
-                <>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={async () => { await handleSaveAll(false); router.push('/teacher/evaluations'); }}
+                disabled={isSaving}
+                className="px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-60 disabled:cursor-not-allowed rounded-lg transition-colors border border-slate-200 dark:border-slate-700 flex items-center gap-1.5"
+              >
+                {isSaving ? (
                   <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                   </svg>
-                  Saving...
-                </>
-              ) : (
-                <>
+                ) : (
                   <Save className="w-3.5 h-3.5" />
-                  Save All
-                </>
-              )}
-            </button>
+                )}
+                Draft
+              </button>
+              <button
+                onClick={async () => { await handleSaveAll(true); router.push('/teacher/evaluations'); }}
+                disabled={isSaving}
+                className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed rounded-lg transition-colors shadow-sm flex items-center gap-1.5"
+              >
+                {isSaving ? (
+                  <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                ) : (
+                  <Send className="w-3.5 h-3.5" />
+                )}
+                Publish
+              </button>
+            </div>
           </div>
 
           {classStudents.length === 0 ? (
@@ -496,7 +507,7 @@ export default function MarkEntryOverviewTable() {
             exit={{ opacity: 0, y: -10 }}
             className="fixed top-4 right-4 p-4 bg-emerald-500 text-white font-semibold text-sm rounded-lg shadow-lg flex items-center gap-2 z-50"
           >
-            <CheckCircle className="w-5 h-5" />
+        <CheckCircle className="w-5 h-5" />
             Marks saved successfully!
           </motion.div>
         )}

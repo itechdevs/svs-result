@@ -6,7 +6,7 @@ import { ArrowLeft, CheckCircle, Calendar } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { useStudentEvaluationResults, useBulkSaveMarks } from '@/hooks/use-evaluations';
-import { calcObtainedMarks, calcFullMarks, calcPassFail } from '@/components/teacher/DetailedMarkEntryView';
+import { calcFullMarks } from '@/components/teacher/DetailedMarkEntryView';
 import { Student, EvaluationPlan, StudentOutcomeMark, OutcomeMark } from '@/types/academic';
 import { Input } from '@/components/shared/ui/input';
 import {
@@ -92,9 +92,32 @@ export default function ReExamDetailedView({ student, evaluation }: Props) {
   };
 
   const outcomes = evaluation.learningOutcomes;
-  const obtained = calcObtainedMarks(localMarks, outcomes);
+  const obtained = outcomes.reduce((sum, lo) => {
+    const m = localMarks?.outcomeMarks[lo.name];
+    const finalMark = m?.reExamMark ?? m?.regularMark ?? 0;
+    return sum + finalMark;
+  }, 0);
   const fullTotal = calcFullMarks(outcomes);
-  const status = calcPassFail(localMarks, outcomes);
+  const status = (() => {
+    const anyEntered = outcomes.some((lo) => {
+      const m = localMarks?.outcomeMarks[lo.name];
+      return m?.regularMark !== null && m?.regularMark !== undefined;
+    });
+    if (!anyEntered) return 'Pending';
+    const anyFail = outcomes.some((lo) => {
+      const m = localMarks?.outcomeMarks[lo.name];
+      const finalMark = m?.reExamMark ?? m?.regularMark;
+      if (finalMark === null || finalMark === undefined) return false;
+      return finalMark < (lo.passMarks ?? 0);
+    });
+    if (anyFail) return 'Fail';
+    const allEntered = outcomes.every((lo) => {
+      const m = localMarks?.outcomeMarks[lo.name];
+      return m?.regularMark !== null && m?.regularMark !== undefined;
+    });
+    if (!allEntered) return 'Pending';
+    return 'Pass';
+  })();
 
   const failedOutcomes = outcomes.filter(lo => {
     const m = localMarks?.outcomeMarks[lo.name];

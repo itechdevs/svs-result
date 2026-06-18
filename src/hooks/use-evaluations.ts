@@ -106,6 +106,7 @@ export interface BulkSaveResultItem {
 
 export interface BulkSaveResultsInput {
   evaluationTemplateId: string;
+  submit?: boolean;
   results: BulkSaveResultItem[];
 }
 
