@@ -38,15 +38,16 @@ export async function POST(req: NextRequest) {
 
     // Create assignments if provided
     if (assignments && assignments.length > 0) {
-      await prisma.teacherAssignment.createMany({
-        data: assignments.map((a: any) => ({
-          userId: user.id,
-          gradeLevel: a.gradeLevel,
-          syncedSubjectId: a.subjectId,
-          academicYearId: a.academicYearId,
-          assignedBy: "admin", // TODO: Get from session
-        })),
-      });
+      await Promise.all(
+        assignments.map(async (a: any) => {
+          if (a.subjectId) {
+            await prisma.syncedSubject.update({
+              where: { id: a.subjectId },
+              data: { teacherId: syncedTeacherId },
+            });
+          }
+        })
+      );
     }
 
     return NextResponse.json({
