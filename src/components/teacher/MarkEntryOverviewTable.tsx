@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Eye, CheckCircle, AlertTriangle, Save, Calendar } from "lucide-react";
+import { Eye, CheckCircle, AlertTriangle, Save, Calendar, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useProfile } from "@/hooks/use-profile";
@@ -46,6 +46,8 @@ export default function MarkEntryOverviewTable() {
   const [selectedEvalPlan, setSelectedEvalPlan] = useState(
     searchParams.get("eval") ?? ""
   );
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   const { data: studentsData } = useStudents(
     selectedClass ? { grade: selectedClass, limit: 9999 } : { limit: 1 }
@@ -145,17 +147,23 @@ export default function MarkEntryOverviewTable() {
     setSelectedClass(value);
     setSelectedSubject("");
     setSelectedEvalPlan("");
+    setPage(1);
     updateURL(value, "", "");
   };
   const handleSubjectChange = (value: string) => {
     setSelectedSubject(value);
     setSelectedEvalPlan("");
+    setPage(1);
     updateURL(selectedClass, value, "");
   };
   const handleEvalPlanChange = (value: string) => {
     setSelectedEvalPlan(value);
+    setPage(1);
     updateURL(selectedClass, selectedSubject, value);
   };
+
+  const totalPages = Math.max(1, Math.ceil(classStudents.length / PAGE_SIZE));
+  const pagedStudents = classStudents.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <motion.div
@@ -164,10 +172,19 @@ export default function MarkEntryOverviewTable() {
       className="space-y-6"
     >
       {/* ── Filters ─────────────────────────────────────────────── */}
-      <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-border shadow-sm p-5">
-        <h1 className="text-lg font-bold text-[#002045] dark:text-white mb-4">
-          Mark Entry
-        </h1>
+      <div className="bg-card rounded-xl border border-border shadow-sm p-5">
+        <div className="flex items-center gap-3 mb-4">
+          <button
+            onClick={() => router.back()}
+            className="h-8 w-8 flex items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+            title="Go back"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <h1 className="text-lg font-bold text-foreground">
+            Mark Entry
+          </h1>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
@@ -265,6 +282,7 @@ export default function MarkEntryOverviewTable() {
               <p className="text-[11px] text-slate-400 mt-0.5">
                 {selectedClass} · {selectedEvalPlan} · {classStudents.length}{" "}
                 student{classStudents.length !== 1 ? "s" : ""}
+                {totalPages > 1 && ` · Page ${page} of ${totalPages}`}
               </p>
             </div>
             <button
@@ -334,7 +352,7 @@ export default function MarkEntryOverviewTable() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-border">
-                  {classStudents.map((student) => {
+                  {pagedStudents.map((student) => {
                     // ── Per-student calculations ────────────────
                     const totalObtained = outcomeColumns.reduce((sum, col) => {
                       const mark = getStudentMark(student.id, col.evalId);
@@ -483,6 +501,56 @@ export default function MarkEntryOverviewTable() {
               </table>
             </div>
           )}
+
+          {/* ── Pagination footer (always visible) ── */}
+          <div className="px-5 py-3 border-t border-border flex items-center justify-between bg-muted/30">
+            <p className="text-[11px] text-muted-foreground">
+              Showing {Math.min((page - 1) * PAGE_SIZE + 1, classStudents.length)}–{Math.min(page * PAGE_SIZE, classStudents.length)} of {classStudents.length} student{classStudents.length !== 1 ? 's' : ''}
+            </p>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="h-7 w-7 flex items-center justify-center rounded-md border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-bold text-sm"
+                >
+                  ‹
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                  .reduce<(number | '...')[]>((acc, p, i, arr) => {
+                    if (i > 0 && (p as number) - (arr[i - 1] as number) > 1) acc.push('...');
+                    acc.push(p);
+                    return acc;
+                  }, [])
+                  .map((p, i) =>
+                    p === '...' ? (
+                      <span key={`ell-${i}`} className="px-1 text-muted-foreground text-xs">…</span>
+                    ) : (
+                      <button
+                        key={p}
+                        onClick={() => setPage(p as number)}
+                        className={cn(
+                          'h-7 min-w-[28px] px-2 flex items-center justify-center rounded-md text-xs font-semibold transition-colors border',
+                          page === p
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted'
+                        )}
+                      >
+                        {p}
+                      </button>
+                    )
+                  )}
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="h-7 w-7 flex items-center justify-center rounded-md border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-bold text-sm"
+                >
+                  ›
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

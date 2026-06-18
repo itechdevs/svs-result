@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { motion } from 'motion/react';
-import { AlertCircle, Clock, CalendarCheck, Eye } from 'lucide-react';
+import { AlertCircle, Clock, CalendarCheck, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useStudentEvaluationResults } from '@/hooks/use-evaluations';
 import { useStudents } from '@/hooks/use-students';
@@ -12,6 +12,16 @@ import { useSubjects } from '@/hooks/use-subjects';
 import { SyncedStudent } from '@/hooks/use-students';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/shared/ui/select';
 import { buttonVariants } from '@/components/shared/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/shared/ui/table';
+
+const PAGE_SIZE = 10;
 
 export default function ReExamPortalTab() {
   const { data: profile } = useProfile();
@@ -21,6 +31,7 @@ export default function ReExamPortalTab() {
 
   const [selectedClass, setSelectedClass] = useState('_all');
   const [selectedSubject, setSelectedSubject] = useState('_all');
+  const [page, setPage] = useState(1);
 
   // Assigned classes from teacher profile (or all classes if ADMIN)
   const assignedClasses = useMemo(() => {
@@ -58,13 +69,11 @@ export default function ReExamPortalTab() {
         return r.marksObtained < passMarks;
       })
       .map(r => {
-        // Parse subject name and template display name from the raw template name
         const rawName = r.evaluationTemplate?.name ?? '';
         const newFmt = rawName.match(/^\[([^\]]+)\]\[([^\]]+)\]\s*(.+)$/);
         const legacyFmt = rawName.match(/^\[([^\]]+)\]\s*(.+)$/);
         const taskType = newFmt ? newFmt[2] : legacyFmt ? legacyFmt[1] : rawName;
         const subTask = newFmt ? newFmt[3] : legacyFmt ? legacyFmt[2] : rawName;
-        // Get subject name from the nested relation (added to API response)
         const subjectName = (r.evaluationTemplate as unknown as { syncedSubject?: { name: string } })?.syncedSubject?.name ?? '—';
 
         return {
@@ -73,12 +82,13 @@ export default function ReExamPortalTab() {
           rollNumber: r.syncedStudent?.rollNumber ?? studentsMap[r.syncedStudentId]?.rollNumber ?? '—',
           grade: r.syncedStudent?.grade ?? studentsMap[r.syncedStudentId]?.grade ?? '—',
           subject: subjectName,
-          templateName: `${taskType}: ${subTask}`,
+          taskType,
+          subTask,
           evaluationId: r.evaluationTemplateId,
           resultId: r.id,
           marksObtained: r.marksObtained,
           passMarks: r.evaluationTemplate?.passMarks ?? 0,
-          hasReExam: false,
+          fullMarks: r.evaluationTemplate?.fullMarks ?? 0,
         };
       });
   }, [resultsData, studentsMap]);
@@ -91,9 +101,19 @@ export default function ReExamPortalTab() {
     return items;
   }, [failedItems, selectedClass, selectedSubject]);
 
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
+  const pagedItems = filteredItems.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   const handleClassChange = (value: string) => {
     setSelectedClass(value);
     setSelectedSubject('_all');
+    setPage(1);
+  };
+
+  const handleSubjectChange = (value: string) => {
+    setSelectedSubject(value);
+    setPage(1);
   };
 
   return (
@@ -104,10 +124,13 @@ export default function ReExamPortalTab() {
       exit={{ opacity: 0, y: -15 }}
       className="space-y-6"
     >
+      {/* Header */}
       <div className="flex justify-between items-end">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Re-Examination Management</h1>
-          <p className="text-sm text-muted-foreground mt-1">Coordinate and score supplemental sessions for failed learning outcome targets.</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Coordinate and score supplemental sessions for failed learning outcome targets.
+          </p>
         </div>
       </div>
 
@@ -115,7 +138,9 @@ export default function ReExamPortalTab() {
       <div className="bg-card text-card-foreground rounded-xl border border-border shadow-sm p-5">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Filter by Class</label>
+            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+              Filter by Class
+            </label>
             <Select value={selectedClass} onValueChange={handleClassChange}>
               <SelectTrigger className="w-full text-sm">
                 <SelectValue placeholder="All Classes" />
@@ -127,8 +152,10 @@ export default function ReExamPortalTab() {
             </Select>
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Filter by Subject</label>
-            <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+              Filter by Subject
+            </label>
+            <Select value={selectedSubject} onValueChange={handleSubjectChange}>
               <SelectTrigger className="w-full text-sm">
                 <SelectValue placeholder="All Subjects" />
               </SelectTrigger>
@@ -178,48 +205,186 @@ export default function ReExamPortalTab() {
         </div>
       </div>
 
-      {/* Failed Students Registry */}
-      <div className="bg-card text-card-foreground border border-border rounded-xl shadow-sm overflow-hidden flex flex-col">
-        <div className="p-4 border-b border-border bg-muted/40">
-          <h3 className="font-bold text-xs text-foreground uppercase tracking-wider">Failed Students Registry</h3>
-          <p className="text-[10px] text-muted-foreground mt-1">Click View to enter re-exam marks for each student</p>
-        </div>
-        <div className="divide-y divide-border max-h-[500px] overflow-y-auto">
-          {filteredItems.length === 0 ? (
-            <div className="p-8 text-center text-xs text-muted-foreground">No failed students found.</div>
-          ) : (
-            filteredItems.map(item => {
-              const viewHref = profile?.role === 'ADMIN'
-                ? `/admin/re-exam-portal/${item.studentId}/${item.evaluationId}`
-                : `/teacher/mark-entry/${item.studentId}?evalId=${item.evaluationId}`;
-
-              return (
-                <div
-                  key={`${item.studentId}-${item.evaluationId}`}
-                  className="p-4 hover:bg-muted/30 transition-colors flex items-center justify-between gap-4"
-                >
-                  <div className="min-w-0">
-                    <div className="font-bold text-sm text-foreground">{item.studentName}</div>
-                    <div className="text-[10px] text-muted-foreground font-mono mt-0.5">{item.rollNumber} · {item.grade}</div>
-                    <div className="text-[11px] text-primary font-semibold mt-1 truncate" title={item.templateName}>
-                      {item.subject} · {item.templateName}
-                    </div>
-                    <div className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-destructive/10 text-destructive text-[10px] font-bold">
-                      ✗ {item.marksObtained} / {item.passMarks} — Failed
-                    </div>
-                  </div>
-                  <Link
-                    href={viewHref}
-                    className={cn(buttonVariants({ size: 'sm', variant: 'default' }), "h-8 text-xs shrink-0")}
-                  >
-                    <Eye className="w-3.5 h-3.5 mr-1" />
-                    View
-                  </Link>
-                </div>
-              );
-            })
+      {/* Failed Students Table */}
+      <div className="bg-card text-card-foreground border border-border rounded-xl shadow-sm overflow-hidden">
+        {/* Table Header Bar */}
+        <div className="px-5 py-4 border-b border-border bg-muted/40 flex items-center justify-between">
+          <div>
+            <h3 className="font-bold text-sm text-foreground">Failed Students Registry</h3>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              {filteredItems.length} student{filteredItems.length !== 1 ? 's' : ''} · Click View to enter re-exam marks
+            </p>
+          </div>
+          {totalPages > 1 && (
+            <span className="text-[11px] text-muted-foreground">
+              Page {page} of {totalPages}
+            </span>
           )}
         </div>
+
+        {/* Table */}
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/30">
+              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground w-[40px]">
+                SN
+              </TableHead>
+              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Student
+              </TableHead>
+              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Class
+              </TableHead>
+
+              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Task / Outcome
+              </TableHead>
+              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground text-center">
+                Marks
+              </TableHead>
+              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground text-center">
+                Status
+              </TableHead>
+              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground text-center">
+                Action
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {pagedItems.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
+                  No failed students found matching the current filters.
+                </TableCell>
+              </TableRow>
+            ) : (
+              pagedItems.map((item, idx) => {
+                const viewHref = profile?.role === 'ADMIN'
+                  ? `/admin/re-exam-portal/${item.studentId}/${item.evaluationId}`
+                  : `/teacher/mark-entry/${item.studentId}?evalId=${item.evaluationId}`;
+
+                const percentage = item.fullMarks > 0
+                  ? Math.round((Number(item.marksObtained) / Number(item.fullMarks)) * 100)
+                  : 0;
+
+                return (
+                  <TableRow
+                    key={`${item.studentId}-${item.evaluationId}`}
+                    className="hover:bg-muted/30 transition-colors"
+                  >
+                    {/* SN */}
+                    <TableCell className="text-[11px] font-semibold text-muted-foreground">
+                      {(page - 1) * PAGE_SIZE + idx + 1}
+                    </TableCell>
+
+                    {/* Student */}
+                    <TableCell>
+                      <div className="font-semibold text-sm text-foreground">{item.studentName}</div>
+                      <div className="text-[10px] font-mono text-muted-foreground mt-0.5">{item.rollNumber}</div>
+                    </TableCell>
+
+                    {/* Class */}
+                    <TableCell>
+                      <span className="text-xs bg-muted text-muted-foreground font-semibold px-2 py-1 rounded-md">
+                        {item.grade}
+                      </span>
+                    </TableCell>
+
+
+                    {/* Task / Outcome */}
+                    <TableCell className="max-w-[200px]">
+                      <div className="text-xs font-semibold text-foreground truncate" title={item.taskType}>
+                        {item.taskType}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground truncate mt-0.5" title={item.subTask}>
+                        {item.subTask}
+                      </div>
+                    </TableCell>
+
+                    {/* Marks */}
+                    <TableCell className="text-center">
+                      <div className="text-sm font-bold text-destructive">
+                        {item.marksObtained} / {item.passMarks}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">{percentage}%</div>
+                    </TableCell>
+
+                    {/* Status */}
+                    <TableCell className="text-center">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-destructive/10 text-destructive border border-destructive/20">
+                        ✗ Failed
+                      </span>
+                    </TableCell>
+
+                    {/* Action */}
+                    <TableCell className="text-center">
+                      <Link
+                        href={viewHref}
+                        className={cn(
+                          buttonVariants({ size: 'sm', variant: 'default' }),
+                          'h-8 text-xs gap-1.5'
+                        )}
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        View
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+
+        {/* Pagination Footer */}
+        {totalPages > 1 && (
+          <div className="px-5 py-3 border-t border-border flex items-center justify-between bg-muted/20">
+            <p className="text-[11px] text-muted-foreground">
+              Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filteredItems.length)} of {filteredItems.length} results
+            </p>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="h-7 w-7 flex items-center justify-center rounded-md border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                .reduce<(number | '...')[]>((acc, p, i, arr) => {
+                  if (i > 0 && (p as number) - (arr[i - 1] as number) > 1) acc.push('...');
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((p, i) =>
+                  p === '...' ? (
+                    <span key={`ellipsis-${i}`} className="px-1 text-muted-foreground text-xs">…</span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => setPage(p as number)}
+                      className={cn(
+                        'h-7 min-w-[28px] px-2 flex items-center justify-center rounded-md text-xs font-semibold transition-colors border',
+                        page === p
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted'
+                      )}
+                    >
+                      {p}
+                    </button>
+                  )
+                )}
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="h-7 w-7 flex items-center justify-center rounded-md border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </motion.div>
   );
