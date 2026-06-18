@@ -33,8 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/shared/ui/select";
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { useMarksContext } from "@/contexts/marks-context";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";import { useMarksContext } from "@/contexts/marks-context";
 
 export default function MarkEntryOverviewTable() {
   const { data: profile } = useProfile();
@@ -350,6 +349,7 @@ export default function MarkEntryOverviewTable() {
                       d="M4 12a8 8 0 018-8v8H4z"
                     />
                   </svg>
+                ) : (
                 ) : (
                   <Save className="w-3.5 h-3.5" />
                 )}
@@ -670,7 +670,7 @@ export default function MarkEntryOverviewTable() {
             exit={{ opacity: 0, y: -10 }}
             className="fixed top-4 right-4 p-4 bg-emerald-500 text-white font-semibold text-sm rounded-lg shadow-lg flex items-center gap-2 z-50"
           >
-            <CheckCircle className="w-5 h-5" />
+        <CheckCircle className="w-5 h-5" />
             Marks saved successfully!
           </motion.div>
         )}
