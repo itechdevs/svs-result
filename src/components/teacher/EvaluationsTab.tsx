@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Plus, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { Plus, MoreVertical, Pencil, Trash2, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EvaluationPlan } from '@/types/academic';
 import Link from 'next/link';
@@ -74,13 +74,23 @@ export default function EvaluationsTab({
             </p>
           )}
         </div>
-        <Button
-          onClick={() => setCurrentTab('create-evaluation')}
-          className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold flex items-center gap-2 text-xs shadow-sm"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Create Evaluation Plan</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => setCurrentTab('result-compilation')}
+            variant="outline"
+            className="font-bold flex items-center gap-2 text-xs shadow-sm"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Result Compilation</span>
+          </Button>
+          <Button
+            onClick={() => setCurrentTab('create-evaluation')}
+            className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold flex items-center gap-2 text-xs shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Create Evaluation Plan</span>
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 bg-card p-5 rounded-2xl border border-border shadow-sm">
@@ -206,15 +216,21 @@ export default function EvaluationsTab({
               )}
             </div>
 
-            <div className="px-5 pb-5 pt-2 border-t border-border/50 flex items-center gap-3">
+            <div className="px-5 pb-5 pt-2 border-t border-border/50">
               <Button
                 onClick={() => {
                   setSelectedEvaluationId(evalPlan.id);
                   setCurrentTab('mark-entry', { eval: evalPlan.title });
                 }}
-                className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 font-bold text-xs"
+                disabled={evalPlan.status === 'Published'}
+                className={cn(
+                  "w-full font-bold text-xs",
+                  evalPlan.status === 'Published'
+                    ? "bg-muted text-muted-foreground cursor-not-allowed"
+                    : "bg-primary text-primary-foreground hover:bg-primary/90"
+                )}
               >
-                Enter Marks
+                {evalPlan.status === 'Published' ? 'Published' : 'Enter Marks'}
               </Button>
             </div>
           </div>

@@ -160,6 +160,7 @@ export default function TeacherEvaluationsPage() {
     const suffix = params.toString() ? `?${params}` : "";
     if (tab === "create-evaluation") router.push(`/teacher/create-evaluation${suffix}`);
     else if (tab === "mark-entry") router.push(`/teacher/mark-entry${suffix}`);
+    else if (tab === "result-compilation") router.push(`/teacher/result-compilation${suffix}`);
     else router.push("/teacher/dashboard");
   };
 

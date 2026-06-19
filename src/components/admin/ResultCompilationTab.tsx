@@ -2,12 +2,12 @@
 
 import React, { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { CheckCircle, BookOpen, ClipboardList } from 'lucide-react';
+import { CheckCircle, BookOpen, ClipboardList, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEvaluationTemplates, useStudentEvaluationResults } from '@/hooks/use-evaluations';
 import { useStudents } from '@/hooks/use-students';
+import { useAdminTeacherCompilations } from '@/hooks/use-teacher-compilations';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/shared/ui/select';
-import { buttonVariants } from '@/components/shared/ui/button';
 import {
   Table,
   TableHeader,
@@ -17,114 +17,154 @@ import {
   TableCell,
 } from '@/components/shared/ui/table';
 
+interface SubjectResult {
+  subjectName: string;
+  totalObtained: number;
+  totalFull: number;
+  percentage: number;
+  grade: string;
+  isPassed: boolean;
+}
+
 interface CompiledResult {
   rollNo: string;
   studentId: string;
   studentName: string;
-  subjectMarks: Record<string, number | null>;
-  totalObtained: number;
-  totalFull: number;
-  average: number;
-  percentage: number;
-  grade: string;
+  subjects: Record<string, SubjectResult>;
+  overallPercentage: number;
+  overallGrade: string;
   result: 'Pass' | 'Fail' | 'Pending';
 }
 
 export default function ResultCompilationTab() {
-  const { data: templatesData = [], isLoading: isLoadingEvals } = useEvaluationTemplates();
-  const { data: studentsData, isLoading: isLoadingStudents } = useStudents({ limit: 500 });
-  const { data: resultsData = [] } = useStudentEvaluationResults({ limit: 2000 });
+  const { data: templatesData = [] } = useEvaluationTemplates();
+  const { data: studentsData } = useStudents({ limit: 500 });
+  const { data: resultsData = [] } = useStudentEvaluationResults({ limit: 5000 });
+  const { data: teacherCompilations = [] } = useAdminTeacherCompilations({ status: 'SUBMITTED' });
 
   const [selectedClass, setSelectedClass] = useState('all');
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
-  const [selectedEvaluations, setSelectedEvaluations] = useState<string[]>([]);
 
   const students = useMemo(() => studentsData?.students ?? [], [studentsData]);
 
-  // Map raw results → outcomeMarks lookup: [studentId][evaluationTemplateId] = marksObtained
+  const allClasses = useMemo(() => [...new Set(students.map(s => s.grade))], [students]);
+
+  // All subjects present in templates
+  const allSubjects = useMemo(() => {
+    const subjectMap = new Map<string, string>(); // name -> id
+    for (const t of templatesData) {
+      if (t.syncedSubject?.name) subjectMap.set(t.syncedSubject.name, t.syncedSubject.id);
+    }
+    return Array.from(subjectMap.entries()).map(([name, id]) => ({ name, id }));
+  }, [templatesData]);
+
+  // Filtered students by class
+  const filteredStudents = useMemo(() => {
+    return selectedClass === 'all' ? students : students.filter(s => s.grade === selectedClass);
+  }, [students, selectedClass]);
+
+  // Build marks lookup: [studentId][templateId] = marksObtained
   const marksLookup = useMemo(() => {
     const lookup: Record<string, Record<string, number | null>> = {};
     resultsData.forEach(r => {
       if (!lookup[r.syncedStudentId]) lookup[r.syncedStudentId] = {};
-      lookup[r.syncedStudentId][r.evaluationTemplateId] = r.marksObtained;
+      lookup[r.syncedStudentId][r.evaluationTemplateId] =
+        r.marksObtained !== null && r.marksObtained !== undefined ? Number(r.marksObtained) : null;
     });
     return lookup;
   }, [resultsData]);
 
-  const allClasses = useMemo(() => [...new Set(students.map(s => s.grade))], [students]);
-  const allSubjects = useMemo(() => [...new Set(templatesData.map(t => t.syncedSubject?.name ?? 'Unknown'))], [templatesData]);
+  // Group templates by subject
+  const templatesBySubject = useMemo(() => {
+    const map = new Map<string, typeof templatesData>();
+    for (const t of templatesData) {
+      const subjectName = t.syncedSubject?.name ?? 'Unknown';
+      if (!map.has(subjectName)) map.set(subjectName, []);
+      map.get(subjectName)!.push(t);
+    }
+    return map;
+  }, [templatesData]);
 
-  const toggleSubject = (subject: string) =>
-    setSelectedSubjects(prev => prev.includes(subject) ? prev.filter(s => s !== subject) : [...prev, subject]);
+  // Compute grade from percentage (hardcoded scale)
+  const lookupGrade = (percent: number): string => {
+    if (percent >= 90) return 'A+';
+    if (percent >= 80) return 'A';
+    if (percent >= 70) return 'B+';
+    if (percent >= 60) return 'B';
+    if (percent >= 50) return 'C+';
+    if (percent >= 40) return 'C';
+    return 'D';
+  };
 
-  const toggleEvaluation = (evalId: string) =>
-    setSelectedEvaluations(prev => prev.includes(evalId) ? prev.filter(id => id !== evalId) : [...prev, evalId]);
-
-  const filteredTemplates = useMemo(() =>
-    templatesData.filter(t =>
-      selectedSubjects.length === 0 || selectedSubjects.includes(t.syncedSubject?.name ?? 'Unknown')
-    ),
-    [templatesData, selectedSubjects]
-  );
-
+  // Compute compiled results: one weighted aggregate per subject per student
   const compiledResults = useMemo((): CompiledResult[] => {
-    if (selectedEvaluations.length === 0) return [];
-
-    const selectedTemplates = templatesData.filter(t => selectedEvaluations.includes(t.id));
-    const filteredStudents = selectedClass !== 'all'
-      ? students.filter(s => s.grade === selectedClass)
-      : students;
+    if (filteredStudents.length === 0 || allSubjects.length === 0) return [];
 
     return filteredStudents.map(student => {
-      const subjectMarks: Record<string, number | null> = {};
-      let totalObtained = 0;
-      let totalFull = 0;
+      const subjects: Record<string, SubjectResult> = {};
+      let totalPercentage = 0;
+      let subjectCount = 0;
       let hasAnyMarks = false;
-      let hasFailed = false;
+      let anyFailed = false;
 
-      selectedTemplates.forEach(t => {
-        const obtained = marksLookup[student.id]?.[t.id] ?? null;
-        const subject = t.syncedSubject?.name ?? 'Unknown';
-        subjectMarks[subject] = obtained;
+      for (const subject of allSubjects) {
+        const templates = templatesBySubject.get(subject.name) ?? [];
+        if (templates.length === 0) continue;
 
-        if (obtained !== null) {
-          hasAnyMarks = true;
-          totalObtained += obtained;
-          totalFull += Number(t.fullMarks);
-          if (obtained < Number(t.passMarks)) hasFailed = true;
-        } else {
-          totalFull += Number(t.fullMarks);
+        let weightedObtained = 0;
+        let weightedFull = 0;
+        let failedEvals = 0;
+        let subjectHasMarks = false;
+
+        for (const t of templates) {
+          const obtained = marksLookup[student.id]?.[t.id] ?? null;
+          const fullMarks = Number(t.fullMarks);
+          const weight = Number(t.weightage) / 100;
+
+          weightedFull += fullMarks * weight;
+
+          if (obtained !== null) {
+            subjectHasMarks = true;
+            hasAnyMarks = true;
+            weightedObtained += (obtained / fullMarks) * fullMarks * weight;
+            if (obtained < Number(t.passMarks)) failedEvals++;
+          }
         }
-      });
 
-      const percentage = totalFull > 0 ? (totalObtained / totalFull) * 100 : 0;
-      const average = selectedTemplates.length > 0 ? totalObtained / selectedTemplates.length : 0;
+        const percentage = weightedFull > 0 ? Number(((weightedObtained / weightedFull) * 100).toFixed(1)) : 0;
+        const grade = subjectHasMarks ? lookupGrade(percentage) : 'N/A';
+        const isPassed = subjectHasMarks && failedEvals === 0;
 
-      let grade = 'N/A';
-      if (hasAnyMarks) {
-        if (percentage >= 90) grade = 'A+';
-        else if (percentage >= 80) grade = 'A';
-        else if (percentage >= 70) grade = 'B+';
-        else if (percentage >= 60) grade = 'B';
-        else if (percentage >= 50) grade = 'C+';
-        else if (percentage >= 40) grade = 'C';
-        else grade = 'D';
+        if (subjectHasMarks) {
+          totalPercentage += percentage;
+          subjectCount++;
+        }
+
+        if (!isPassed && subjectHasMarks) anyFailed = true;
+
+        subjects[subject.name] = {
+          subjectName: subject.name,
+          totalObtained: Number(weightedObtained.toFixed(2)),
+          totalFull: Number(weightedFull.toFixed(2)),
+          percentage,
+          grade,
+          isPassed,
+        };
       }
+
+      const overallPercentage = subjectCount > 0 ? Number((totalPercentage / subjectCount).toFixed(1)) : 0;
+      const overallGrade = hasAnyMarks ? lookupGrade(overallPercentage) : 'N/A';
 
       return {
         rollNo: student.rollNumber,
         studentId: student.id,
         studentName: student.name,
-        subjectMarks,
-        totalObtained,
-        totalFull,
-        average,
-        percentage,
-        grade,
-        result: !hasAnyMarks ? 'Pending' : hasFailed ? 'Fail' : 'Pass',
+        subjects,
+        overallPercentage,
+        overallGrade,
+        result: !hasAnyMarks ? 'Pending' : anyFailed ? 'Fail' : 'Pass',
       };
     });
-  }, [selectedEvaluations, templatesData, students, marksLookup, selectedClass]);
+  }, [filteredStudents, allSubjects, templatesBySubject, marksLookup]);
 
   return (
     <motion.div
@@ -138,7 +178,7 @@ export default function ResultCompilationTab() {
       <div className="flex justify-between items-end">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Result Compilation</h1>
-          <p className="text-sm text-muted-foreground mt-1">View all evaluations created by teachers</p>
+          <p className="text-sm text-muted-foreground mt-1">Select a class to compile results across all subjects</p>
         </div>
       </div>
 
@@ -177,177 +217,141 @@ export default function ResultCompilationTab() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-card text-card-foreground rounded-xl border border-border shadow-sm p-5">
-        <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-3">Filter Evaluations</h3>
-        <div className="grid grid-cols-1 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Filter by Class</label>
-            <Select value={selectedClass} onValueChange={setSelectedClass}>
-              <SelectTrigger className="w-full text-sm">
-                <SelectValue placeholder="All Classes" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Classes</SelectItem>
-                {allClasses.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-              </SelectContent>
-            </Select>
+      {/* Teacher Submissions */}
+      {teacherCompilations.length > 0 && (
+        <div className="bg-card text-card-foreground rounded-xl border border-border shadow-sm p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="w-5 h-5 text-primary" />
+            <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
+              Teacher Submissions ({teacherCompilations.length})
+            </h3>
           </div>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/40">
+                  <TableHead className="border border-border px-3 py-2 text-left font-bold text-foreground">Teacher</TableHead>
+                  <TableHead className="border border-border px-3 py-2 text-left font-bold text-foreground">Subject</TableHead>
+                  <TableHead className="border border-border px-3 py-2 text-left font-bold text-foreground">Grade</TableHead>
+                  <TableHead className="border border-border px-3 py-2 text-left font-bold text-foreground">Academic Year</TableHead>
+                  <TableHead className="border border-border px-3 py-2 text-center font-bold text-foreground">Students</TableHead>
+                  <TableHead className="border border-border px-3 py-2 text-center font-bold text-foreground">Avg %</TableHead>
+                  <TableHead className="border border-border px-3 py-2 text-center font-bold text-foreground">Status</TableHead>
+                  <TableHead className="border border-border px-3 py-2 text-left font-bold text-foreground">Submitted</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {teacherCompilations.map((comp) => {
+                  const avgPercentage = comp.results.length > 0
+                    ? comp.results.reduce((sum, r) => sum + r.percentage, 0) / comp.results.length
+                    : 0;
+                  return (
+                    <TableRow key={comp.id} className="hover:bg-muted/20">
+                      <TableCell className="border border-border px-3 py-2 text-foreground">{comp.teacher.name}</TableCell>
+                      <TableCell className="border border-border px-3 py-2 text-foreground">{comp.subject.name}</TableCell>
+                      <TableCell className="border border-border px-3 py-2 text-foreground">{comp.gradeLevel}</TableCell>
+                      <TableCell className="border border-border px-3 py-2 text-foreground">{comp.academicYear.name}</TableCell>
+                      <TableCell className="border border-border px-3 py-2 text-center text-foreground">{comp.results.length}</TableCell>
+                      <TableCell className="border border-border px-3 py-2 text-center text-foreground">{avgPercentage.toFixed(1)}%</TableCell>
+                      <TableCell className="border border-border px-3 py-2 text-center">
+                        <span className={cn(
+                          "px-2 py-0.5 rounded text-[9px] font-bold uppercase",
+                          comp.status === 'SUBMITTED'
+                            ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300"
+                            : "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300"
+                        )}>
+                          {comp.status}
+                        </span>
+                      </TableCell>
+                      <TableCell className="border border-border px-3 py-2 text-foreground">
+                        {comp.submittedAt ? new Date(comp.submittedAt).toLocaleDateString() : '—'}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      )}
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Filter by Subjects (Multiple)</label>
-            <div className="flex flex-wrap gap-2">
-              {allSubjects.map(subject => (
-                <button
-                  key={subject}
-                  onClick={() => toggleSubject(subject)}
-                  className={cn(
-                    "px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors",
-                    selectedSubjects.includes(subject)
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-transparent text-foreground border-input hover:bg-muted"
-                  )}
-                >
-                  {subject}
-                </button>
-              ))}
-            </div>
-            {selectedSubjects.length > 0 && (
-              <button onClick={() => setSelectedSubjects([])} className="text-xs text-destructive hover:underline">
-                Clear all subjects
-              </button>
-            )}
-          </div>
+      {/* Class Filter */}
+      <div className="bg-card text-card-foreground rounded-xl border border-border shadow-sm p-5">
+        <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-3">Select Class</h3>
+        <div className="w-full md:w-72">
+          <Select value={selectedClass} onValueChange={setSelectedClass}>
+            <SelectTrigger className="w-full text-sm">
+              <SelectValue placeholder="All Classes" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Classes</SelectItem>
+              {allClasses.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
-      {/* Evaluation Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredTemplates.map(t => (
-          <div
-            key={t.id}
-            onClick={() => toggleEvaluation(t.id)}
-            className={cn(
-              "bg-card text-card-foreground border rounded-xl overflow-hidden hover:shadow-md transition-all flex flex-col cursor-pointer",
-              selectedEvaluations.includes(t.id)
-                ? "border-primary ring-2 ring-primary"
-                : "border-border"
-            )}
-          >
-            <div className="p-5 flex-1 space-y-4">
-              <div className="flex justify-between items-start">
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center gap-2">
-                    {selectedEvaluations.includes(t.id) && <CheckCircle className="w-4 h-4 text-primary" />}
-                    <span className={cn(
-                      "px-2.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider w-fit border",
-                      t.isActive
-                        ? "bg-emerald-100 dark:bg-emerald-950/45 text-emerald-800 dark:text-emerald-300 border-emerald-250 dark:border-emerald-900/40"
-                        : "bg-muted text-muted-foreground border-border"
-                    )}>
-                      {t.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
-                  <span className="text-muted-foreground text-[10px] font-mono block">
-                    {t.scheduledDate ? new Date(t.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'TBD'}
-                  </span>
-                </div>
-                <span className="text-[10px] font-bold px-2.5 py-0.5 bg-muted text-foreground rounded-full uppercase tracking-wider border border-border">
-                  {t.syncedSubject?.name ?? 'Unknown'}
-                </span>
-              </div>
-
-              <div>
-                <h3 className="font-bold text-sm text-foreground leading-snug line-clamp-1">{t.name}</h3>
-                <p className="text-[11px] text-muted-foreground mt-1">Grade: {t.gradeConfig?.gradeLevel ?? '—'}</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 bg-muted/30 p-3 rounded-lg border border-border">
-                <div>
-                  <span className="text-[9px] font-bold text-muted-foreground uppercase block">Max Marks</span>
-                  <span className="font-bold text-xs text-foreground font-mono">{t.fullMarks}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] font-bold text-muted-foreground uppercase block">Pass Marks</span>
-                  <span className="font-bold text-xs text-foreground font-mono">{t.passMarks}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] font-bold text-muted-foreground uppercase block">Weightage</span>
-                  <span className="font-bold text-xs text-primary font-mono">{t.weightage}%</span>
-                </div>
-                <div>
-                  <span className="text-[9px] font-bold text-muted-foreground uppercase block">Academic Year</span>
-                  <span className="font-bold text-xs text-primary font-mono">{t.gradeConfig?.academicYear?.name ?? '—'}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Compiled Results Table */}
-      {selectedEvaluations.length > 0 && compiledResults.length > 0 && (
+      {/* Compiled Results Table — one column per subject */}
+      {compiledResults.length > 0 && (
         <div className="bg-card text-card-foreground rounded-xl border border-border shadow-sm p-5">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
-              Compiled Results ({compiledResults.length} students)
+              Compiled Results ({compiledResults.length} students · {allSubjects.length} subjects)
             </h3>
-            <button onClick={() => setSelectedEvaluations([])} className="text-xs text-destructive hover:underline">
-              Clear selection
-            </button>
           </div>
 
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/40">
-                <TableHead className="border border-border px-3 py-2 text-left font-bold text-foreground">Roll No</TableHead>
-                <TableHead className="border border-border px-3 py-2 text-left font-bold text-foreground">Student Name</TableHead>
-                {templatesData.filter(t => selectedEvaluations.includes(t.id)).map(t => (
-                  <TableHead key={t.id} className="border border-border px-3 py-2 text-center font-bold text-foreground">
-                    {t.syncedSubject?.name ?? 'Unknown'}
-                  </TableHead>
-                ))}
-                <TableHead className="border border-border px-3 py-2 text-center font-bold text-foreground">Total</TableHead>
-                <TableHead className="border border-border px-3 py-2 text-center font-bold text-foreground">Average</TableHead>
-                <TableHead className="border border-border px-3 py-2 text-center font-bold text-foreground">Percentage</TableHead>
-                <TableHead className="border border-border px-3 py-2 text-center font-bold text-foreground">Grade</TableHead>
-                <TableHead className="border border-border px-3 py-2 text-center font-bold text-foreground">Result</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {compiledResults.map(result => (
-                <TableRow key={result.studentId} className="hover:bg-muted/20">
-                  <TableCell className="border border-border px-3 py-2 text-foreground">{result.rollNo}</TableCell>
-                  <TableCell className="border border-border px-3 py-2 text-foreground">{result.studentName}</TableCell>
-                  {templatesData.filter(t => selectedEvaluations.includes(t.id)).map(t => (
-                    <TableCell key={t.id} className="border border-border px-3 py-2 text-center text-foreground">
-                      {result.subjectMarks[t.syncedSubject?.name ?? 'Unknown'] ?? '-'}
-                    </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/40">
+                  <TableHead className="border border-border px-3 py-2 text-left font-bold text-foreground sticky left-0 bg-muted/40">Roll No</TableHead>
+                  <TableHead className="border border-border px-3 py-2 text-left font-bold text-foreground sticky left-[60px] bg-muted/40">Student Name</TableHead>
+                  {allSubjects.map(s => (
+                    <TableHead key={s.id} className="border border-border px-3 py-2 text-center font-bold text-foreground">
+                      {s.name}
+                    </TableHead>
                   ))}
-                  <TableCell className="border border-border px-3 py-2 text-center font-semibold text-foreground">
-                    {result.totalObtained}/{result.totalFull}
-                  </TableCell>
-                  <TableCell className="border border-border px-3 py-2 text-center text-foreground">
-                    {result.average.toFixed(1)}
-                  </TableCell>
-                  <TableCell className="border border-border px-3 py-2 text-center text-foreground">
-                    {result.percentage.toFixed(1)}%
-                  </TableCell>
-                  <TableCell className="border border-border px-3 py-2 text-center font-semibold text-foreground">
-                    {result.grade}
-                  </TableCell>
-                  <TableCell className={cn(
-                    "border border-border px-3 py-2 text-center font-bold",
-                    result.result === 'Pass' ? "text-emerald-650 dark:text-emerald-450" :
-                    result.result === 'Fail' ? "text-destructive" :
-                    "text-muted-foreground"
-                  )}>
-                    {result.result}
-                  </TableCell>
+                  <TableHead className="border border-border px-3 py-2 text-center font-bold text-foreground">Overall %</TableHead>
+                  <TableHead className="border border-border px-3 py-2 text-center font-bold text-foreground">Grade</TableHead>
+                  <TableHead className="border border-border px-3 py-2 text-center font-bold text-foreground">Result</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {compiledResults.map(result => (
+                  <TableRow key={result.studentId} className="hover:bg-muted/20">
+                    <TableCell className="border border-border px-3 py-2 text-foreground sticky left-0 bg-background">{result.rollNo}</TableCell>
+                    <TableCell className="border border-border px-3 py-2 text-foreground sticky left-[60px] bg-background">{result.studentName}</TableCell>
+                    {allSubjects.map(s => {
+                      const sub = result.subjects[s.name];
+                      return (
+                        <TableCell key={s.id} className="border border-border px-3 py-2 text-center text-foreground">
+                          {sub ? (
+                            <span className={cn("font-mono text-xs", !sub.isPassed && sub.subjectName && "text-destructive")}>
+                              {sub.percentage}%
+                            </span>
+                          ) : '-'}
+                        </TableCell>
+                      );
+                    })}
+                    <TableCell className="border border-border px-3 py-2 text-center font-semibold text-foreground">
+                      {result.overallPercentage}%
+                    </TableCell>
+                    <TableCell className="border border-border px-3 py-2 text-center font-semibold text-foreground">
+                      {result.overallGrade}
+                    </TableCell>
+                    <TableCell className={cn(
+                      "border border-border px-3 py-2 text-center font-bold",
+                      result.result === 'Pass' ? "text-emerald-600 dark:text-emerald-400" :
+                      result.result === 'Fail' ? "text-destructive" :
+                      "text-muted-foreground"
+                    )}>
+                      {result.result}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       )}
     </motion.div>
