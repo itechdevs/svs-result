@@ -30,3 +30,12 @@ export function useSubjects(filters: ListSubjectsFilters = {}) {
     },
   });
 }
+
+export function useGradeLevels() {
+  return useQuery<string[]>({
+    queryKey: ["grade-levels"],
+    queryFn: async () => {
+      return apiClient.get("/subjects/grade-levels");
+    },
+  });
+}

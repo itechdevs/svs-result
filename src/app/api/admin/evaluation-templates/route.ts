@@ -22,6 +22,7 @@ export const GET = withHandler(
         deletedAt: null,
         ...(query.gradeConfigId && { gradeConfigId: query.gradeConfigId }),
         ...(query.syncedSubjectId && { syncedSubjectId: query.syncedSubjectId }),
+        ...(query.examId && { examId: query.examId }),
         ...(query.isActive !== undefined && { isActive: query.isActive }),
       },
       include: {
@@ -34,6 +35,9 @@ export const GET = withHandler(
         },
         syncedSubject: {
           select: { id: true, name: true, code: true, gradeLevel: true },
+        },
+        exam: {
+          select: { id: true, name: true },
         },
       },
       orderBy: [{ displayOrder: "asc" }, { createdAt: "desc" }],
@@ -98,6 +102,7 @@ export const POST = withHandler(
       data: {
         gradeConfigId: body.gradeConfigId,
         syncedSubjectId: body.syncedSubjectId,
+        examId: body.examId,
         name: body.name,
         fullMarks: body.fullMarks,
         passMarks: body.passMarks,
@@ -108,6 +113,7 @@ export const POST = withHandler(
       include: {
         syncedSubject: true,
         gradeConfig: true,
+        exam: { select: { id: true, name: true } },
       },
     });
 

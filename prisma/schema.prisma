@@ -13,6 +13,8 @@
 //             can only enter and submit marks; cannot aggregate or publish
 //
 // Core evaluation flow:
+//   Exam  (ADMIN defines grouping e.g. "Mid-Term Exam")
+//       ↓
 //   EvaluationTemplate  (ADMIN defines: "Oral Test — 20 marks — 30% weight")
 //       ↓  teacher enters marks per student
 //   StudentEvaluationResult
@@ -264,7 +266,33 @@ model SyncedSubject {
 }
 
 // =============================================================================
-// 4. ACADEMIC YEAR
+// 4. EXAM
+//    ADMIN defines exams that group EvaluationTemplate records across subjects.
+//    e.g. "Mid-Term Exam" bundles Oral Test + Written Test for each subject.
+// =============================================================================
+
+model Exam {
+  id             String    @id @default(cuid())
+  name           String
+  description    String?
+  academicYearId String
+  gradeLevel     String // "Playgroup", "KG", "Grade 1" … "Grade 5"
+  startDate      DateTime?
+  endDate        DateTime?
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  academicYear         AcademicYear         @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  evaluationTemplates  EvaluationTemplate[]
+
+  @@unique([academicYearId, gradeLevel, name])
+  @@index([academicYearId, gradeLevel])
+  @@map("exams")
+}
+
+// =============================================================================
+// 5. ACADEMIC YEAR
 // =============================================================================
 
 model AcademicYear {
@@ -276,15 +304,16 @@ model AcademicYear {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  gradeConfigs       GradeConfig[]
-  finalResults       FinalResult[]
-  marksheets         Marksheet[]
+  exams                Exam[]
+  gradeConfigs         GradeConfig[]
+  finalResults         FinalResult[]
+  marksheets           Marksheet[]
 
   @@map("academic_years")
 }
 
 // =============================================================================
-// 5. GRADE CONFIG + GRADE SCALE
+// 6. GRADE CONFIG + GRADE SCALE
 //    ADMIN configures grading rules per grade level per academic year.
 // =============================================================================
 
@@ -327,19 +356,21 @@ model GradeScale {
 }
 
 // =============================================================================
-// 6. EVALUATION TEMPLATE
+// 7. EVALUATION TEMPLATE
 //    ADMIN defines the evaluation structure for each subject in a grade.
 //    e.g. Maths / Grade 3 / 2024-25:
 //      - Oral Test      (20 marks, pass 8,  weightage 20%)
 //      - Written Test 1 (40 marks, pass 16, weightage 40%)
 //      - Written Test 2 (40 marks, pass 16, weightage 40%)
 //    Rule: weightages across all templates for a subject MUST sum to 100.
+//    Optionally belongs to an Exam grouping (e.g. "Mid-Term Exam").
 // =============================================================================
 
 model EvaluationTemplate {
   id              String    @id @default(cuid())
   gradeConfigId   String
   syncedSubjectId String
+  examId          String?
   name            String // "Oral Test", "Written Test 1"
   fullMarks       Decimal   @db.Decimal(6, 2)
   passMarks       Decimal   @db.Decimal(6, 2)
@@ -353,17 +384,19 @@ model EvaluationTemplate {
 
   gradeConfig       GradeConfig               @relation(fields: [gradeConfigId], references: [id], onDelete: Cascade)
   syncedSubject     SyncedSubject             @relation(fields: [syncedSubjectId], references: [id], onDelete: Cascade)
+  exam              Exam?                     @relation(fields: [examId], references: [id], onDelete: SetNull)
   evaluationResults StudentEvaluationResult[]
   reExamSchedule    ReExamSchedule?
 
   @@unique([gradeConfigId, syncedSubjectId, name])
   @@index([gradeConfigId])
   @@index([syncedSubjectId])
+  @@index([examId])
   @@map("evaluation_templates")
 }
 
 // =============================================================================
-// 7. STUDENT EVALUATION RESULT
+// 8. STUDENT EVALUATION RESULT
 //    TEACHER enters marks per student per evaluation template.
 //
 //    Lifecycle:
@@ -409,7 +442,7 @@ model StudentEvaluationResult {
 }
 
 // =============================================================================
-// 8. RE-EXAMINATION
+// 9. RE-EXAMINATION
 //    ADMIN schedules a re-exam for a specific evaluation when students fail.
 //    Re-exam is scoped to one EvaluationTemplate only.
 // =============================================================================
@@ -474,7 +507,7 @@ model ReExamResult {
 }
 
 // =============================================================================
-// 9. AGGREGATED RESULTS  (ADMIN triggers; never entered manually)
+// 10. AGGREGATED RESULTS  (ADMIN triggers; never entered manually)
 //
 //    SubjectResult = weighted aggregate of all evaluations for one subject
 //    FinalResult   = aggregate of all SubjectResults → CGPA → promotion decision
@@ -543,7 +576,7 @@ model FinalResult {
 }
 
 // =============================================================================
-// 10. MARKSHEET
+// 11. MARKSHEET
 //     ADMIN generates after FinalResult is published.
 //     metadata = full point-in-time snapshot so re-printing is always correct.
 // =============================================================================
@@ -572,7 +605,7 @@ model Marksheet {
 }
 
 // =============================================================================
-// 11. SYNC LOG
+// 12. SYNC LOG
 //     Audit trail of every inbound sync from the school management system.
 // =============================================================================
 

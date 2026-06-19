@@ -160,11 +160,34 @@ export const bulkUpsertGradeScalesSchema = z.object({
     ),
 });
 
+// ─── Exam ────────────────────────────────────────────────────────
+
+export const createExamSchema = z.object({
+  name: z.string().min(1).max(150),
+  description: z.string().max(500).optional(),
+  academicYearId: z.string().cuid(),
+  gradeLevel: gradeLevelSchema,
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
+});
+
+export const updateExamSchema = createExamSchema.partial();
+
+export const listExamsSchema = z.object({
+  academicYearId: z.string().cuid().optional(),
+  gradeLevel: gradeLevelSchema.optional(),
+  isActive: z
+    .string()
+    .transform((v) => v === "true")
+    .optional(),
+});
+
 // ─── Evaluation Template ──────────────────────────────────────────────────────
 
 export const createEvaluationTemplateSchema = z.object({
   gradeConfigId: z.string().cuid(),
   syncedSubjectId: z.string().cuid(),
+  examId: z.string().cuid().optional(),
   name: z.string().min(1).max(100),
   fullMarks: z.number().positive(),
   passMarks: z.number().nonnegative(),
@@ -176,11 +199,15 @@ export const createEvaluationTemplateSchema = z.object({
 export const updateEvaluationTemplateSchema = createEvaluationTemplateSchema
   .omit({ gradeConfigId: true, syncedSubjectId: true })
   .partial()
-  .extend({ isActive: z.boolean().optional() });
+  .extend({
+    isActive: z.boolean().optional(),
+    examId: z.string().cuid().nullable().optional(),
+  });
 
 export const listEvaluationTemplatesSchema = z.object({
   gradeConfigId: z.string().cuid().optional(),
   syncedSubjectId: z.string().cuid().optional(),
+  examId: z.string().cuid().optional(),
   isActive: z
     .string()
     .transform((v) => v === "true")

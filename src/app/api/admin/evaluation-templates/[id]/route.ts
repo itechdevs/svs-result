@@ -20,6 +20,9 @@ export const GET = withHandler(
         syncedSubject: {
           select: { id: true, name: true, code: true, gradeLevel: true },
         },
+        exam: {
+          select: { id: true, name: true },
+        },
       },
     });
 
@@ -72,10 +75,12 @@ export const PATCH = withHandler(
         ...(body.scheduledDate !== undefined && { scheduledDate: body.scheduledDate }),
         ...(body.displayOrder !== undefined && { displayOrder: body.displayOrder }),
         ...(body.isActive !== undefined && { isActive: body.isActive }),
+        ...(body.examId !== undefined && { examId: body.examId }),
       },
       include: {
         syncedSubject: true,
         gradeConfig: true,
+        exam: { select: { id: true, name: true } },
       },
     });
 

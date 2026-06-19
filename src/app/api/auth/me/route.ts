@@ -1,10 +1,10 @@
 import { withHandler } from "@/lib/handlers";
 import { prisma } from "@/lib/prisma";
-import { ok } from "@/lib/response";
+import { notFound, ok } from "@/lib/response";
 
 // GET /api/auth/me — returns the current user's profile
 export const GET = withHandler(async (_req, { user }) => {
-  const full = await prisma.user.findUniqueOrThrow({
+  const full = await prisma.user.findUnique({
     where: { id: user.id },
     select: {
       id: true,
@@ -28,5 +28,6 @@ export const GET = withHandler(async (_req, { user }) => {
       },
     },
   });
+  if (!full) return notFound("User not found");
   return ok(full);
 });

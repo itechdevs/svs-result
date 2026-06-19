@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { RefreshCw, CheckCircle, XCircle, Clock, Users, GraduationCap, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -11,6 +11,11 @@ export default function SyncManagementClient() {
   const [syncing, setSyncing] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [syncType, setSyncType] = useState<SyncType>('all');
+  const [origin, setOrigin] = useState('');
+
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
 
   const handleSync = async (type: SyncType) => {
     setSyncing(true);
@@ -202,13 +207,13 @@ export default function SyncManagementClient() {
               <div>
                 <p className="text-xs font-medium text-foreground mb-1">Sync All Entities:</p>
                 <code className="block p-2 bg-muted rounded text-xs font-mono text-foreground border border-border">
-                  0 * * * * curl -X GET {typeof window !== 'undefined' ? window.location.origin : ''}/api/sync/all/cron
+                  0 * * * * curl -X GET {origin}/api/sync/all/cron
                 </code>
               </div>
               <div>
                 <p className="text-xs font-medium text-foreground mb-1">Sync Teachers Only:</p>
                 <code className="block p-2 bg-muted rounded text-xs font-mono text-foreground border border-border">
-                  0 * * * * curl -X GET {typeof window !== 'undefined' ? window.location.origin : ''}/api/sync/teachers/cron
+                  0 * * * * curl -X GET {origin}/api/sync/teachers/cron
                 </code>
               </div>
             </div>

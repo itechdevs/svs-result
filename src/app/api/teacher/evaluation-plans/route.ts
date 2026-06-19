@@ -7,6 +7,7 @@ import { withHandler } from "@/lib/handlers";
 const createPlanSchema = z.object({
   syncedSubjectId: z.string().min(1),
   gradeLevel: z.string().min(1),
+  examId: z.string().cuid().optional(),
   name: z.string().min(1).max(100),
   fullMarks: z.number().min(0),
   passMarks: z.number().min(0),
@@ -62,6 +63,7 @@ export const POST = withHandler(async (req: NextRequest, { user }) => {
       },
     },
     update: {
+      examId: body.examId,
       fullMarks: body.fullMarks,
       passMarks: body.passMarks,
       weightage: body.weightage,
@@ -73,6 +75,7 @@ export const POST = withHandler(async (req: NextRequest, { user }) => {
     create: {
       gradeConfigId: gradeConfig.id,
       syncedSubjectId: body.syncedSubjectId,
+      examId: body.examId,
       name: body.name,
       fullMarks: body.fullMarks,
       passMarks: body.passMarks,
