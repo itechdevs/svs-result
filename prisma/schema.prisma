@@ -71,6 +71,11 @@ enum GradeType {
   DESCRIPTIVE // Outstanding, Excellent, Good, Satisfactory, Needs Improvement
 }
 
+enum CompilationStatus {
+  DRAFT
+  SUBMITTED
+}
+
 // =============================================================================
 // 1. USER & AUTH
 //    Users are LOCAL to the result system — not synced from school management.
@@ -116,6 +121,9 @@ model User {
   publishedResults    FinalResult[]             @relation("PublishedBy")
   // Audit: who generated marksheets
   generatedMarksheets Marksheet[]               @relation("GeneratedBy")
+
+  // Teacher compilations
+  teacherCompilations  TeacherSubjectCompilation[]
 
   @@index([role, isActive])
   @@index([email])
@@ -221,6 +229,7 @@ model SyncedStudent {
   subjectResults    SubjectResult[]
   finalResults      FinalResult[]
   marksheets        Marksheet[]
+  compilationResults TeacherSubjectCompilationResult[]
 
   @@index([grade, section])
   @@index([isActive])
@@ -259,6 +268,7 @@ model SyncedSubject {
   teacher             SyncedTeacher?       @relation(fields: [teacherId], references: [id], onDelete: SetNull)
   evaluationTemplates EvaluationTemplate[]
   subjectResults      SubjectResult[]
+  teacherCompilations TeacherSubjectCompilation[]
 
   @@index([gradeLevel])
   @@index([teacherId])
@@ -308,6 +318,7 @@ model AcademicYear {
   gradeConfigs         GradeConfig[]
   finalResults         FinalResult[]
   marksheets           Marksheet[]
+  teacherCompilations  TeacherSubjectCompilation[]
 
   @@map("academic_years")
 }
@@ -605,7 +616,63 @@ model Marksheet {
 }
 
 // =============================================================================
-// 12. SYNC LOG
+// 12. TEACHER SUBJECT COMPILATION
+//     TEACHER compiles per-subject results by selecting evaluation templates.
+//     Computes weighted accumulation per student and saves to DB.
+//     Admin can then review and trigger final aggregation.
+// =============================================================================
+
+model TeacherSubjectCompilation {
+  id                    String             @id @default(cuid())
+  teacherId             String             // User.id of the TEACHER
+  syncedSubjectId       String
+  academicYearId        String
+  gradeLevel            String
+  evaluationTemplateIds Json               // Array of selected EvaluationTemplate IDs
+  status                CompilationStatus  @default(DRAFT)
+  submittedAt           DateTime?
+  computedAt            DateTime           @default(now())
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  teacher   User            @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  subject   SyncedSubject   @relation(fields: [syncedSubjectId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  results   TeacherSubjectCompilationResult[]
+
+  @@unique([teacherId, syncedSubjectId, academicYearId, gradeLevel])
+  @@index([teacherId])
+  @@index([syncedSubjectId])
+  @@index([academicYearId])
+  @@index([status])
+  @@map("teacher_subject_compilations")
+}
+
+model TeacherSubjectCompilationResult {
+  id                String  @id @default(cuid())
+  compilationId     String
+  syncedStudentId   String
+  totalFullMarks    Decimal @db.Decimal(8, 2)
+  obtainedMarks     Decimal @db.Decimal(8, 2)
+  percentage        Decimal @db.Decimal(5, 2)
+  grade             String?
+  gradePoint        Decimal? @db.Decimal(3, 2)
+  isPassed          Boolean
+  failedEvaluations Int     @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  compilation TeacherSubjectCompilation @relation(fields: [compilationId], references: [id], onDelete: Cascade)
+  student     SyncedStudent              @relation(fields: [syncedStudentId], references: [id], onDelete: Cascade)
+
+  @@unique([compilationId, syncedStudentId])
+  @@index([compilationId])
+  @@index([syncedStudentId])
+  @@map("teacher_subject_compilation_results")
+}
+
+// =============================================================================
+// 13. SYNC LOG
 //     Audit trail of every inbound sync from the school management system.
 // =============================================================================
 

@@ -18,7 +18,7 @@ export const GET = withHandler(async () => {
     },
   });
   return ok(years);
-}, ["ADMIN"]);
+}, ["ADMIN", "TEACHER"]);
 
 // POST /api/admin/academic-years
 export const POST = withHandler(

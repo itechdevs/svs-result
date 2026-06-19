@@ -26,7 +26,7 @@ const NAV_ITEMS = [
   { label: "Student Records", tab: "student-records", icon: Users, adminOnly: false },
   { label: "Re-Exam Panel", tab: "re-exam-portal", icon: ClipboardX, adminOnly: false },
   { label: "Teacher Allocations", tab: "allocations", icon: Grid2X2, adminOnly: true },
-  { label: "Result Compilation", tab: "result-compilation", icon: Sparkles, adminOnly: true },
+  { label: "Result Compilation", tab: "result-compilation", icon: Sparkles, adminOnly: false },
 ] as const;
 
 export function Sidebar({ role = "teacher" }: SidebarProps) {

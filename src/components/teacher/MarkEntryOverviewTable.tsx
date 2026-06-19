@@ -137,6 +137,17 @@ export default function MarkEntryOverviewTable() {
     evalIds.length > 0 ? { limit: 1000 } : {},
   );
 
+  // Compute the overall status for the current evaluation group
+  const evalGroupStatus = useMemo(() => {
+    if (evalIds.length === 0 || resultsData.length === 0) return 'NONE';
+    const evalIdSet = new Set(evalIds);
+    const relevantResults = resultsData.filter(r => evalIdSet.has(r.evaluationTemplateId));
+    if (relevantResults.length === 0) return 'NONE';
+    if (relevantResults.some(r => r.status === 'SUBMITTED' || r.status === 'VERIFIED' || r.status === 'LOCKED')) return 'SUBMITTED';
+    if (relevantResults.some(r => r.status === 'DRAFT')) return 'DRAFT';
+    return 'NONE';
+  }, [evalIds, resultsData]);
+
   const classStudents = useMemo(
     () => studentsData?.students ?? [],
     [studentsData],
@@ -327,8 +338,12 @@ export default function MarkEntryOverviewTable() {
                   await handleSaveAll(false);
                   router.push("/teacher/evaluations");
                 }}
-                disabled={isSaving}
-                className="px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-60 disabled:cursor-not-allowed rounded-lg transition-colors border border-slate-200 dark:border-slate-700 flex items-center gap-1.5"
+                disabled={isSaving || evalGroupStatus === 'DRAFT' || evalGroupStatus === 'SUBMITTED'}
+                className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 ${
+                  evalGroupStatus === 'DRAFT' || evalGroupStatus === 'SUBMITTED'
+                    ? 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-200 dark:border-slate-700'
+                    : 'text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-60 disabled:cursor-not-allowed border border-slate-200 dark:border-slate-700'
+                }`}
               >
                 {isSaving ? (
                   <svg
@@ -353,15 +368,19 @@ export default function MarkEntryOverviewTable() {
                 ) : (
                   <Save className="w-3.5 h-3.5" />
                 )}
-                Draft
+                {evalGroupStatus === 'DRAFT' ? 'Drafted' : evalGroupStatus === 'SUBMITTED' ? 'Drafted' : 'Draft'}
               </button>
               <button
                 onClick={async () => {
                   await handleSaveAll(true);
                   router.push("/teacher/evaluations");
                 }}
-                disabled={isSaving}
-                className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed rounded-lg transition-colors shadow-sm flex items-center gap-1.5"
+                disabled={isSaving || evalGroupStatus === 'SUBMITTED'}
+                className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors shadow-sm flex items-center gap-1.5 ${
+                  evalGroupStatus === 'SUBMITTED'
+                    ? 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed'
+                    : 'text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed'
+                }`}
               >
                 {isSaving ? (
                   <svg
@@ -386,7 +405,7 @@ export default function MarkEntryOverviewTable() {
                 ) : (
                   <Send className="w-3.5 h-3.5" />
                 )}
-                Publish
+                {evalGroupStatus === 'SUBMITTED' ? 'Published' : 'Publish'}
               </button>
             </div>
           </div>
