@@ -22,9 +22,9 @@ interface SidebarProps {
 const NAV_ITEMS = [
   { label: "Dashboard Overview", tab: "dashboard", icon: LayoutGrid, adminOnly: false },
   { label: "Evaluations Plan", tab: "evaluations", icon: ClipboardList, adminOnly: false },
-  { label: "Marking Center", tab: "mark-entry", icon: PenLine, adminOnly: false },
+  { label: "Marking Center", tab: "mark-entry", icon: PenLine, adminOnly: false, teacherOnly: true },
   { label: "Student Records", tab: "student-records", icon: Users, adminOnly: false },
-  { label: "Re-Exam Panel", tab: "re-exam-portal", icon: ClipboardX, adminOnly: false },
+  { label: "Re-Exam Panel", tab: "re-exam-portal", icon: ClipboardX, adminOnly: false, teacherOnly: true },
   { label: "Teacher Allocations", tab: "allocations", icon: Grid2X2, adminOnly: true },
   { label: "Result Compilation", tab: "result-compilation", icon: Sparkles, adminOnly: false },
 ] as const;
@@ -39,7 +39,11 @@ export function Sidebar({ role = "teacher" }: SidebarProps) {
   const { state, isMobile, openMobile, setOpenMobile } = useSidebar();
   const isCollapsed = state === "collapsed" && !isMobile;
 
-  const visibleItems = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin);
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    if (item.adminOnly && !isAdmin) return false;
+    if ('teacherOnly' in item && item.teacherOnly && isAdmin) return false;
+    return true;
+  });
 
   const SidebarContent = (
     <aside
