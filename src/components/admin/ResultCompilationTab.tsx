@@ -16,6 +16,8 @@ import {
   TableRow,
   TableCell,
 } from '@/components/shared/ui/table';
+import TranscriptModal from '@/components/shared/TranscriptModal';
+import { Student } from '@/types/academic';
 
 interface SubjectResult {
   subjectName: string;
@@ -43,6 +45,7 @@ export default function ResultCompilationTab() {
   const { data: teacherCompilations = [] } = useAdminTeacherCompilations({ status: 'SUBMITTED' });
 
   const [selectedClass, setSelectedClass] = useState('all');
+  const [showTranscriptModal, setShowTranscriptModal] = useState<Student | null>(null);
 
   const students = useMemo(() => studentsData?.students ?? [], [studentsData]);
 
@@ -314,6 +317,7 @@ export default function ResultCompilationTab() {
                   <TableHead className="border border-border px-3 py-2 text-center font-bold text-foreground">Overall %</TableHead>
                   <TableHead className="border border-border px-3 py-2 text-center font-bold text-foreground">Grade</TableHead>
                   <TableHead className="border border-border px-3 py-2 text-center font-bold text-foreground">Result</TableHead>
+                  <TableHead className="border border-border px-3 py-2 text-center font-bold text-foreground">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -347,6 +351,39 @@ export default function ResultCompilationTab() {
                     )}>
                       {result.result}
                     </TableCell>
+                    <TableCell className="border border-border px-3 py-2 text-center">
+                      <button
+                        onClick={() => {
+                          const studentObj: Student = {
+                            id: result.studentId,
+                            name: result.studentName,
+                            rollNo: result.rollNo,
+                            avatar: '',
+                            status: 'Active Enrollment',
+                            class: selectedClass === 'all' ? (students.find(s => s.id === result.studentId)?.grade ?? '') : selectedClass,
+                            attendance: '100%',
+                            department: 'General',
+                            overallTotal: '',
+                            overallPercent: result.overallPercentage,
+                            grade: result.overallGrade,
+                            resultStatus: result.result === 'Pass' ? 'PROMOTED' : result.result === 'Fail' ? 'FAILED' : 'PENDING',
+                            remarks: result.result === 'Pass' ? 'Promoted to next grade.' : 'Failed to clear all subjects.',
+                            scores: Object.values(result.subjects).map(sub => ({
+                              subject: sub.subjectName,
+                              type: 'General',
+                              obtained: sub.totalObtained,
+                              max: sub.totalFull,
+                              pass: sub.isPassed
+                            })),
+                            dist: {}
+                          };
+                          setShowTranscriptModal(studentObj);
+                        }}
+                        className="px-2.5 py-1 bg-[#002045] hover:bg-opacity-95 text-white rounded text-[11px] font-bold cursor-pointer transition-colors"
+                      >
+                        View Grade Sheet
+                      </button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -354,6 +391,10 @@ export default function ResultCompilationTab() {
           </div>
         </div>
       )}
+      <TranscriptModal
+        showTranscriptModal={showTranscriptModal}
+        setShowTranscriptModal={setShowTranscriptModal}
+      />
     </motion.div>
   );
 }
