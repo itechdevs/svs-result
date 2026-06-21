@@ -24,7 +24,7 @@ interface TranscriptModalProps {
   setShowTranscriptModal: (student: Student | null) => void;
 }
 
-interface MergedScore {
+export interface MergedScore {
   subject: string;
   obtained: number;
   max: number;
@@ -46,6 +46,31 @@ const getGradeDetails = (percentage: number) => {
   if (percentage >= 35) return { grade: 'D', gp: 1.6, remark: 'Basic' };
   return { grade: 'NG', gp: 0.0, remark: 'Not Graded' };
 };
+
+export function buildMergedScores(scores: any[]): MergedScore[] {
+  const map: Record<string, { obtained: number; max: number }> = {};
+  scores.forEach((s: any) => {
+    const base = s.subject.replace(/\s*\((TH|IN|Theory|Internal|External)\)\s*$/i, '').trim();
+    if (!map[base]) map[base] = { obtained: 0, max: 0 };
+    map[base].obtained += s.obtained;
+    map[base].max += s.max;
+  });
+  return Object.entries(map).map(([subject, data]) => {
+    const pct = data.max > 0 ? (data.obtained / data.max) * 100 : 0;
+    const g = getGradeDetails(pct);
+    return {
+      subject, obtained: data.obtained, max: data.max, percentage: pct,
+      grade: g.grade, gp: g.grade === 'NG' ? '-' : g.gp.toFixed(1), remark: g.remark,
+    };
+  });
+}
+
+export function computeGpa(mergedScores: MergedScore[]): string {
+  const vals = mergedScores
+    .map(s => typeof s.gp === 'number' ? s.gp : parseFloat(s.gp as string))
+    .filter(v => !isNaN(v));
+  return vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2) : '0.00';
+}
 
 // ─── PDF Document ─────────────────────────────────────────────────────────────
 
@@ -81,7 +106,7 @@ const pdfStyles = PdfStyleSheet.create({
   dateText: { marginTop: 8, fontFamily: 'Helvetica-Bold', fontSize: 7.5 },
 });
 
-function GradeSheetPDF({
+export function GradeSheetPDF({
   student,
   mergedScoresList,
   gpa,
@@ -176,39 +201,8 @@ export default function TranscriptModal({
 
   if (!showTranscriptModal) return null;
 
-  // Process and merge scores
-  const mergedScoresMap: Record<string, { obtained: number; max: number }> = {};
-  showTranscriptModal.scores.forEach((scoreItem: any) => {
-    const baseSubject = scoreItem.subject.replace(/\s*\((TH|IN|Theory|Internal|External)\)\s*$/i, '').trim();
-    if (!mergedScoresMap[baseSubject]) {
-      mergedScoresMap[baseSubject] = { obtained: 0, max: 0 };
-    }
-    mergedScoresMap[baseSubject].obtained += scoreItem.obtained;
-    mergedScoresMap[baseSubject].max += scoreItem.max;
-  });
-
-  const mergedScoresList: MergedScore[] = Object.entries(mergedScoresMap).map(([subject, data]) => {
-    const percentage = data.max > 0 ? (data.obtained / data.max) * 100 : 0;
-    const gradeDetails = getGradeDetails(percentage);
-    return {
-      subject,
-      obtained: data.obtained,
-      max: data.max,
-      percentage,
-      grade: gradeDetails.grade,
-      gp: gradeDetails.grade === 'NG' ? '-' : gradeDetails.gp.toFixed(1),
-      remark: gradeDetails.remark,
-    };
-  });
-
-  // Calculate GPA
-  const validGps = mergedScoresList
-    .map(s => typeof s.gp === 'number' ? s.gp : parseFloat(s.gp as string))
-    .filter(gp => !isNaN(gp));
-  const gpa = validGps.length > 0
-    ? (validGps.reduce((sum, gp) => sum + gp, 0) / validGps.length).toFixed(2)
-    : '0.00';
-
+  const mergedScoresList = buildMergedScores(showTranscriptModal.scores);
+  const gpa = computeGpa(mergedScoresList);
   const rank = (showTranscriptModal as any).rank ?? (showTranscriptModal as any).classRank ?? 3;
 
   const handlePrint = () => {

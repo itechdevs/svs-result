@@ -333,14 +333,21 @@ export default function MarkEntryOverviewTable() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <Link
+                href={`/teacher/evaluations`}
+                className="px-4 py-2 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                View Details
+              </Link>
               <button
                 onClick={async () => {
                   await handleSaveAll(false);
                   router.push("/teacher/evaluations");
                 }}
-                disabled={isSaving || evalGroupStatus === 'DRAFT' || evalGroupStatus === 'SUBMITTED'}
+                disabled={isSaving || evalGroupStatus === 'SUBMITTED'}
                 className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 ${
-                  evalGroupStatus === 'DRAFT' || evalGroupStatus === 'SUBMITTED'
+                  evalGroupStatus === 'SUBMITTED'
                     ? 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-200 dark:border-slate-700'
                     : 'text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-60 disabled:cursor-not-allowed border border-slate-200 dark:border-slate-700'
                 }`}
@@ -368,7 +375,7 @@ export default function MarkEntryOverviewTable() {
                 ) : (
                   <Save className="w-3.5 h-3.5" />
                 )}
-                {evalGroupStatus === 'DRAFT' ? 'Drafted' : evalGroupStatus === 'SUBMITTED' ? 'Drafted' : 'Draft'}
+                {evalGroupStatus === 'SUBMITTED' ? 'Drafted' : 'Draft'}
               </button>
               <button
                 onClick={async () => {
