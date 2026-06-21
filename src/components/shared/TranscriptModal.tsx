@@ -4,16 +4,10 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { Student } from '@/types/academic';
 import dynamic from 'next/dynamic';
-import {
-  Document,
-  Page,
-  View,
-  Text,
-  StyleSheet as PdfStyleSheet,
-} from '@react-pdf/renderer';
+import { buildMergedScores, computeGpa } from '@/lib/transcript-utils';
 
-const PDFDownloadLink = dynamic(
-  () => import('@react-pdf/renderer').then((mod) => mod.PDFDownloadLink),
+const TranscriptPDFContent = dynamic(
+  () => import('@/components/shared/TranscriptPDFContent'),
   { ssr: false }
 );
 
@@ -34,163 +28,7 @@ export interface MergedScore {
   remark: string;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-const getGradeDetails = (percentage: number) => {
-  if (percentage >= 90) return { grade: 'A+', gp: 4.0, remark: 'Outstanding' };
-  if (percentage >= 80) return { grade: 'A', gp: 3.6, remark: 'Excellent' };
-  if (percentage >= 70) return { grade: 'B+', gp: 3.2, remark: 'Very Good' };
-  if (percentage >= 60) return { grade: 'B', gp: 2.8, remark: 'Good' };
-  if (percentage >= 50) return { grade: 'C+', gp: 2.4, remark: 'Satisfactory' };
-  if (percentage >= 40) return { grade: 'C', gp: 2.0, remark: 'Acceptable' };
-  if (percentage >= 35) return { grade: 'D', gp: 1.6, remark: 'Basic' };
-  return { grade: 'NG', gp: 0.0, remark: 'Not Graded' };
-};
-
-export function buildMergedScores(scores: any[]): MergedScore[] {
-  const map: Record<string, { obtained: number; max: number }> = {};
-  scores.forEach((s: any) => {
-    const base = s.subject.replace(/\s*\((TH|IN|Theory|Internal|External)\)\s*$/i, '').trim();
-    if (!map[base]) map[base] = { obtained: 0, max: 0 };
-    map[base].obtained += s.obtained;
-    map[base].max += s.max;
-  });
-  return Object.entries(map).map(([subject, data]) => {
-    const pct = data.max > 0 ? (data.obtained / data.max) * 100 : 0;
-    const g = getGradeDetails(pct);
-    return {
-      subject, obtained: data.obtained, max: data.max, percentage: pct,
-      grade: g.grade, gp: g.grade === 'NG' ? '-' : g.gp.toFixed(1), remark: g.remark,
-    };
-  });
-}
-
-export function computeGpa(mergedScores: MergedScore[]): string {
-  const vals = mergedScores
-    .map(s => typeof s.gp === 'number' ? s.gp : parseFloat(s.gp as string))
-    .filter(v => !isNaN(v));
-  return vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2) : '0.00';
-}
-
-// ─── PDF Document ─────────────────────────────────────────────────────────────
-
-const pdfStyles = PdfStyleSheet.create({
-  page: { padding: 28, fontFamily: 'Helvetica', fontSize: 8, color: '#002045' },
-  outerBorder: { border: '2pt solid #002045', padding: 14, flexGrow: 1 },
-  headerRow: { alignItems: 'center', marginBottom: 10 },
-  schoolName: { fontSize: 14, fontFamily: 'Helvetica-Bold', textAlign: 'center', textTransform: 'uppercase' },
-  subHeader: { fontSize: 8, textAlign: 'center', marginTop: 2 },
-  examTitle: { alignItems: 'center', marginVertical: 8 },
-  examLabel: { fontSize: 8, fontFamily: 'Helvetica-Bold', textTransform: 'uppercase', letterSpacing: 2 },
-  sheetTitle: { fontSize: 11, fontFamily: 'Helvetica-Bold', textTransform: 'uppercase', letterSpacing: 2, marginTop: 2 },
-  divider: { borderBottom: '1pt solid #002045', width: 160, marginTop: 3 },
-  infoRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 5, fontSize: 7.5 },
-  infoLabel: { fontFamily: 'Helvetica' },
-  infoValue: { fontFamily: 'Helvetica-Bold', borderBottom: '0.5pt solid #002045', minWidth: 80, paddingHorizontal: 4 },
-  table: { border: '0.5pt solid #002045', marginTop: 10 },
-  thead: { flexDirection: 'row', backgroundColor: '#f0f4f8' },
-  tr: { flexDirection: 'row', borderTop: '0.5pt solid #002045' },
-  th: { fontFamily: 'Helvetica-Bold', padding: '4 6', borderRight: '0.5pt solid #002045', fontSize: 7.5 },
-  td: { padding: '4 6', borderRight: '0.5pt solid #002045', fontSize: 7.5 },
-  colSubject: { width: '45%' },
-  colGp: { width: '20%', textAlign: 'center' },
-  colGrade: { width: '15%', textAlign: 'center' },
-  colRemark: { width: '20%' },
-  gpaBar: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    border: '0.5pt solid #002045', backgroundColor: '#f0f4f8',
-    padding: '5 8', marginTop: 6, fontFamily: 'Helvetica-Bold', fontSize: 8,
-  },
-  sigRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 36 },
-  sigBox: { width: 100, borderTop: '0.5pt solid #002045', paddingTop: 3, textAlign: 'center', fontFamily: 'Helvetica-Bold', fontSize: 7.5 },
-  dateText: { marginTop: 8, fontFamily: 'Helvetica-Bold', fontSize: 7.5 },
-});
-
-export function GradeSheetPDF({
-  student,
-  mergedScoresList,
-  gpa,
-  rank,
-}: {
-  student: Student;
-  mergedScoresList: MergedScore[];
-  gpa: string;
-  rank: number | string;
-}) {
-  return (
-    <Document>
-      <Page size="A4" style={pdfStyles.page}>
-        <View style={pdfStyles.outerBorder}>
-          {/* School header */}
-          <View style={pdfStyles.headerRow}>
-            <Text style={pdfStyles.schoolName}>Sanskar Vidhyapith School</Text>
-            <Text style={pdfStyles.subHeader}>Balkhu, Kathmandu</Text>
-            <Text style={pdfStyles.subHeader}>Phone: 9802036680 | Email: sanskarvschool@gmail.com</Text>
-          </View>
-
-          {/* Exam title */}
-          <View style={pdfStyles.examTitle}>
-            <Text style={pdfStyles.examLabel}>Final Examination</Text>
-            <Text style={pdfStyles.sheetTitle}>Grade Sheet</Text>
-            <View style={pdfStyles.divider} />
-          </View>
-
-          {/* Student info */}
-          <View style={{ marginTop: 12, gap: 5 }}>
-            <View style={pdfStyles.infoRow}>
-              <Text style={pdfStyles.infoLabel}>The Grade(s) Secured By: </Text>
-              <Text style={pdfStyles.infoValue}>{student.name.toUpperCase()}</Text>
-              <Text style={pdfStyles.infoLabel}>  Roll No: </Text>
-              <Text style={[pdfStyles.infoValue, { minWidth: 30 }]}>{student.rollNo}</Text>
-              <Text style={pdfStyles.infoLabel}>  Grade: </Text>
-              <Text style={[pdfStyles.infoValue, { minWidth: 50 }]}>{student.class.toUpperCase()}</Text>
-            </View>
-            <View style={pdfStyles.infoRow}>
-              <Text style={pdfStyles.infoLabel}>In the Final Examination Conducted in </Text>
-              <Text style={[pdfStyles.infoValue, { minWidth: 30 }]}>2082</Text>
-              <Text style={pdfStyles.infoLabel}> B.S. ( </Text>
-              <Text style={[pdfStyles.infoValue, { minWidth: 30 }]}>2026</Text>
-              <Text style={pdfStyles.infoLabel}> A.D.) Are Given Below.</Text>
-            </View>
-          </View>
-
-          {/* Marks table */}
-          <View style={pdfStyles.table}>
-            <View style={pdfStyles.thead}>
-              <Text style={[pdfStyles.th, pdfStyles.colSubject]}>SUBJECTS</Text>
-              <Text style={[pdfStyles.th, pdfStyles.colGp]}>GRADE POINT (GP)</Text>
-              <Text style={[pdfStyles.th, pdfStyles.colGrade]}>GRADE</Text>
-              <Text style={[pdfStyles.th, pdfStyles.colRemark, { borderRight: 0 }]}>REMARKS</Text>
-            </View>
-            {mergedScoresList.map((s, i) => (
-              <View key={i} style={pdfStyles.tr}>
-                <Text style={[pdfStyles.td, pdfStyles.colSubject, { fontFamily: 'Helvetica-Bold', textTransform: 'uppercase' }]}>
-                  {s.subject}
-                </Text>
-                <Text style={[pdfStyles.td, pdfStyles.colGp]}>{String(s.gp)}</Text>
-                <Text style={[pdfStyles.td, pdfStyles.colGrade]}>{s.grade}</Text>
-                <Text style={[pdfStyles.td, pdfStyles.colRemark, { borderRight: 0 }]}>{s.remark}</Text>
-              </View>
-            ))}
-          </View>
-
-          {/* GPA + Rank */}
-          <View style={pdfStyles.gpaBar}>
-            <Text>Grade Point Average (GPA) = {gpa}</Text>
-            <Text>Rank = {rank}</Text>
-          </View>
-
-          {/* Signatures */}
-          <View style={pdfStyles.sigRow}>
-            <View style={pdfStyles.sigBox}><Text>CLASS TEACHER</Text></View>
-            <View style={pdfStyles.sigBox}><Text>PRINCIPAL</Text></View>
-          </View>
-          <Text style={pdfStyles.dateText}>DATE OF ISSUE: 2082-12-28</Text>
-        </View>
-      </Page>
-    </Document>
-  );
-}
+export { buildMergedScores, computeGpa } from '@/lib/transcript-utils';
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
 
@@ -389,23 +227,14 @@ export default function TranscriptModal({
           >
             Print Grade Sheet
           </button>
-          <PDFDownloadLink
-            document={
-              <GradeSheetPDF
-                student={showTranscriptModal}
-                mergedScoresList={mergedScoresList}
-                gpa={gpa}
-                rank={rank}
-              />
-            }
-            fileName={`GradeSheet_${showTranscriptModal.name}_${showTranscriptModal.rollNo}.pdf`}
-          >
-            {({ loading }: { loading: boolean }) => (
-              <button className="px-6 py-2 bg-[#002045] text-white hover:bg-opacity-90 rounded font-bold shadow-sm cursor-pointer">
-                {loading ? 'Preparing...' : 'Download PDF'}
-              </button>
-            )}
-          </PDFDownloadLink>
+          {TranscriptPDFContent && (
+            <TranscriptPDFContent
+              student={showTranscriptModal}
+              mergedScoresList={mergedScoresList}
+              gpa={gpa}
+              rank={rank}
+            />
+          )}
         </div>
 
       </motion.div>

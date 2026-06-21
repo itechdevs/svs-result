@@ -15,7 +15,7 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline'", // narrow in production
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' blob: data: https:",
       "font-src 'self' https://fonts.gstatic.com",
@@ -29,7 +29,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  // Security headers on all routes
+  serverExternalPackages: ["@react-pdf/renderer"],
   async headers() {
     return [
       {
@@ -38,25 +38,30 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-
-  // Image domains — extend as needed
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "avatars.githubusercontent.com" },
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
     ],
   },
-
-  // Redirect www → non-www (adjust for your domain)
   async redirects() {
     return [];
   },
-
   experimental: {
-    // Enable server actions (stable in Next 15, but explicit is good)
     serverActions: {
       allowedOrigins: [process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"],
     },
+  },
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+        canvas: false,
+      };
+    }
+    return config;
   },
 };
 

@@ -12,10 +12,13 @@ import { useExams } from '@/hooks/use-exams';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/shared/ui/select';
 import { Button } from '@/components/shared/ui/button';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/shared/ui/table';
-import TranscriptModal, { GradeSheetPDF, buildMergedScores, computeGpa } from '@/components/shared/TranscriptModal';
 import { Student } from '@/types/academic';
 import { apiClient } from '@/lib/api-client';
 import { toast } from 'sonner';
+import dynamic from 'next/dynamic';
+import { buildMergedScores, computeGpa } from '@/lib/transcript-utils';
+
+const TranscriptModal = dynamic(() => import('@/components/shared/TranscriptModal'), { ssr: false });
 
 interface SubjectResult {
   subjectName: string;
@@ -263,6 +266,7 @@ export default function ResultCompilationTab() {
     setBulkLoading(true);
     try {
       const { pdf } = await import('@react-pdf/renderer');
+      const { GradeSheetPDF } = await import('@/components/shared/GradeSheetPDF');
       const JSZip = (await import('jszip')).default;
       const zip = new JSZip();
       await Promise.all(selected.map(async result => {
