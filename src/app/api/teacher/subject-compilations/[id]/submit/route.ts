@@ -42,7 +42,7 @@ export const POST = withHandler(
         teacher: { select: { id: true, name: true } },
         results: {
           include: {
-            student: { select: { id: true, name: true, rollNumber: true, grade: true, section: true } },
+            student: { select: { id: true, name: true, rollNumber: true, class: true, section: true } },
           },
         },
       },

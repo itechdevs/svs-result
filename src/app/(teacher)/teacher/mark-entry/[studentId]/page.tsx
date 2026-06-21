@@ -62,7 +62,7 @@ export default function StudentMarkEntryPage() {
       avatar:
         'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80',
       status: s.isActive ? 'Active' : 'Inactive',
-      class: s.grade,
+      class: s.class,
       attendance: '96%',
       department: 'Primary',
       overallTotal: '—',

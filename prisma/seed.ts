@@ -48,7 +48,7 @@ async function main() {
       sourceId: "S1",
       name: "mathematics",
       code: "MATH",
-      gradeLevel: "Giraffe (U.K.G.)",
+      gradeLevel: "KG",
       teacherId: syncedTeacher.id,
       isActive: true,
     },

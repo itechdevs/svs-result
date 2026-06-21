@@ -26,6 +26,8 @@ export interface EvaluationTemplate {
     code: string;
     gradeLevel: string;
   };
+  examId?: string;
+  exam?: { id: string; name: string };
 }
 
 export interface StudentEvaluationResult {
@@ -48,7 +50,7 @@ export interface StudentEvaluationResult {
     id: string;
     name: string;
     rollNumber: string;
-    grade: string;
+    class: string;
     section: string;
   };
   evaluationTemplate?: {

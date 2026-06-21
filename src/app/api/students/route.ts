@@ -7,7 +7,7 @@ import { withHandler } from "@/lib/handlers";
 const querySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).default(20),
-  grade: z.string().optional(),
+  class: z.string().optional(),
   section: z.string().optional(),
   search: z.string().optional(),
   isActive: z.string().transform((v) => v === "true").optional(),
@@ -19,9 +19,9 @@ export const GET = withHandler(async (req: NextRequest, { user }) => {
   const query = querySchema.parse(Object.fromEntries(searchParams));
 
   // Teachers can only see students in their assigned grades.
-  // If an explicit grade is requested, trust it (teacher navigated via their own sidebar).
+  // If an explicit class is requested, trust it (teacher navigated via their own sidebar).
   let allowedGrades: string[] | undefined;
-  if (user.role === "TEACHER" && !query.grade) {
+  if (user.role === "TEACHER" && !query.class) {
     const teacher = await prisma.user.findUnique({
       where: { id: user.id },
       select: { syncedTeacher: { select: { subjects: { select: { gradeLevel: true }, distinct: ["gradeLevel"] } } } },
@@ -30,10 +30,10 @@ export const GET = withHandler(async (req: NextRequest, { user }) => {
   }
 
   const where = {
-    ...(query.grade
-      ? { grade: query.grade }
+    ...(query.class
+      ? { class: query.class }
       : allowedGrades
-        ? { grade: { in: allowedGrades } }
+        ? { class: { in: allowedGrades } }
         : {}),
     ...(query.section && { section: query.section }),
     ...(query.isActive !== undefined && { isActive: query.isActive }),

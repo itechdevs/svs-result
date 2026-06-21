@@ -219,7 +219,7 @@ model SyncedStudent {
   sourceId   String   @unique // Student.id from school DB
   name       String
   rollNumber String
-  grade      String // "Playgroup", "KG", "Grade 1" … "Grade 5"
+  class      String // "Rabbit (Playgroup)", "Panda (L.K.G.)", etc.
   section    String
   isActive   Boolean  @default(true)
   syncedAt   DateTime @default(now())
@@ -231,7 +231,7 @@ model SyncedStudent {
   marksheets        Marksheet[]
   compilationResults TeacherSubjectCompilationResult[]
 
-  @@index([grade, section])
+  @@index([class, section])
   @@index([isActive])
   @@map("synced_students")
 }

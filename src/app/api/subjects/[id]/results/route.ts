@@ -19,7 +19,7 @@ export const GET = withHandler(async (req: NextRequest, { params }) => {
       syncedSubjectId: params.id,
       ...(academicYearId && { academicYearId }),
       ...(gradeLevel && {
-        syncedStudent: { grade: gradeLevel },
+        syncedStudent: { class: gradeLevel },
       }),
     },
     include: {
@@ -28,7 +28,7 @@ export const GET = withHandler(async (req: NextRequest, { params }) => {
           id: true,
           name: true,
           rollNumber: true,
-          grade: true,
+          class: true,
           section: true,
         },
       },

@@ -22,7 +22,7 @@ export default function ReExamDetailPage() {
     return {
       id: s.id, name: s.name, rollNo: s.rollNumber,
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80',
-      status: s.isActive ? 'Active' : 'Inactive', class: s.grade,
+      status: s.isActive ? 'Active' : 'Inactive', class: s.class,
       attendance: '96%', department: 'Primary', overallTotal: '—',
       overallPercent: 0, grade: '—', resultStatus: 'PENDING', remarks: '', scores: [], dist: {},
     };
