@@ -76,6 +76,37 @@ export function useCreateAcademicYear() {
   });
 }
 
+export interface UpdateAcademicYearInput {
+  name?: string;
+  startDate?: string | Date;
+  endDate?: string | Date;
+  isCurrent?: boolean;
+}
+
+export function useUpdateAcademicYear() {
+  const queryClient = useQueryClient();
+  return useMutation<AcademicYear, Error, { id: string; data: UpdateAcademicYearInput }>({
+    mutationFn: async ({ id, data }) => {
+      return apiClient.patch(`/admin/academic-years/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["academic-years"] });
+    },
+  });
+}
+
+export function useDeleteAcademicYear() {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: async (id) => {
+      return apiClient.delete(`/admin/academic-years/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["academic-years"] });
+    },
+  });
+}
+
 export function useGradeConfigs(filters: { academicYearId?: string; gradeLevel?: string } = {}) {
   return useQuery<GradeConfig[]>({
     queryKey: ["grade-configs", filters],

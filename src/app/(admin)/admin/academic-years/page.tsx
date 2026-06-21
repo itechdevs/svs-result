@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Plus, Calendar } from "lucide-react";
+import { Plus, Calendar, Pencil, Trash2, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,6 +13,17 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -20,14 +31,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useAcademicYears, useCreateAcademicYear } from "@/hooks/use-academic-config";
+import {
+  useAcademicYears,
+  useCreateAcademicYear,
+  useUpdateAcademicYear,
+  useDeleteAcademicYear,
+  AcademicYear,
+} from "@/hooks/use-academic-config";
 import SanskarLoader from "@/components/shared/SanskarLoader";
 
 export default function AcademicYearsPage() {
   const { data: years, isLoading } = useAcademicYears();
   const createYear = useCreateAcademicYear();
+  const updateYear = useUpdateAcademicYear();
+  const deleteYear = useDeleteAcademicYear();
 
-  const [open, setOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingYear, setEditingYear] = useState<AcademicYear | null>(null);
+
   const [name, setName] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -40,9 +62,7 @@ export default function AcademicYearsPage() {
 
   const handleCreate = async () => {
     try {
-      // Set as current if no other years exist
       const isCurrent = !years || years.length === 0;
-      
       await createYear.mutateAsync({
         name,
         startDate: new Date(startDate),
@@ -50,9 +70,55 @@ export default function AcademicYearsPage() {
         isCurrent,
       });
       resetForm();
-      setOpen(false);
+      setCreateOpen(false);
     } catch (err: any) {
       alert(err.message || "Failed to create academic year");
+    }
+  };
+
+  const openEdit = (year: AcademicYear) => {
+    setEditingYear(year);
+    setName(year.name);
+    setStartDate(year.startDate.split("T")[0]);
+    setEndDate(year.endDate.split("T")[0]);
+    setEditOpen(true);
+  };
+
+  const handleUpdate = async () => {
+    if (!editingYear) return;
+    try {
+      await updateYear.mutateAsync({
+        id: editingYear.id,
+        data: {
+          name,
+          startDate: new Date(startDate),
+          endDate: new Date(endDate),
+        },
+      });
+      resetForm();
+      setEditOpen(false);
+      setEditingYear(null);
+    } catch (err: any) {
+      alert(err.message || "Failed to update academic year");
+    }
+  };
+
+  const handleSetCurrent = async (year: AcademicYear) => {
+    try {
+      await updateYear.mutateAsync({
+        id: year.id,
+        data: { isCurrent: true },
+      });
+    } catch (err: any) {
+      alert(err.message || "Failed to set current year");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteYear.mutateAsync(id);
+    } catch (err: any) {
+      alert(err.message || "Failed to delete academic year");
     }
   };
 
@@ -73,7 +139,7 @@ export default function AcademicYearsPage() {
             Manage academic year periods
           </p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={createOpen} onOpenChange={(v) => { setCreateOpen(v); if (!v) resetForm(); }}>
           <DialogTrigger asChild>
             <Button className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold gap-2">
               <Plus className="w-4 h-4" />
@@ -122,7 +188,7 @@ export default function AcademicYearsPage() {
               </div>
             </div>
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => { resetForm(); setOpen(false); }} className="text-xs">
+              <Button variant="outline" onClick={() => { resetForm(); setCreateOpen(false); }} className="text-xs">
                 Cancel
               </Button>
               <Button
@@ -147,6 +213,7 @@ export default function AcademicYearsPage() {
                 <TableHead>Status</TableHead>
                 <TableHead>Grade Configs</TableHead>
                 <TableHead>Final Results</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -180,6 +247,60 @@ export default function AcademicYearsPage() {
                       {year._count?.finalResults ?? 0}
                     </span>
                   </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      {!year.isCurrent && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleSetCurrent(year)}
+                          disabled={updateYear.isPending}
+                          title="Set as current"
+                          className="h-8 w-8 p-0"
+                        >
+                          <Star className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEdit(year)}
+                        title="Edit"
+                        className="h-8 w-8 p-0"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title="Delete"
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete {year.name}?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action cannot be undone. Academic years with published final results cannot be deleted.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel className="text-xs">Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDelete(year.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 text-xs"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -192,6 +313,63 @@ export default function AcademicYearsPage() {
           </div>
         )}
       </div>
+
+      <Dialog open={editOpen} onOpenChange={(v) => { setEditOpen(v); if (!v) { resetForm(); setEditingYear(null); } }}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit Academic Year</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
+                Year Name
+              </label>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. 2024/25 or 2081 BS"
+                className="w-full text-sm"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
+                  Start Date
+                </label>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
+                  End Date
+                </label>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full text-sm"
+                />
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => { resetForm(); setEditOpen(false); setEditingYear(null); }} className="text-xs">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpdate}
+              disabled={!name || !startDate || !endDate || updateYear.isPending}
+              className="bg-primary text-primary-foreground text-xs font-bold"
+            >
+              {updateYear.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }

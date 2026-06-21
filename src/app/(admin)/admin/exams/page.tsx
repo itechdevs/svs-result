@@ -53,12 +53,12 @@ export default function ExamsPage() {
   const deleteExam = useDeleteExam();
 
   const currentYear = academicYears?.find((y: any) => y.isCurrent);
-  console.log("Current academic year:", currentYear);
 
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [gradeLevel, setGradeLevel] = useState("");
+  const [academicYearId, setAcademicYearId] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
@@ -66,39 +66,30 @@ export default function ExamsPage() {
     setName("");
     setDescription("");
     setGradeLevel("");
+    setAcademicYearId("");
     setStartDate("");
     setEndDate("");
   };
 
   const handleCreate = async () => {
-    if (!currentYear) {
-      alert("No current academic year found. Please set one first.");
+    const yearId = academicYearId || currentYear?.id;
+    if (!yearId) {
+      alert("No academic year selected. Please select one first.");
       return;
     }
     try {
-      console.log("Creating exam with data:", {
-        name,
-        description: description || undefined,
-        academicYearId: currentYear.id,
-        gradeLevel,
-        startDate: startDate || undefined,
-        endDate: endDate || undefined,
-      });
-
       const result = await createExam.mutateAsync({
         name,
         description: description || undefined,
-        academicYearId: currentYear.id,
+        academicYearId: yearId,
         gradeLevel,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
       });
 
-      console.log("Exam created:", result);
       resetForm();
       setOpen(false);
     } catch (err: any) {
-      console.error("Failed to create exam:", err);
       alert(err.message || "Failed to create exam");
     }
   };
@@ -159,6 +150,27 @@ export default function ExamsPage() {
               </div>
               <div>
                 <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
+                  Academic Year
+                </label>
+                <Select
+                  value={academicYearId}
+                  onValueChange={setAcademicYearId}
+                  defaultValue={currentYear?.id}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select academic year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {academicYears?.map((year: any) => (
+                      <SelectItem key={year.id} value={year.id}>
+                        {year.name} {year.isCurrent && "(Current)"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
                   Grade Level
                 </label>
                 <Select value={gradeLevel} onValueChange={setGradeLevel}>
@@ -213,7 +225,7 @@ export default function ExamsPage() {
               <Button
                 onClick={handleCreate}
                 disabled={
-                  !name || !currentYear || !gradeLevel || createExam.isPending
+                  !name || !(academicYearId || currentYear) || !gradeLevel || createExam.isPending
                 }
                 className="bg-primary text-primary-foreground text-xs font-bold"
               >

@@ -192,6 +192,8 @@ export const POST = withHandler(
         },
         update: {
           evaluationTemplateIds: body.evaluationTemplateIds,
+          status: "DRAFT",
+          submittedAt: null,
           computedAt: new Date(),
         },
       });

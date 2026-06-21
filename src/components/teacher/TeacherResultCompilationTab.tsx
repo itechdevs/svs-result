@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { BookOpen, CheckCircle, Save, Send, ArrowLeft } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
@@ -14,8 +14,10 @@ import {
   useSubmitTeacherCompilation,
 } from '@/hooks/use-teacher-compilations';
 import { useAcademicYears } from '@/hooks/use-academic-config';
+import { useExams } from '@/hooks/use-exams';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/shared/ui/select';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 interface CompiledStudentResult {
   studentId: string;
@@ -37,18 +39,47 @@ interface Props {
 export default function TeacherResultCompilationTab({ onBack }: Props) {
   const searchParams = useSearchParams();
   const { data: profile } = useProfile();
-  const { data: templatesData = [] } = useEvaluationTemplates();
-  const { data: resultsData = [] } = useStudentEvaluationResults({ limit: 5000 });
-  const { data: studentsData } = useStudents({ limit: 500 });
   const { data: academicYears = [] } = useAcademicYears();
 
   const [selectedClass, setSelectedClass] = useState(searchParams.get('class') ?? '');
   const [selectedSubject, setSelectedSubject] = useState(searchParams.get('subject') ?? '');
   const [selectedAcademicYear, setSelectedAcademicYear] = useState('');
+  const [selectedExam, setSelectedExam] = useState('all');
   const [selectedEvaluations, setSelectedEvaluations] = useState<string[]>([]);
 
   const createCompilation = useCreateTeacherCompilation();
   const submitCompilation = useSubmitTeacherCompilation();
+
+  // Auto-select current academic year
+  useEffect(() => {
+    if (academicYears.length > 0 && !selectedAcademicYear) {
+      const currentYear = academicYears.find((y) => y.isCurrent);
+      if (currentYear) {
+        setSelectedAcademicYear(currentYear.id);
+      } else {
+        setSelectedAcademicYear(academicYears[0].id);
+      }
+    }
+  }, [academicYears, selectedAcademicYear]);
+
+  // Reset exam when academic year changes
+  const prevYear = useRef(selectedAcademicYear);
+  useEffect(() => {
+    if (prevYear.current !== selectedAcademicYear) {
+      prevYear.current = selectedAcademicYear;
+      setSelectedExam('all');
+      setSelectedEvaluations([]);
+    }
+  }, [selectedAcademicYear]);
+
+  const { data: exams = [] } = useExams(
+    selectedAcademicYear ? { academicYearId: selectedAcademicYear } : undefined,
+  );
+  const { data: templatesData = [] } = useEvaluationTemplates(
+    selectedAcademicYear ? { academicYearId: selectedAcademicYear } : {},
+  );
+  const { data: resultsData = [] } = useStudentEvaluationResults({ limit: 5000 });
+  const { data: studentsData } = useStudents({ limit: 500 });
 
   // Get existing compilations
   const { data: existingCompilations = [] } = useTeacherSubjectCompilations({
@@ -74,13 +105,17 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
     return assignedSubjects.filter((s) => s.gradeLevel === selectedClass);
   }, [assignedSubjects, selectedClass]);
 
-  // Filtered templates for selected subject
+  // Filtered templates for selected subject + exam
   const filteredTemplates = useMemo(() => {
     if (!selectedSubject) return [];
-    return templatesData.filter(
-      (t) => t.syncedSubject?.name === selectedSubject && t.syncedSubject?.gradeLevel === selectedClass && t.isActive
-    );
-  }, [templatesData, selectedSubject, selectedClass]);
+    return templatesData.filter((t) => {
+      if (t.syncedSubject?.name !== selectedSubject) return false;
+      if (!t.isActive) return false;
+      if (t.gradeConfig?.academicYear?.id && t.gradeConfig.academicYear.id !== selectedAcademicYear) return false;
+      if (selectedExam !== 'all' && t.examId && t.examId !== selectedExam) return false;
+      return true;
+    });
+  }, [templatesData, selectedSubject, selectedAcademicYear, selectedExam]);
 
   // Students for selected class
   const filteredStudents = useMemo(() => {
@@ -161,13 +196,13 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
     );
 
   const handleSaveDraft = async () => {
-    if (!selectedSubject || !selectedClass || !selectedAcademicYear || selectedEvaluations.length === 0) return;
+    if (!selectedSubject || !selectedClass || !selectedAcademicYear || selectedEvaluations.length === 0) {
+      toast.error('Please select all filters and at least one evaluation');
+      return;
+    }
 
     const subjectObj = subjects.find((s) => s.name === selectedSubject);
     if (!subjectObj) return;
-
-    const currentYear = academicYears.find((y) => y.id === selectedAcademicYear);
-    if (!currentYear) return;
 
     await createCompilation.mutateAsync({
       syncedSubjectId: subjectObj.id,
@@ -175,15 +210,18 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
       gradeLevel: selectedClass,
       evaluationTemplateIds: selectedEvaluations,
     });
+    toast.success('Draft saved successfully');
   };
 
   const handleSubmit = async () => {
-    if (!selectedSubject || !selectedClass || !selectedAcademicYear || selectedEvaluations.length === 0) return;
+    if (!selectedSubject || !selectedClass || !selectedAcademicYear || selectedEvaluations.length === 0) {
+      toast.error('Please select all filters and at least one evaluation');
+      return;
+    }
 
     const subjectObj = subjects.find((s) => s.name === selectedSubject);
     if (!subjectObj) return;
 
-    // First save
     const result = await createCompilation.mutateAsync({
       syncedSubjectId: subjectObj.id,
       academicYearId: selectedAcademicYear,
@@ -191,9 +229,9 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
       evaluationTemplateIds: selectedEvaluations,
     });
 
-    // Then submit
     if (result?.id) {
       await submitCompilation.mutateAsync(result.id);
+      toast.success('Submitted to admin successfully');
     }
   };
 
@@ -237,7 +275,7 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
 
       {/* Filters */}
       <div className="bg-card rounded-xl border border-border shadow-sm p-5">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
               Select Class
@@ -270,6 +308,22 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
           </div>
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+              Select Exam
+            </label>
+            <Select value={selectedExam} onValueChange={(v) => { setSelectedExam(v); setSelectedEvaluations([]); }}>
+              <SelectTrigger className="w-full text-sm">
+                <SelectValue placeholder="All Exams" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Exams</SelectItem>
+                {exams.map((exam) => (
+                  <SelectItem key={exam.id} value={exam.id}>{exam.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
               Academic Year
             </label>
             <Select value={selectedAcademicYear} onValueChange={setSelectedAcademicYear}>
@@ -278,7 +332,7 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
               </SelectTrigger>
               <SelectContent>
                 {academicYears.map((y) => (
-                  <SelectItem key={y.id} value={y.id}>{y.name}</SelectItem>
+                  <SelectItem key={y.id} value={y.id}>{y.name} {y.isCurrent && '(Current)'}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -365,12 +419,18 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
                     <span className="font-bold text-muted-foreground uppercase">Subject</span>
                     <p className="font-mono text-foreground">{t.syncedSubject?.name ?? '—'}</p>
                   </div>
+                  {t.exam && (
+                    <div className="col-span-2">
+                      <span className="font-bold text-muted-foreground uppercase">Exam</span>
+                      <p className="font-mono text-foreground">{t.exam.name}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
             {filteredTemplates.length === 0 && (
               <div className="col-span-full text-center py-8 text-sm text-muted-foreground">
-                No evaluation templates found for this subject.
+                No evaluation templates found for this subject{selectedExam !== 'all' ? ' and exam' : ''}.
               </div>
             )}
           </div>
@@ -387,19 +447,19 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
             <div className="flex items-center gap-2">
               <Button
                 onClick={handleSaveDraft}
-                disabled={createCompilation.isPending || existingCompilation?.status === 'SUBMITTED'}
+                disabled={createCompilation.isPending}
                 className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 font-bold text-xs"
               >
                 <Save className="w-3.5 h-3.5 mr-1.5" />
-                {existingCompilation?.status === 'SUBMITTED' ? 'Submitted' : 'Save Draft'}
+                Save Draft
               </Button>
               <Button
                 onClick={handleSubmit}
-                disabled={submitCompilation.isPending || existingCompilation?.status === 'SUBMITTED'}
+                disabled={submitCompilation.isPending}
                 className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold text-xs"
               >
                 <Send className="w-3.5 h-3.5 mr-1.5" />
-                {existingCompilation?.status === 'SUBMITTED' ? 'Already Submitted' : 'Submit to Admin'}
+                {existingCompilation?.status === 'SUBMITTED' ? 'Re-Submit to Admin' : 'Submit to Admin'}
               </Button>
             </div>
           </div>
@@ -409,7 +469,7 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
                 <tr className="bg-muted/40">
                   <th className="border border-border px-3 py-2 text-left font-bold text-foreground">Roll No</th>
                   <th className="border border-border px-3 py-2 text-left font-bold text-foreground">Student Name</th>
-                  {templatesData.filter((t) => selectedEvaluations.includes(t.id)).map((t) => (
+                  {filteredTemplates.filter((t) => selectedEvaluations.includes(t.id)).map((t) => (
                     <th key={t.id} className="border border-border px-3 py-2 text-center font-bold text-foreground">
                       {t.name}
                     </th>
@@ -425,7 +485,7 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
                   <tr key={result.studentId} className="hover:bg-muted/20">
                     <td className="border border-border px-3 py-2 text-foreground">{result.rollNo}</td>
                     <td className="border border-border px-3 py-2 text-foreground">{result.studentName}</td>
-                    {templatesData.filter((t) => selectedEvaluations.includes(t.id)).map((t) => (
+                    {filteredTemplates.filter((t) => selectedEvaluations.includes(t.id)).map((t) => (
                       <td key={t.id} className="border border-border px-3 py-2 text-center text-foreground">
                         {result.subjectMarks[t.name] ?? '-'}
                       </td>

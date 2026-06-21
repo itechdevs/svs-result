@@ -208,6 +208,7 @@ export const listEvaluationTemplatesSchema = z.object({
   gradeConfigId: z.string().cuid().optional(),
   syncedSubjectId: z.string().cuid().optional(),
   examId: z.string().cuid().optional(),
+  academicYearId: z.string().cuid().optional(),
   isActive: z
     .string()
     .transform((v) => v === "true")

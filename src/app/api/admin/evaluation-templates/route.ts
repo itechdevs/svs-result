@@ -24,6 +24,9 @@ export const GET = withHandler(
         ...(query.syncedSubjectId && { syncedSubjectId: query.syncedSubjectId }),
         ...(query.examId && { examId: query.examId }),
         ...(query.isActive !== undefined && { isActive: query.isActive }),
+        ...(query.academicYearId && {
+          gradeConfig: { academicYearId: query.academicYearId },
+        }),
       },
       include: {
         gradeConfig: {

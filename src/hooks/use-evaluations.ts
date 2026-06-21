@@ -75,6 +75,8 @@ export interface StudentEvaluationResult {
 export interface ListTemplatesFilters {
   gradeConfigId?: string;
   syncedSubjectId?: string;
+  examId?: string;
+  academicYearId?: string;
   isActive?: boolean;
 }
 
@@ -129,6 +131,8 @@ export function useEvaluationTemplates(filters: ListTemplatesFilters = {}) {
       const params = new URLSearchParams();
       if (filters.gradeConfigId) params.set("gradeConfigId", filters.gradeConfigId);
       if (filters.syncedSubjectId) params.set("syncedSubjectId", filters.syncedSubjectId);
+      if (filters.academicYearId) params.set("academicYearId", filters.academicYearId);
+      if (filters.examId) params.set("examId", filters.examId);
       if (filters.isActive !== undefined) params.set("isActive", String(filters.isActive));
       return apiClient.get(`/admin/evaluation-templates?${params.toString()}`);
     },
