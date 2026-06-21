@@ -334,7 +334,7 @@ export default function MarkEntryOverviewTable() {
             </div>
             <div className="flex items-center gap-2">
               <Link
-                href={`/teacher/evaluations`}
+                href={`/teacher/mark-entry/all?class=${selectedClass}&evalId=${evaluations[0].id}`}
                 className="px-4 py-2 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
               >
                 <Eye className="w-3.5 h-3.5" />
