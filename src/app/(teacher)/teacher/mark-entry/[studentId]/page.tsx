@@ -51,11 +51,21 @@ export default function StudentMarkEntryPage() {
     }
   }, [groupTemplates, setEvaluations]);
 
-  // Build Student shape
-  const student: Student | undefined = useMemo(() => {
-    const s = studentsData?.students.find((s) => s.id === studentId);
-    if (!s) return undefined;
-    return {
+  // Build Student shapes
+  const studentsToRender: Student[] = useMemo(() => {
+    if (!studentsData?.students) return [];
+    
+    let list = studentsData.students;
+    if (studentId !== 'all') {
+      list = list.filter((s) => s.id === studentId);
+    } else {
+      const className = searchParams.get('class');
+      if (className) {
+        list = list.filter((s) => s.class === className);
+      }
+    }
+
+    return list.map((s) => ({
       id: s.id,
       name: s.name,
       rollNo: s.rollNumber,
@@ -72,8 +82,8 @@ export default function StudentMarkEntryPage() {
       remarks: '',
       scores: [],
       dist: {},
-    };
-  }, [studentsData, studentId]);
+    }));
+  }, [studentsData, studentId, searchParams]);
 
   // Build EvaluationPlan shape from group templates
   const evaluation: EvaluationPlan | undefined = useMemo(() => {
@@ -141,12 +151,12 @@ export default function StudentMarkEntryPage() {
     };
   }, [baseTemplate, groupTemplates]);
 
-  if (!student || !evaluation) {
+  if (studentsToRender.length === 0 || !evaluation) {
     return (
       <div className="flex items-center justify-center min-h-[40vh]">
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          {!student
-            ? `Student "${studentId}" not found.`
+          {studentsToRender.length === 0
+            ? `Students not found.`
             : `Evaluation "${evalId}" not found.`}
         </p>
       </div>
@@ -154,12 +164,17 @@ export default function StudentMarkEntryPage() {
   }
 
   return (
-    <DetailedMarkEntryView
-      student={student}
-      evaluation={evaluation}
-      getStudentMark={getStudentMark}
-      updateOutcomeMark={updateOutcomeMark}
-      handleSaveAll={handleSaveAll}
-    />
+    <div className="space-y-12 pb-20">
+      {studentsToRender.map((student) => (
+        <DetailedMarkEntryView
+          key={student.id}
+          student={student}
+          evaluation={evaluation}
+          getStudentMark={getStudentMark}
+          updateOutcomeMark={updateOutcomeMark}
+          handleSaveAll={handleSaveAll}
+        />
+      ))}
+    </div>
   );
 }
