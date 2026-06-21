@@ -71,6 +71,7 @@ export function computeGpa(mergedScores: MergedScore[]): string {
     .filter(v => !isNaN(v));
   return vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2) : '0.00';
 }
+
 // ─── PDF Document ─────────────────────────────────────────────────────────────
 
 const pdfStyles = PdfStyleSheet.create({

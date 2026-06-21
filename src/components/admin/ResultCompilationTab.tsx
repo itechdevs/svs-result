@@ -1,3 +1,4 @@
+<<<<<<< ours
 "use client";
 
 import React, { useState, useMemo, useCallback } from "react";
@@ -32,6 +33,23 @@ import TranscriptModal from "@/components/shared/TranscriptModal";
 import { Student } from "@/types/academic";
 import { apiClient } from "@/lib/api-client";
 import { toast } from "sonner";
+=======
+'use client';
+
+import React, { useState, useMemo } from 'react';
+import { motion } from 'motion/react';
+import { CheckCircle, BookOpen, ClipboardList, Users, FileDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useEvaluationTemplates, useStudentEvaluationResults } from '@/hooks/use-evaluations';
+import { useStudents } from '@/hooks/use-students';
+import { useAdminTeacherCompilations } from '@/hooks/use-teacher-compilations';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/shared/ui/select';
+import {
+  Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
+} from '@/components/shared/ui/table';
+import TranscriptModal, { GradeSheetPDF, buildMergedScores, computeGpa } from '@/components/shared/TranscriptModal';
+import { Student } from '@/types/academic';
+>>>>>>> theirs
 
 interface SubjectResult {
   subjectName: string;
@@ -50,6 +68,29 @@ interface CompiledResult {
   overallPercentage: number;
   overallGrade: string;
   result: "Pass" | "Fail" | "Pending";
+}
+
+function toStudentObj(result: CompiledResult, selectedClass: string, students: any[]): Student {
+  return {
+    id: result.studentId,
+    name: result.studentName,
+    rollNo: result.rollNo,
+    avatar: '',
+    status: 'Active Enrollment',
+    class: selectedClass === 'all' ? (students.find((s: any) => s.id === result.studentId)?.class ?? '') : selectedClass,
+    attendance: '100%',
+    department: 'General',
+    overallTotal: '',
+    overallPercent: result.overallPercentage,
+    grade: result.overallGrade,
+    resultStatus: result.result === 'Pass' ? 'PROMOTED' : result.result === 'Fail' ? 'FAILED' : 'PENDING',
+    remarks: result.result === 'Pass' ? 'Promoted to next grade.' : 'Failed to clear all subjects.',
+    scores: Object.values(result.subjects).map(sub => ({
+      subject: sub.subjectName, type: 'General',
+      obtained: sub.totalObtained, max: sub.totalFull, pass: sub.isPassed,
+    })),
+    dist: {},
+  };
 }
 
 export default function ResultCompilationTab() {
@@ -72,6 +113,7 @@ export default function ResultCompilationTab() {
       : {},
   );
   const { data: studentsData } = useStudents({ limit: 500 });
+<<<<<<< ours
   const { data: resultsData = [] } = useStudentEvaluationResults({
     limit: 5000,
   });
@@ -103,6 +145,45 @@ export default function ResultCompilationTab() {
       setShowResults(false);
     }
   }, [selectedAcademicYear]);
+=======
+  const { data: resultsData = [] } = useStudentEvaluationResults({ limit: 5000 });
+  const { data: teacherCompilations = [] } = useAdminTeacherCompilations({ status: 'SUBMITTED' });
+
+  const [selectedClass, setSelectedClass] = useState('all');
+  const [showTranscriptModal, setShowTranscriptModal] = useState<Student | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
+
+  const toggleSelect = (id: string) =>
+    setSelectedIds(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+
+  const handleBulkDownload = async () => {
+    const selected = compiledResults.filter(r => selectedIds.has(r.studentId));
+    if (!selected.length) return;
+    setBulkLoading(true);
+    try {
+      const { pdf } = await import('@react-pdf/renderer');
+      const JSZip = (await import('jszip')).default;
+      const zip = new JSZip();
+      await Promise.all(selected.map(async result => {
+        const studentObj: Student = toStudentObj(result, selectedClass, students);
+        const scores = buildMergedScores(studentObj.scores);
+        const gpa = computeGpa(scores);
+        const blob = await pdf(
+          <GradeSheetPDF student={studentObj} mergedScoresList={scores} gpa={gpa} rank={3} />
+        ).toBlob();
+        zip.file(`GradeSheet_${result.studentName}_${result.rollNo}.pdf`, blob);
+      }));
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'GradeSheets.zip'; a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+>>>>>>> theirs
 
   const students = useMemo(() => studentsData?.students ?? [], [studentsData]);
 
@@ -370,6 +451,11 @@ export default function ResultCompilationTab() {
     if (selectedClass === "all") return "All Classes";
     return selectedClass;
   }, [selectedClass]);
+
+  const allSelected = compiledResults.length > 0 && selectedIds.size === compiledResults.length;
+  const someSelected = selectedIds.size > 0 && !allSelected;
+  const toggleAll = () =>
+    setSelectedIds(allSelected ? new Set() : new Set(compiledResults.map(r => r.studentId)));
 
   return (
     <motion.div
@@ -642,20 +728,44 @@ export default function ResultCompilationTab() {
                 Compiled Results ({compiledResults.length} students ·{" "}
                 {totalSubjectsInTemplates.length} subjects)
               </h3>
-              <Button
-                onClick={handleSaveCompilation}
-                disabled={isSaving || !selectedAcademicYear}
-                className="flex items-center gap-2"
-              >
-                <Save className="w-4 h-4" />
-                {isSaving ? "Saving..." : "Save to Database"}
-              </Button>
+              <div className="flex items-center gap-3">
+                {selectedIds.size > 0 && (
+                  <Button
+                    onClick={handleBulkDownload}
+                    disabled={bulkLoading}
+                    variant="outline"
+                    className="flex items-center gap-2 border-[#002045] text-[#002045] hover:bg-slate-50 h-9 py-2 text-xs font-semibold cursor-pointer"
+                  >
+                    <FileDown className="w-4 h-4" />
+                    {bulkLoading ? "Generating..." : `Download ${selectedIds.size} PDF${selectedIds.size > 1 ? "s" : ""}`}
+                  </Button>
+                )}
+                <Button
+                  onClick={handleSaveCompilation}
+                  disabled={isSaving || !selectedAcademicYear}
+                  className="flex items-center gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  {isSaving ? "Saving..." : "Save to Database"}
+                </Button>
+              </div>
             </div>
 
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/40">
+                    <TableHead className="border border-border px-3 py-2 text-center w-10">
+                      <input
+                        type="checkbox"
+                        checked={allSelected}
+                        ref={(el) => {
+                          if (el) el.indeterminate = someSelected;
+                        }}
+                        onChange={toggleAll}
+                        className="cursor-pointer accent-[#002045]"
+                      />
+                    </TableHead>
                     <TableHead className="border border-border px-3 py-2 text-left font-bold text-foreground sticky left-0 bg-muted/40">
                       Roll No
                     </TableHead>
@@ -688,8 +798,20 @@ export default function ResultCompilationTab() {
                   {compiledResults.map((result) => (
                     <TableRow
                       key={result.studentId}
-                      className="hover:bg-muted/20"
+                      className={cn(
+                        "hover:bg-muted/20",
+                        selectedIds.has(result.studentId) &&
+                          "bg-blue-50/40 dark:bg-blue-950/20",
+                      )}
                     >
+                      <TableCell className="border border-border px-3 py-2 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(result.studentId)}
+                          onChange={() => toggleSelect(result.studentId)}
+                          className="cursor-pointer accent-[#002045]"
+                        />
+                      </TableCell>
                       <TableCell className="border border-border px-3 py-2 text-foreground sticky left-0 bg-background">
                         {result.rollNo}
                       </TableCell>
@@ -740,47 +862,7 @@ export default function ResultCompilationTab() {
                       </TableCell>
                       <TableCell className="border border-border px-3 py-2 text-center">
                         <button
-                          onClick={() => {
-                            const studentObj: Student = {
-                              id: result.studentId,
-                              name: result.studentName,
-                              rollNo: result.rollNo,
-                              avatar: "",
-                              status: "Active Enrollment",
-                              class:
-                                selectedClass === "all"
-                                  ? (students.find(
-                                      (s) => s.id === result.studentId,
-                                    )?.class ?? "")
-                                  : selectedClass,
-                              attendance: "100%",
-                              department: "General",
-                              overallTotal: "",
-                              overallPercent: result.overallPercentage,
-                              grade: result.overallGrade,
-                              resultStatus:
-                                result.result === "Pass"
-                                  ? "PROMOTED"
-                                  : result.result === "Fail"
-                                    ? "FAILED"
-                                    : "PENDING",
-                              remarks:
-                                result.result === "Pass"
-                                  ? "Promoted to next grade."
-                                  : "Failed to clear all subjects.",
-                              scores: Object.values(result.subjects).map(
-                                (sub) => ({
-                                  subject: sub.subjectName,
-                                  type: "General",
-                                  obtained: sub.totalObtained,
-                                  max: sub.totalFull,
-                                  pass: sub.isPassed,
-                                }),
-                              ),
-                              dist: {},
-                            };
-                            setShowTranscriptModal(studentObj);
-                          }}
+                          onClick={() => setShowTranscriptModal(toStudentObj(result, selectedClass, students))}
                           className="px-2.5 py-1 bg-[#002045] hover:bg-opacity-95 text-white rounded text-[11px] font-bold cursor-pointer transition-colors"
                         >
                           View Grade Sheet
