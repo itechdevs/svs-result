@@ -18,7 +18,7 @@ export const POST = withHandler(
       where: {
         academicYearId: body.academicYearId,
         resultStatus: "PENDING",
-        syncedStudent: { grade: body.gradeLevel },
+        syncedStudent: { class: body.gradeLevel },
         ...(body.syncedStudentIds && {
           syncedStudentId: { in: body.syncedStudentIds },
         }),
@@ -35,7 +35,7 @@ export const POST = withHandler(
       where: {
         academicYearId: body.academicYearId,
         isPublished: false,
-        syncedStudent: { grade: body.gradeLevel },
+        syncedStudent: { class: body.gradeLevel },
         ...(body.syncedStudentIds && {
           syncedStudentId: { in: body.syncedStudentIds },
         }),
@@ -53,7 +53,7 @@ export const POST = withHandler(
     const forRanking = await prisma.finalResult.findMany({
       where: {
         academicYearId: body.academicYearId,
-        syncedStudent: { grade: body.gradeLevel },
+        syncedStudent: { class: body.gradeLevel },
       },
       orderBy: { percentage: "desc" },
       select: { id: true },

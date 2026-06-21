@@ -6,7 +6,7 @@ export interface SyncedStudent {
   sourceId: string;
   name: string;
   rollNumber: string;
-  grade: string;
+  class: string;
   section: string;
   isActive: boolean;
   syncedAt: string;
@@ -14,7 +14,7 @@ export interface SyncedStudent {
 }
 
 export interface ListStudentsFilters {
-  grade?: string;
+  class?: string;
   section?: string;
   search?: string;
   isActive?: boolean;
@@ -34,7 +34,7 @@ export function useStudents(filters: ListStudentsFilters = {}) {
     queryKey: ["students", filters],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (filters.grade) params.set("grade", filters.grade);
+      if (filters.class) params.set("class", filters.class);
       if (filters.section) params.set("section", filters.section);
       if (filters.search) params.set("search", filters.search);
       if (filters.isActive !== undefined) params.set("isActive", String(filters.isActive));

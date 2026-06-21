@@ -121,8 +121,8 @@ export default function ReExamPortalTab() {
             studentsMap[r.syncedStudentId]?.rollNumber ??
             "—",
           grade:
-            r.syncedStudent?.grade ??
-            studentsMap[r.syncedStudentId]?.grade ??
+            r.syncedStudent?.class ??
+            studentsMap[r.syncedStudentId]?.class ??
             "—",
           subject: subjectName,
           taskType,

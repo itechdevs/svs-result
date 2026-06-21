@@ -330,10 +330,12 @@ export const syncStudentSchema = z.object({
   sourceId: z.string(),
   name: z.string().min(1),
   rollNumber: z.string().min(1),
-  grade: gradeLevelSchema,
+  grade: z.string().min(1),
   section: z.string().min(1),
   isActive: z.boolean().default(true),
-});
+  class: z.string().optional(),
+  classroom: z.object({ name: z.string() }).optional(),
+}).passthrough();
 
 export const syncTeacherSchema = z.object({
   sourceId: z.string(),

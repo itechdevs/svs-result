@@ -65,7 +65,7 @@ export const GET = withHandler(async (req: NextRequest, { user }) => {
           id: true,
           name: true,
           rollNumber: true,
-          grade: true,
+          class: true,
           section: true,
         },
       },

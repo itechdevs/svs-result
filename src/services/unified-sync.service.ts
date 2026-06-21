@@ -21,14 +21,21 @@ export class UnifiedSyncService {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch from ${endpoint}: ${response.statusText}`);
+      throw new Error(
+        `Failed to fetch from ${endpoint}: ${response.statusText}`,
+      );
     }
 
     return response.json();
   }
 
   async syncTeachers(): Promise<SyncResult> {
-    const result: SyncResult = { entity: "teacher", synced: 0, failed: 0, errors: [] };
+    const result: SyncResult = {
+      entity: "teacher",
+      synced: 0,
+      failed: 0,
+      errors: [],
+    };
 
     try {
       const teachers = await this.fetchData<any>("/api/sync/teachers");
@@ -71,7 +78,7 @@ export class UnifiedSyncService {
 
               // Assign teacher to these subjects
               await prisma.syncedSubject.updateMany({
-                where: { id: { in: syncedSubjects.map(s => s.id) } },
+                where: { id: { in: syncedSubjects.map((s) => s.id) } },
                 data: { teacherId: syncedTeacher.id },
               });
 
@@ -79,7 +86,7 @@ export class UnifiedSyncService {
               await prisma.syncedSubject.updateMany({
                 where: {
                   teacherId: syncedTeacher.id,
-                  id: { notIn: syncedSubjects.map(s => s.id) },
+                  id: { notIn: syncedSubjects.map((s) => s.id) },
                 },
                 data: { teacherId: null },
               });
@@ -99,41 +106,83 @@ export class UnifiedSyncService {
           result.synced++;
         } catch (error) {
           result.failed++;
-          result.errors.push(`${teacher.id}: ${error instanceof Error ? error.message : "Unknown"}`);
+          result.errors.push(
+            `${teacher.id}: ${error instanceof Error ? error.message : "Unknown"}`,
+          );
         }
       }
     } catch (error) {
-      result.errors.push(error instanceof Error ? error.message : "Unknown error");
+      result.errors.push(
+        error instanceof Error ? error.message : "Unknown error",
+      );
     }
 
     return result;
   }
 
   async syncStudents(): Promise<SyncResult> {
-    const result: SyncResult = { entity: "student", synced: 0, failed: 0, errors: [] };
+    const result: SyncResult = {
+      entity: "student",
+      synced: 0,
+      failed: 0,
+      errors: [],
+    };
 
     try {
-      const students = await this.fetchData<any>("/api/sync/students");
+      const url = `${this.apiUrl}/api/sync/students`;
+      console.log(`[SYNC] Fetching students from: ${url}`);
+
+      const response: any = await this.fetchData<any>("/api/sync/students");
+      const students: any[] = Array.isArray(response) ? response : (response?.data ?? []);
+
+      console.log(`[SYNC] Received ${students.length} students. IsArray: ${Array.isArray(response)}, hasData: ${!Array.isArray(response) && !!response?.data}`);
+
+      if (students.length > 0) {
+        const sample = students[0];
+        console.log(`[SYNC] First student sample:`, {
+          id: sample.id,
+          name: sample.name,
+          firstName: sample.firstName,
+          lastName: sample.lastName,
+          grade: sample.grade,
+          classroom: sample.classroom,
+          classroomName: sample.classroom?.name,
+          keys: Object.keys(sample),
+        });
+      }
 
       for (const student of students) {
         try {
-          await prisma.syncedStudent.upsert({
+          const classroomName = student.class ?? student.classroom?.name ?? student.grade ?? "";
+          const studentName = student.name ?? ([student.firstName, student.lastName].filter(Boolean).join(" ").trim() || "Unknown");
+
+          const upserted = await prisma.syncedStudent.upsert({
             where: { sourceId: student.id },
             update: {
-              name: student.name,
+              name: studentName,
               rollNumber: student.rollNumber || "",
-              grade: student.grade,
+              class: classroomName,
               section: student.section || "A",
               syncedAt: new Date(),
             },
             create: {
               sourceId: student.id,
-              name: student.name,
+              name: studentName,
               rollNumber: student.rollNumber || "",
-              grade: student.grade,
+              class: classroomName,
               section: student.section || "A",
             },
           });
+
+          if (result.synced === 0) {
+            console.log(`[SYNC] First upsert result:`, {
+              sourceId: student.id,
+              storedClass: upserted.class,
+              inputClass: classroomName,
+              rawClassroom: student.classroom,
+              rawGrade: student.grade,
+            });
+          }
 
           await prisma.syncLog.create({
             data: {
@@ -148,18 +197,27 @@ export class UnifiedSyncService {
           result.synced++;
         } catch (error) {
           result.failed++;
-          result.errors.push(`${student.id}: ${error instanceof Error ? error.message : "Unknown"}`);
+          result.errors.push(
+            `${student.id}: ${error instanceof Error ? error.message : "Unknown"}`,
+          );
         }
       }
     } catch (error) {
-      result.errors.push(error instanceof Error ? error.message : "Unknown error");
+      result.errors.push(
+        error instanceof Error ? error.message : "Unknown error",
+      );
     }
 
     return result;
   }
 
   async syncSubjects(): Promise<SyncResult> {
-    const result: SyncResult = { entity: "subject", synced: 0, failed: 0, errors: [] };
+    const result: SyncResult = {
+      entity: "subject",
+      synced: 0,
+      failed: 0,
+      errors: [],
+    };
 
     try {
       const subjects = await this.fetchData<any>("/api/sync/subjects");
@@ -208,21 +266,25 @@ export class UnifiedSyncService {
           result.failed++;
           const errorMsg = error instanceof Error ? error.message : "Unknown";
           result.errors.push(`${subject.id}: ${errorMsg}`);
-          
-          await prisma.syncLog.create({
-            data: {
-              entity: "subject",
-              sourceId: subject.id,
-              action: "sync",
-              payload: subject,
-              status: "error",
-              error: errorMsg,
-            },
-          }).catch(() => {});
+
+          await prisma.syncLog
+            .create({
+              data: {
+                entity: "subject",
+                sourceId: subject.id,
+                action: "sync",
+                payload: subject,
+                status: "error",
+                error: errorMsg,
+              },
+            })
+            .catch(() => {});
         }
       }
     } catch (error) {
-      result.errors.push(error instanceof Error ? error.message : "Unknown error");
+      result.errors.push(
+        error instanceof Error ? error.message : "Unknown error",
+      );
     }
 
     return result;
@@ -236,8 +298,14 @@ export class UnifiedSyncService {
       students: await this.syncStudents(),
     };
 
-    const totalSynced = results.teachers.synced + results.students.synced + results.subjects.synced;
-    const totalFailed = results.teachers.failed + results.students.failed + results.subjects.failed;
+    const totalSynced =
+      results.teachers.synced +
+      results.students.synced +
+      results.subjects.synced;
+    const totalFailed =
+      results.teachers.failed +
+      results.students.failed +
+      results.subjects.failed;
 
     return {
       success: totalFailed === 0,

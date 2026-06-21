@@ -36,7 +36,7 @@ export const GET = withHandler(
         teacher: { select: { id: true, name: true } },
         results: {
           include: {
-            student: { select: { id: true, name: true, rollNumber: true, grade: true, section: true } },
+              student: { select: { id: true, name: true, rollNumber: true, class: true, section: true } },
           },
         },
       },
@@ -69,7 +69,7 @@ export const POST = withHandler(
 
     // Fetch all students for this grade level
     const students = await prisma.syncedStudent.findMany({
-      where: { grade: body.gradeLevel, isActive: true },
+      where: { class: body.gradeLevel, isActive: true },
     });
 
     if (students.length === 0) {
@@ -216,7 +216,7 @@ export const POST = withHandler(
           teacher: { select: { id: true, name: true } },
           results: {
             include: {
-              student: { select: { id: true, name: true, rollNumber: true, grade: true, section: true } },
+            student: { select: { id: true, name: true, rollNumber: true, class: true, section: true } },
             },
           },
         },

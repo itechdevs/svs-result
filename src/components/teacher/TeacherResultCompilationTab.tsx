@@ -84,7 +84,7 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
 
   // Students for selected class
   const filteredStudents = useMemo(() => {
-    return students.filter((s) => s.grade === selectedClass);
+    return students.filter((s) => s.class === selectedClass);
   }, [students, selectedClass]);
 
   // Marks lookup: [studentId][templateId] = marksObtained

@@ -30,7 +30,7 @@ export const GET = withHandler(
         isPublished: query.isPublished,
       }),
       ...(query.gradeLevel && {
-        syncedStudent: { grade: query.gradeLevel },
+        syncedStudent: { class: query.gradeLevel },
       }),
     };
 
@@ -44,7 +44,7 @@ export const GET = withHandler(
               id: true,
               name: true,
               rollNumber: true,
-              grade: true,
+              class: true,
               section: true,
             },
           },
@@ -53,7 +53,7 @@ export const GET = withHandler(
         },
         skip: (query.page - 1) * query.limit,
         take: query.limit,
-        orderBy: [{ syncedStudent: { grade: "asc" } }, { classRank: "asc" }],
+        orderBy: [{ syncedStudent: { class: "asc" } }, { classRank: "asc" }],
       }),
     ]);
 

@@ -68,7 +68,7 @@ export default function MarkEntryOverviewTable() {
   const PAGE_SIZE = 10;
 
   const { data: studentsData } = useStudents(
-    selectedClass ? { grade: selectedClass, limit: 9999 } : { limit: 1 },
+    selectedClass ? { class: selectedClass, limit: 9999 } : { limit: 1 },
   );
 
   // Assigned classes from syncedTeacher.subjects

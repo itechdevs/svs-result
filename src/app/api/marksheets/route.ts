@@ -31,7 +31,7 @@ export const GET = withHandler(
             id: true,
             name: true,
             rollNumber: true,
-            grade: true,
+            class: true,
             section: true,
           },
         },
@@ -82,7 +82,7 @@ export const POST = withHandler(
       student: {
         name: finalResult.syncedStudent.name,
         rollNumber: finalResult.syncedStudent.rollNumber,
-        grade: finalResult.syncedStudent.grade,
+        grade: finalResult.syncedStudent.class,
         section: finalResult.syncedStudent.section,
       },
       academicYear: finalResult.academicYear.name,

@@ -46,14 +46,8 @@ export const POST = withPublicHandler(async (req: NextRequest) => {
 
   try {
     if (event.entity === "student") {
-      const data = event.payload as {
-        sourceId: string;
-        name: string;
-        rollNumber: string;
-        grade: string;
-        section: string;
-        isActive: boolean;
-      };
+      const data = event.payload as Record<string, any>;
+      const className = data.class ?? data.classroom?.name ?? data.grade ?? "";
 
       if (event.action === "deactivate") {
         await prisma.syncedStudent.updateMany({
@@ -61,15 +55,23 @@ export const POST = withPublicHandler(async (req: NextRequest) => {
           data: { isActive: false, updatedAt: new Date() },
         });
       } else {
+        const { class: _c, grade: _g, classroom: _cr, ...rest } = data;
         await prisma.syncedStudent.upsert({
           where: { sourceId: data.sourceId },
-          create: { ...data },
+          create: {
+            sourceId: data.sourceId,
+            name: data.name,
+            rollNumber: data.rollNumber || "",
+            class: className,
+            section: data.section || "A",
+            isActive: data.isActive ?? true,
+          },
           update: {
             name: data.name,
-            rollNumber: data.rollNumber,
-            grade: data.grade,
-            section: data.section,
-            isActive: data.isActive,
+            rollNumber: data.rollNumber || "",
+            class: className,
+            section: data.section || "A",
+            isActive: data.isActive ?? true,
             syncedAt: new Date(),
           },
         });

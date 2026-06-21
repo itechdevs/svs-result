@@ -13,7 +13,7 @@ export const GET = withHandler(
             id: true,
             name: true,
             rollNumber: true,
-            grade: true,
+            class: true,
             section: true,
           },
         },
