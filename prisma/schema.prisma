@@ -260,18 +260,16 @@ model SyncedSubject {
   name       String
   code       String   @unique
   gradeLevel String
-  teacherId  String? // SyncedTeacher.id — teacher assigned to this subject
   isActive   Boolean  @default(true)
   syncedAt   DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  teacher             SyncedTeacher?       @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  teachers            SyncedTeacher[]
   evaluationTemplates EvaluationTemplate[]
   subjectResults      SubjectResult[]
   teacherCompilations TeacherSubjectCompilation[]
 
   @@index([gradeLevel])
-  @@index([teacherId])
   @@map("synced_subjects")
 }
 

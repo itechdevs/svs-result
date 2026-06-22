@@ -80,20 +80,24 @@ export class UnifiedSyncService {
 
               // Assign teacher to these subjects
               if (syncedSubjects.length > 0) {
-                await prisma.syncedSubject.updateMany({
-                  where: { id: { in: syncedSubjects.map((s) => s.id) } },
-                  data: { teacherId: syncedTeacher.id },
-                });
-
-                // Unassign subjects not in the list
-                await prisma.syncedSubject.updateMany({
-                  where: {
-                    teacherId: syncedTeacher.id,
-                    id: { notIn: syncedSubjects.map((s) => s.id) },
+                await prisma.syncedTeacher.update({
+                  where: { id: syncedTeacher.id },
+                  data: {
+                    subjects: {
+                      set: syncedSubjects.map((s) => ({ id: s.id })),
+                    },
                   },
-                  data: { teacherId: null },
                 });
               }
+            } else {
+              await prisma.syncedTeacher.update({
+                where: { id: syncedTeacher.id },
+                data: {
+                  subjects: {
+                    set: [],
+                  },
+                },
+              });
             }
           }
 
@@ -228,13 +232,14 @@ export class UnifiedSyncService {
 
       for (const subject of subjects) {
         try {
-          // Find teacher by sourceId if teacherId is provided
-          let teacherId: string | null = null;
+          let teachersConnect: { id: string }[] = [];
           if (subject.teacherId) {
             const teacher = await prisma.syncedTeacher.findUnique({
               where: { sourceId: subject.teacherId },
             });
-            teacherId = teacher?.id || null;
+            if (teacher) {
+              teachersConnect.push({ id: teacher.id });
+            }
           }
 
           await prisma.syncedSubject.upsert({
@@ -243,7 +248,9 @@ export class UnifiedSyncService {
               name: subject.name,
               code: subject.code || subject.name.toUpperCase().substring(0, 6),
               gradeLevel: subject.gradeLevel || "General",
-              teacherId,
+              ...(teachersConnect.length > 0 && {
+                teachers: { connect: teachersConnect },
+              }),
               syncedAt: new Date(),
             },
             create: {
@@ -251,7 +258,7 @@ export class UnifiedSyncService {
               name: subject.name,
               code: subject.code || subject.name.toUpperCase().substring(0, 6),
               gradeLevel: subject.gradeLevel || "General",
-              teacherId,
+              teachers: { connect: teachersConnect },
             },
           });
 
@@ -325,21 +332,14 @@ export class UnifiedSyncService {
             where: { sourceId: { in: subjectIds } },
           });
 
-          if (syncedSubjects.length === 0) continue;
-
-          // Assign teacher to these subjects
-          await prisma.syncedSubject.updateMany({
-            where: { id: { in: syncedSubjects.map((s) => s.id) } },
-            data: { teacherId: syncedTeacher.id },
-          });
-
-          // Unassign subjects not in the list
-          await prisma.syncedSubject.updateMany({
-            where: {
-              teacherId: syncedTeacher.id,
-              id: { notIn: syncedSubjects.map((s) => s.id) },
-            },
-            data: { teacherId: null },
+          // Update teacher subjects
+          await prisma.syncedTeacher.update({
+            where: { id: syncedTeacher.id },
+            data: {
+              subjects: {
+                set: syncedSubjects.map(s => ({ id: s.id }))
+              }
+            }
           });
 
           result.synced++;

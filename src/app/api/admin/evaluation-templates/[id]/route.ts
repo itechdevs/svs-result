@@ -94,12 +94,12 @@ export const DELETE = withHandler(
   async (_req, { params, user }) => {
     const existing = await prisma.evaluationTemplate.findFirst({
       where: { id: params.id, deletedAt: null },
-      include: { syncedSubject: { include: { teacher: { include: { user: { select: { id: true } } } } } } },
+      include: { syncedSubject: { include: { teachers: { include: { user: { select: { id: true } } } } } } },
     });
     if (!existing) return notFound("Evaluation template not found");
 
     // Teachers can only delete their own subject's templates
-    if (user.role === "TEACHER" && existing.syncedSubject.teacher?.user?.id !== user.id) {
+    if (user.role === "TEACHER" && !existing.syncedSubject.teachers.some(t => t.user?.id === user.id)) {
       return notFound("Evaluation template not found");
     }
 

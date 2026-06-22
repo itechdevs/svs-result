@@ -35,7 +35,7 @@ export const GET = withHandler(async (req: NextRequest, { user }) => {
     if (currentUser?.syncedTeacherId) {
       const templates = await prisma.evaluationTemplate.findMany({
         where: {
-          syncedSubject: { teacherId: currentUser.syncedTeacherId },
+          syncedSubject: { teachers: { some: { id: currentUser.syncedTeacherId } } },
           isActive: true,
           deletedAt: null,
         },
@@ -122,10 +122,10 @@ export const POST = withHandler(async (req: NextRequest, { user }) => {
 
     const subject = await prisma.syncedSubject.findUnique({
       where: { id: template.syncedSubjectId },
-      select: { teacherId: true },
+      include: { teachers: { select: { id: true } } },
     });
 
-    if (subject?.teacherId !== currentUser.syncedTeacherId) {
+    if (!subject || !subject.teachers.some(t => t.id === currentUser.syncedTeacherId)) {
       return forbidden("You are not assigned to this subject");
     }
   }

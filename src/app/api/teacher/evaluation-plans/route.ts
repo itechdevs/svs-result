@@ -24,11 +24,11 @@ export const POST = withHandler(async (req: NextRequest, { user }) => {
   // Verify subject exists and is assigned to this teacher
   const subject = await prisma.syncedSubject.findUnique({
     where: { id: body.syncedSubjectId },
-    include: { teacher: { include: { user: { select: { id: true } } } } },
+    include: { teachers: { include: { user: { select: { id: true } } } } },
   });
   if (!subject) return badRequest("Subject not found");
 
-  if (user.role === "TEACHER" && subject.teacher?.user?.id !== user.id) {
+  if (user.role === "TEACHER" && !subject.teachers.some(t => t.user?.id === user.id)) {
     return forbidden("You are not assigned to this subject");
   }
 

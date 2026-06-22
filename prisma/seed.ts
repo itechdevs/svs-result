@@ -49,7 +49,7 @@ async function main() {
       name: "mathematics",
       code: "MATH",
       gradeLevel: "KG",
-      teacherId: syncedTeacher.id,
+      teachers: { connect: { id: syncedTeacher.id } },
       isActive: true,
     },
   });
