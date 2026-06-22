@@ -70,26 +70,30 @@ export class UnifiedSyncService {
             });
 
             // Update subjects assigned to this teacher
-            if (teacher.subjectIds?.length > 0) {
+            // dhalpa-school API returns "subjects" (array of objects), not "subjectIds"
+            const subjectIds = teacher.subjects?.map((s: any) => s.id) ?? [];
+            if (subjectIds.length > 0) {
               // Find synced subjects by their sourceIds
               const syncedSubjects = await prisma.syncedSubject.findMany({
-                where: { sourceId: { in: teacher.subjectIds } },
+                where: { sourceId: { in: subjectIds } },
               });
 
               // Assign teacher to these subjects
-              await prisma.syncedSubject.updateMany({
-                where: { id: { in: syncedSubjects.map((s) => s.id) } },
-                data: { teacherId: syncedTeacher.id },
-              });
+              if (syncedSubjects.length > 0) {
+                await prisma.syncedSubject.updateMany({
+                  where: { id: { in: syncedSubjects.map((s) => s.id) } },
+                  data: { teacherId: syncedTeacher.id },
+                });
 
-              // Unassign subjects not in the list
-              await prisma.syncedSubject.updateMany({
-                where: {
-                  teacherId: syncedTeacher.id,
-                  id: { notIn: syncedSubjects.map((s) => s.id) },
-                },
-                data: { teacherId: null },
-              });
+                // Unassign subjects not in the list
+                await prisma.syncedSubject.updateMany({
+                  where: {
+                    teacherId: syncedTeacher.id,
+                    id: { notIn: syncedSubjects.map((s) => s.id) },
+                  },
+                  data: { teacherId: null },
+                });
+              }
             }
           }
 
@@ -290,22 +294,91 @@ export class UnifiedSyncService {
     return result;
   }
 
+  /**
+   * Second pass: assign subjects to teachers based on teacher.subjects from the
+   * dhalpa-school API. This runs AFTER both teachers and subjects are synced so
+   * the SyncedSubject records already exist in the database.
+   */
+  async assignSubjectsToTeachers(): Promise<SyncResult> {
+    const result: SyncResult = {
+      entity: "teacher-subject-assignment",
+      synced: 0,
+      failed: 0,
+      errors: [],
+    };
+
+    try {
+      const teachers = await this.fetchData<any>("/api/sync/teachers");
+
+      for (const teacher of teachers) {
+        try {
+          const syncedTeacher = await prisma.syncedTeacher.findUnique({
+            where: { sourceId: teacher.id },
+          });
+          if (!syncedTeacher) continue;
+
+          const subjectIds = teacher.subjects?.map((s: any) => s.id) ?? [];
+          if (subjectIds.length === 0) continue;
+
+          // Find synced subjects by their sourceIds
+          const syncedSubjects = await prisma.syncedSubject.findMany({
+            where: { sourceId: { in: subjectIds } },
+          });
+
+          if (syncedSubjects.length === 0) continue;
+
+          // Assign teacher to these subjects
+          await prisma.syncedSubject.updateMany({
+            where: { id: { in: syncedSubjects.map((s) => s.id) } },
+            data: { teacherId: syncedTeacher.id },
+          });
+
+          // Unassign subjects not in the list
+          await prisma.syncedSubject.updateMany({
+            where: {
+              teacherId: syncedTeacher.id,
+              id: { notIn: syncedSubjects.map((s) => s.id) },
+            },
+            data: { teacherId: null },
+          });
+
+          result.synced++;
+        } catch (error) {
+          result.failed++;
+          result.errors.push(
+            `${teacher.id}: ${error instanceof Error ? error.message : "Unknown"}`,
+          );
+        }
+      }
+    } catch (error) {
+      result.errors.push(
+        error instanceof Error ? error.message : "Unknown error",
+      );
+    }
+
+    return result;
+  }
+
   async syncAll() {
     // Sync in order: teachers first, then subjects (since subjects reference teachers), then students
     const results = {
       teachers: await this.syncTeachers(),
       subjects: await this.syncSubjects(),
+      // Second pass: assign subjects to teachers after both are synced
+      teacherSubjectAssignment: await this.assignSubjectsToTeachers(),
       students: await this.syncStudents(),
     };
 
     const totalSynced =
       results.teachers.synced +
       results.students.synced +
-      results.subjects.synced;
+      results.subjects.synced +
+      results.teacherSubjectAssignment.synced;
     const totalFailed =
       results.teachers.failed +
       results.students.failed +
-      results.subjects.failed;
+      results.subjects.failed +
+      results.teacherSubjectAssignment.failed;
 
     return {
       success: totalFailed === 0,
