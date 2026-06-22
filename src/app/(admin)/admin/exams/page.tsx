@@ -6,6 +6,8 @@ import { motion } from "motion/react";
 import { Plus, Trash2, BookOpen, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { BSCalendarSelector } from "@/components/ui/bs-calendar-selector";
+import { formatToBSFullString } from "@/lib/bs-calendar";
 import {
   Dialog,
   DialogContent,
@@ -191,22 +193,18 @@ export default function ExamsPage() {
                   <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
                     Start Date
                   </label>
-                  <Input
-                    type="date"
+                  <BSCalendarSelector
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full text-sm"
+                    onChange={setStartDate}
                   />
                 </div>
                 <div>
                   <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
                     End Date
                   </label>
-                  <Input
-                    type="date"
+                  <BSCalendarSelector
                     value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full text-sm"
+                    onChange={setEndDate}
                   />
                 </div>
               </div>
@@ -271,12 +269,20 @@ export default function ExamsPage() {
                   </TableCell>
                   <TableCell>
                     {exam.startDate ? (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Calendar className="w-3 h-3" />
-                        {new Date(exam.startDate).toLocaleDateString()}
-                        {exam.endDate && (
-                          <> — {new Date(exam.endDate).toLocaleDateString()}</>
-                        )}
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-1 text-sm font-semibold text-foreground">
+                          <Calendar className="w-3.5 h-3.5 text-primary" />
+                          {formatToBSFullString(exam.startDate)}
+                          {exam.endDate && (
+                            <> — {formatToBSFullString(exam.endDate)}</>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground pl-4.5">
+                          {new Date(exam.startDate).toLocaleDateString()}
+                          {exam.endDate && (
+                            <> — {new Date(exam.endDate).toLocaleDateString()}</>
+                          )}
+                        </div>
                       </div>
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>

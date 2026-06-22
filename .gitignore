@@ -8,6 +8,9 @@ node_modules/
 out/
 dist/
 
+# TypeScript build cache
+tsconfig.tsbuildinfo
+
 # Environment variables — NEVER commit
 .env
 .env.local
