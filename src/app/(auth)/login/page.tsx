@@ -1,61 +1,155 @@
 "use client";
 
-import React, { useId, useState, Suspense } from "react";
+import React, { useId, useState, useCallback, Suspense } from "react";
 import { signIn } from "next-auth/react";
-import { Loader2, ShieldCheck, UserCheck, Eye, EyeOff } from "lucide-react";
+import { z } from "zod";
+import { Loader2, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { Button } from "@/components/shared/ui/button";
 import { Input } from "@/components/shared/ui/input";
-import { Separator } from "@/components/shared/ui/separator";
 import { ROUTES } from "@/lib/constants";
+
+// ─── Validation Schema ────────────────────────────────────────────────────────
+
+const loginSchema = z.object({
+  email: z
+    .string()
+    .min(1, "Email address is required.")
+    .email("Please enter a valid email address."),
+  password: z
+    .string()
+    .min(1, "Password is required.")
+});
+
+type LoginFields = z.infer<typeof loginSchema>;
+type FieldErrors = Partial<Record<keyof LoginFields, string>>;
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Returns per-field Zod errors as a plain object. */
+function parseFieldErrors(
+  data: LoginFields
+): { success: true } | { success: false; errors: FieldErrors } {
+  const result = loginSchema.safeParse(data);
+  if (result.success) return { success: true };
+
+  const errors: FieldErrors = {};
+  for (const issue of result.error.issues) {
+    const field = issue.path[0] as keyof LoginFields;
+    if (!errors[field]) errors[field] = issue.message;
+  }
+  return { success: false, errors };
+}
+
+// ─── FieldErrorMessage ────────────────────────────────────────────────────────
+
+function FieldErrorMessage({
+  id,
+  message,
+}: {
+  id: string;
+  message?: string;
+}) {
+  if (!message) return null;
+  return (
+    <p
+      id={id}
+      role="alert"
+      className="flex items-center gap-1.5 text-xs text-destructive mt-1.5 font-medium"
+    >
+      <AlertCircle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+      {message}
+    </p>
+  );
+}
 
 // ─── LoginForm ────────────────────────────────────────────────────────────────
 
 function LoginForm() {
   const emailId = useId();
   const passwordId = useId();
+  const emailErrorId = `${emailId}-error`;
+  const passwordErrorId = `${passwordId}-error`;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+
+  // Per-field validation errors (only shown after first submit or on change
+  // if the form has been submitted once)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [serverError, setServerError] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
+  // ── Validation ──────────────────────────────────────────────────────────────
+
+  const validate = useCallback(
+    (data: LoginFields): boolean => {
+      const result = parseFieldErrors(data);
+      if (result.success) {
+        setFieldErrors({});
+        return true;
+      }
+      setFieldErrors(result.errors);
+      return false;
+    },
+    []
+  );
+
+  // Re-validate on change only after the user has attempted to submit at least
+  // once — prevents "screaming" validation on a fresh form.
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setEmail(value);
+    if (submitted) validate({ email: value, password });
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setPassword(value);
+    if (submitted) validate({ email, password: value });
+  };
+
+  // ── Submit ──────────────────────────────────────────────────────────────────
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitted(true);
+    setServerError("");
+
+    const isValid = validate({ email, password });
+    if (!isValid) return;
+
     setLoading(true);
-    setError("");
 
     try {
       const callbackUrl = email.toLowerCase().includes("admin")
         ? ROUTES.ADMIN_DASHBOARD
         : ROUTES.TEACHER_DASHBOARD;
 
-      await signIn("credentials", { email, password, callbackUrl });
+      const result = await signIn("credentials", {
+        email,
+        password,
+        callbackUrl,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setServerError("Invalid email or password. Please try again.");
+      } else if (result?.url) {
+        window.location.href = result.url;
+      }
     } catch {
-      setError("Invalid email or password. Please try again.");
+      setServerError("An unexpected error occurred. Please try again.");
+    } finally {
       setLoading(false);
     }
   };
 
-  const handleQuickLogin = async (role: "teacher" | "admin") => {
-    setLoading(true);
-    setError("");
+  // ── Derived state ───────────────────────────────────────────────────────────
 
-    const credentials = {
-      teacher: { email: "teacher@school.com", password: "password123" },
-      admin: { email: "admin@school.com", password: "password123" },
-    }[role];
-
-    try {
-      const callbackUrl =
-        role === "admin" ? ROUTES.ADMIN_DASHBOARD : ROUTES.TEACHER_DASHBOARD;
-
-      await signIn("credentials", { ...credentials, callbackUrl });
-    } catch {
-      setError("An unexpected error occurred during quick login.");
-      setLoading(false);
-    }
-  };
+  const emailInvalid = Boolean(fieldErrors.email);
+  const passwordInvalid = Boolean(fieldErrors.password);
 
   return (
     <div className="w-full bg-card border border-border rounded-2xl shadow-lg overflow-hidden">
@@ -82,17 +176,18 @@ function LoginForm() {
       {/* ── Card Body ── */}
       <div className="px-8 pb-8 space-y-6">
 
-        {/* Error alert */}
-        {error && (
+        {/* Server / auth error banner */}
+        {serverError && (
           <div
             role="alert"
-            aria-live="polite"
+            aria-live="assertive"
             className="flex items-start gap-3 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3"
           >
-            <span className="mt-0.5 shrink-0 w-4 h-4 rounded-full bg-destructive/20 flex items-center justify-center text-destructive text-[10px] font-bold">
-              !
-            </span>
-            <p className="text-sm text-destructive leading-snug">{error}</p>
+            <AlertCircle
+              className="mt-0.5 shrink-0 w-4 h-4 text-destructive"
+              aria-hidden="true"
+            />
+            <p className="text-sm text-destructive leading-snug">{serverError}</p>
           </div>
         )}
 
@@ -113,12 +208,17 @@ function LoginForm() {
               autoComplete="email"
               placeholder="teacher@school.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
+              onChange={handleEmailChange}
               disabled={loading}
               aria-required="true"
-              className="h-10 px-3.5 text-sm rounded-xl"
+              aria-invalid={emailInvalid}
+              aria-describedby={emailInvalid ? emailErrorId : undefined}
+              className={`h-10 px-3.5 text-sm rounded-xl transition-colors ${emailInvalid
+                ? "border-destructive focus-visible:ring-destructive/30"
+                : ""
+                }`}
             />
+            <FieldErrorMessage id={emailErrorId} message={fieldErrors.email} />
           </div>
 
           {/* Password */}
@@ -136,16 +236,20 @@ function LoginForm() {
                 autoComplete="current-password"
                 placeholder="••••••••"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
+                onChange={handlePasswordChange}
                 disabled={loading}
                 aria-required="true"
-                className="h-10 px-3.5 pr-10 text-sm rounded-xl"
+                aria-invalid={passwordInvalid}
+                aria-describedby={passwordInvalid ? passwordErrorId : undefined}
+                className={`h-10 px-3.5 pr-10 text-sm rounded-xl transition-colors ${passwordInvalid
+                  ? "border-destructive focus-visible:ring-destructive/30"
+                  : ""
+                  }`}
               />
               <button
                 type="button"
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                onClick={() => setShowPassword(!showPassword)}
+                onClick={() => setShowPassword((prev) => !prev)}
                 tabIndex={-1}
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
@@ -156,6 +260,10 @@ function LoginForm() {
                 )}
               </button>
             </div>
+            <FieldErrorMessage
+              id={passwordErrorId}
+              message={fieldErrors.password}
+            />
           </div>
 
           {/* Submit */}
@@ -176,40 +284,6 @@ function LoginForm() {
           </Button>
         </form>
 
-        {/* Divider */}
-        <div className="relative flex items-center gap-3">
-          <Separator className="flex-1" />
-          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
-            Quick portal sign-in
-          </span>
-          <Separator className="flex-1" />
-        </div>
-
-        {/* Quick-login buttons */}
-        <div className="grid grid-cols-2 gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={loading}
-            onClick={() => handleQuickLogin("teacher")}
-            aria-label="Quick sign in as Teacher"
-            className="h-10 text-sm font-medium gap-2 rounded-xl"
-          >
-            <UserCheck className="w-4 h-4 shrink-0" aria-hidden="true" />
-            Teacher mode
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={loading}
-            onClick={() => handleQuickLogin("admin")}
-            aria-label="Quick sign in as Admin"
-            className="h-11 text-sm font-medium gap-2 rounded-xl"
-          >
-            <ShieldCheck className="w-4 h-4 shrink-0" aria-hidden="true" />
-            Admin mode
-          </Button>
-        </div>
       </div>
     </div>
   );
