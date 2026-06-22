@@ -5,6 +5,8 @@ import { motion } from "motion/react";
 import { Plus, Calendar, Pencil, Trash2, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { BSCalendarSelector } from "@/components/ui/bs-calendar-selector";
+import { formatToBSFullString } from "@/lib/bs-calendar";
 import {
   Dialog,
   DialogContent,
@@ -167,22 +169,18 @@ export default function AcademicYearsPage() {
                   <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
                     Start Date
                   </label>
-                  <Input
-                    type="date"
+                  <BSCalendarSelector
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full text-sm"
+                    onChange={setStartDate}
                   />
                 </div>
                 <div>
                   <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
                     End Date
                   </label>
-                  <Input
-                    type="date"
+                  <BSCalendarSelector
                     value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full text-sm"
+                    onChange={setEndDate}
                   />
                 </div>
               </div>
@@ -226,7 +224,14 @@ export default function AcademicYearsPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {new Date(year.startDate).toLocaleDateString()} — {new Date(year.endDate).toLocaleDateString()}
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-semibold text-foreground">
+                        {formatToBSFullString(year.startDate)} — {formatToBSFullString(year.endDate)}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">
+                        {new Date(year.startDate).toLocaleDateString()} — {new Date(year.endDate).toLocaleDateString()}
+                      </span>
+                    </div>
                   </TableCell>
                   <TableCell>
                     {year.isCurrent ? (
@@ -336,22 +341,18 @@ export default function AcademicYearsPage() {
                 <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
                   Start Date
                 </label>
-                <Input
-                  type="date"
+                <BSCalendarSelector
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full text-sm"
+                  onChange={setStartDate}
                 />
               </div>
               <div>
                 <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
                   End Date
                 </label>
-                <Input
-                  type="date"
+                <BSCalendarSelector
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full text-sm"
+                  onChange={setEndDate}
                 />
               </div>
             </div>
