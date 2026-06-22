@@ -96,5 +96,5 @@ export const POST = withHandler(
 
     return created(result, "Re-exam assessment saved");
   },
-  ["ADMIN"],
+  ["ADMIN", "TEACHER"],
 );

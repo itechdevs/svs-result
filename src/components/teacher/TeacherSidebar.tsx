@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { LayoutGrid, ClipboardList, PenLine, ClipboardX, ChevronDown } from "lucide-react";
 import { ROUTES } from "@/lib/constants";
@@ -20,6 +20,7 @@ const NAV_ITEMS: { label: string; href: string; icon: React.ComponentType<{ size
 
 export function TeacherSidebar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { state, isMobile, openMobile, setOpenMobile } = useSidebar();
   const isCollapsed = state === "collapsed" && !isMobile;
   const [evaluationsExpanded, setEvaluationsExpanded] = useState(true);
@@ -50,7 +51,10 @@ export function TeacherSidebar() {
           const Icon = item.icon;
           const isActive =
             pathname === item.href ||
-            (item.href === ROUTES.TEACHER_EVALUATIONS && pathname === "/teacher/create-evaluation");
+            (item.href === ROUTES.TEACHER_EVALUATIONS && (
+              pathname === "/teacher/create-evaluation" ||
+              pathname.startsWith("/teacher/edit-evaluation")
+            ));
 
           return (
             <div key={item.href}>
@@ -101,9 +105,8 @@ export function TeacherSidebar() {
                     const params = new URLSearchParams({ class: className, subject });
                     const href = `${ROUTES.TEACHER_EVALUATIONS}?${params}`;
                     const isSubActive = pathname === ROUTES.TEACHER_EVALUATIONS &&
-                      typeof window !== 'undefined' &&
-                      new URLSearchParams(window.location.search).get('class') === className &&
-                      new URLSearchParams(window.location.search).get('subject') === subject;
+                      searchParams.get('class') === className &&
+                      searchParams.get('subject') === subject;
                     return (
                       <Link
                         key={`${className}-${subject}`}

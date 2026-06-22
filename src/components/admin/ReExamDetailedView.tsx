@@ -47,6 +47,10 @@ export default function ReExamDetailedView({ student, evaluation }: Props) {
     "idle" | "saving" | "saved" | "error"
   >("idle");
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const localMarksRef = useRef<StudentOutcomeMark | undefined>(undefined);
+
+  // Keep ref in sync with state so auto-save timer always reads latest marks
+  localMarksRef.current = localMarks;
 
   // Sync DB results into local state once
   useEffect(() => {
@@ -107,16 +111,17 @@ export default function ReExamDetailedView({ student, evaluation }: Props) {
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     setAutoSaveStatus("saving");
     autoSaveTimerRef.current = setTimeout(() => {
-      // Save to backend
-      if (localMarks) {
+      // Read latest marks from ref (avoids stale closure)
+      const marks = localMarksRef.current;
+      if (marks) {
         const outcomes = evaluation.learningOutcomes;
         const firstFailedOutcome = outcomes.find((lo) => {
-          const m = localMarks.outcomeMarks[lo.name];
+          const m = marks.outcomeMarks[lo.name];
           return m?.reExamMark !== null && m?.reExamMark !== undefined;
         });
 
         if (firstFailedOutcome) {
-          const m = localMarks.outcomeMarks[firstFailedOutcome.name];
+          const m = marks.outcomeMarks[firstFailedOutcome.name];
           if (m?.reExamMark !== null && m?.reExamMark !== undefined) {
             reExamAssessment.mutate(
               {
@@ -141,7 +146,7 @@ export default function ReExamDetailedView({ student, evaluation }: Props) {
         }
       }
     }, 1000);
-  }, [localMarks, evaluation, student.id, reExamAssessment]);
+  }, [evaluation, student.id, reExamAssessment]);
 
   useEffect(
     () => () => {

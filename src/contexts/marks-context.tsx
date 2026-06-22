@@ -231,13 +231,18 @@ export function MarksProvider({ children }: { children: React.ReactNode }) {
           evaluationTemplateId: t.id,
           submit,
           results: relevantMarks.map((m) => {
-            const obtained = m.outcomeMarks[t.name]?.regularMark;
+            const mark = m.outcomeMarks[t.name];
+            // Support marks replace regular marks when present (Assessment After Support)
+            const obtained =
+              mark?.supportMark !== null && mark?.supportMark !== undefined
+                ? mark.supportMark
+                : mark?.regularMark;
             return {
               syncedStudentId: m.studentId,
               marksObtained:
                 obtained !== null && obtained !== undefined ? obtained : undefined,
               isAbsent: false,
-              remarks: m.outcomeMarks[t.name]?.remarks || undefined,
+              remarks: mark?.remarks || undefined,
             };
           }),
         });
