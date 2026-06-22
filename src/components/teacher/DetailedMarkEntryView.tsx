@@ -29,7 +29,12 @@ export function calcObtainedMarks(
     if (!lo.templateId) return sum;
     const mark = getStudentMark(studentId, lo.templateId);
     const m = mark?.outcomeMarks[lo.name];
-    return sum + (m?.regularMark ?? 0);
+    // Support marks replace regular marks when present
+    const finalMark =
+      m?.supportMark !== null && m?.supportMark !== undefined
+        ? m.supportMark
+        : m?.regularMark;
+    return sum + (finalMark ?? 0);
   }, 0);
 }
 
@@ -60,8 +65,13 @@ export function calcPassFail(
     if (!lo.templateId) return false;
     const mark = getStudentMark(studentId, lo.templateId);
     const m = mark?.outcomeMarks[lo.name];
-    if (m?.regularMark === null || m?.regularMark === undefined) return false;
-    return m.regularMark < (lo.passMarks ?? 0);
+    // Support marks replace regular marks when determining pass/fail
+    const finalMark =
+      m?.supportMark !== null && m?.supportMark !== undefined
+        ? m.supportMark
+        : m?.regularMark;
+    if (finalMark === null || finalMark === undefined) return false;
+    return finalMark < (lo.passMarks ?? 0);
   });
 
   if (anyFail) return 'Fail';

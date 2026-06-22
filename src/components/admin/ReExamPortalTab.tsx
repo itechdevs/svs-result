@@ -342,7 +342,7 @@ export default function ReExamPortalTab() {
                 const viewHref =
                   profile?.role === "ADMIN"
                     ? `/admin/re-exam-portal/${item.studentId}/${item.evaluationId}`
-                    : `/teacher/mark-entry/${item.studentId}?evalId=${item.evaluationId}`;
+                    : `/teacher/re-exam-portal/${item.studentId}/${item.evaluationId}`;
 
                 const percentage =
                   item.fullMarks > 0
