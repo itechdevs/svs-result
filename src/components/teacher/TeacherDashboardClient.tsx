@@ -19,17 +19,19 @@ export default function DashboardPage() {
   });
   const { data: profile } = useProfile();
 
+  const assignedSubjectIds = useMemo(() => {
+    return new Set(profile?.syncedTeacher?.subjects.map((s) => s.id) ?? []);
+  }, [profile]);
+
+  const filteredTemplates = useMemo(() => {
+    if (!profile?.syncedTeacher) return [];
+    return templatesData.filter((t) => assignedSubjectIds.has(t.syncedSubjectId));
+  }, [templatesData, profile, assignedSubjectIds]);
+
   // Total Evaluations: same grouping logic as EvaluationsTab — one card per distinct eval plan
   const totalEvaluations = useMemo(() => {
-    const assignedSubjectIds = new Set(
-      profile?.syncedTeacher?.subjects.map((s) => s.id) ?? [],
-    );
-    const filtered =
-      assignedSubjectIds.size > 0
-        ? templatesData.filter((t) => assignedSubjectIds.has(t.syncedSubjectId))
-        : templatesData;
     const keys = new Set(
-      filtered.map((t) => {
+      filteredTemplates.map((t) => {
         const evalTitleMatch = t.name.match(/^\[([^\]]+)\]\[/);
         const rawEvalPart = evalTitleMatch ? evalTitleMatch[1] : "__legacy__";
         const evalTitle = rawEvalPart.split("|")[0];
@@ -37,19 +39,29 @@ export default function DashboardPage() {
       }),
     );
     return keys.size;
-  }, [templatesData, profile]);
+  }, [filteredTemplates]);
 
-  // Pending Re-Exam: same logic as MarkEntryOverviewTable — students where isPassed === false
-  const pendingReExam = useMemo(
-    () => allResults.filter((r) => r.isPassed === false).length,
-    [allResults],
-  );
+  // Pending Re-Exam: students where isPassed === false and eval template is assigned to teacher
+  const pendingReExam = useMemo(() => {
+    if (!profile?.syncedTeacher) return 0;
+    const validTemplateIds = new Set(filteredTemplates.map((t) => t.id));
+    return allResults.filter(
+      (r) => r.isPassed === false && validTemplateIds.has(r.evaluationTemplateId)
+    ).length;
+  }, [allResults, filteredTemplates, profile]);
+
+  const filteredReExams = useMemo(() => {
+    if (!profile?.syncedTeacher) return [];
+    return reExamData.filter((r) =>
+      assignedSubjectIds.has(r.evaluationTemplate?.syncedSubject?.id ?? "")
+    );
+  }, [reExamData, profile, assignedSubjectIds]);
 
   // Re-Exam Scheduled: count of SCHEDULED re-exam records (source for ReExamDetailedView entries)
-  const reExamScheduled = reExamData.length;
+  const reExamScheduled = filteredReExams.length;
 
-  const recentEvaluations = templatesData.slice(0, 4);
-  const reExamAlerts = reExamData.slice(0, 2);
+  const recentEvaluations = filteredTemplates.slice(0, 4);
+  const reExamAlerts = filteredReExams.slice(0, 2);
 
   const kpis = [
     {

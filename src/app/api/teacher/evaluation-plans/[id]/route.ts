@@ -13,13 +13,13 @@ export const PATCH = withHandler(
       where: { id: params.id, deletedAt: null },
       include: {
         syncedSubject: {
-          include: { teacher: { include: { user: { select: { id: true } } } } },
+          include: { teachers: { include: { user: { select: { id: true } } } } },
         },
       },
     });
     if (!existing) return notFound("Evaluation template not found");
 
-    if (user.role === "TEACHER" && existing.syncedSubject.teacher?.user?.id !== user.id) {
+    if (user.role === "TEACHER" && !existing.syncedSubject.teachers.some(t => t.user?.id === user.id)) {
       return forbidden("You are not assigned to this subject");
     }
 
@@ -52,13 +52,13 @@ export const DELETE = withHandler(
       where: { id: params.id, deletedAt: null },
       include: {
         syncedSubject: {
-          include: { teacher: { include: { user: { select: { id: true } } } } },
+          include: { teachers: { include: { user: { select: { id: true } } } } },
         },
       },
     });
     if (!existing) return notFound("Evaluation template not found");
 
-    if (user.role === "TEACHER" && existing.syncedSubject.teacher?.user?.id !== user.id) {
+    if (user.role === "TEACHER" && !existing.syncedSubject.teachers.some(t => t.user?.id === user.id)) {
       return forbidden("You are not assigned to this subject");
     }
 

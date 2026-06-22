@@ -44,11 +44,10 @@ export default function TeacherEvaluationsPage() {
   );
 
   const evaluations: EvaluationPlan[] = useMemo(() => {
-    let templates = templatesData;
+    if (!profile?.syncedTeacher) return [];
 
-    if (profile && assignedSubjectIds.size > 0) {
-      templates = templates.filter(t => assignedSubjectIds.has(t.syncedSubjectId));
-    }
+    let templates = templatesData.filter(t => assignedSubjectIds.has(t.syncedSubjectId));
+
     if (selectedSubject) {
       templates = templates.filter(t => (t.syncedSubject?.name ?? '') === selectedSubject);
     }

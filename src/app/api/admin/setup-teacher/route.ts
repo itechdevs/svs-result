@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
           if (a.subjectId) {
             await prisma.syncedSubject.update({
               where: { id: a.subjectId },
-              data: { teacherId: syncedTeacherId },
+              data: { teachers: { connect: { id: syncedTeacherId } } },
             });
           }
         })

@@ -18,11 +18,11 @@ export const GET = withHandler(
 
     const subjects = await prisma.syncedSubject.findMany({
       where: {
-        teacherId: { not: null },
+        teachers: { some: {} },
         ...(query.gradeLevel && { gradeLevel: query.gradeLevel }),
       },
       include: {
-        teacher: {
+        teachers: {
           select: {
             id: true,
             name: true,
@@ -33,14 +33,14 @@ export const GET = withHandler(
       orderBy: { gradeLevel: "asc" },
     });
 
-    const assignments = subjects.map(s => ({
-      id: s.id,
-      userId: s.teacher?.user?.id,
+    const assignments = subjects.flatMap(s => s.teachers.map(teacher => ({
+      id: `${s.id}-${teacher.id}`,
+      userId: teacher.user?.id,
       gradeLevel: s.gradeLevel,
       syncedSubjectId: s.id,
       academicYearId: query.academicYearId || "all",
-      user: s.teacher?.user,
-    })).filter(a => !query.userId || a.userId === query.userId);
+      user: teacher.user,
+    }))).filter(a => !query.userId || a.userId === query.userId);
 
     return ok(assignments);
   },
@@ -68,8 +68,8 @@ export const POST = withHandler(
 
     const subject = await prisma.syncedSubject.update({
       where: { id: body.syncedSubjectId },
-      data: { teacherId: targetUser.syncedTeacherId },
-      include: { teacher: { include: { user: true } } },
+      data: { teachers: { connect: { id: targetUser.syncedTeacherId } } },
+      include: { teachers: { include: { user: true } } },
     });
 
     return created({
@@ -77,7 +77,7 @@ export const POST = withHandler(
       userId: targetUser.id,
       gradeLevel: subject.gradeLevel,
       syncedSubjectId: subject.id,
-      user: subject.teacher?.user,
+      user: targetUser,
     }, "Teacher assignment created");
   },
   ["ADMIN"],
