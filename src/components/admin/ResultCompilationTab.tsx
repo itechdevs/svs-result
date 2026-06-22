@@ -142,11 +142,20 @@ export default function ResultCompilationTab() {
     [students, selectedClass]);
 
   const marksLookup = useMemo(() => {
-    const lookup: Record<string, Record<string, number | null>> = {};
+    const lookup: Record<string, Record<string, { marks: number | null; hasReExam: boolean }>> = {};
     resultsData.forEach((r) => {
       if (!lookup[r.syncedStudentId]) lookup[r.syncedStudentId] = {};
-      lookup[r.syncedStudentId][r.evaluationTemplateId] =
-        r.marksObtained !== null && r.marksObtained !== undefined ? Number(r.marksObtained) : null;
+      const reExamMarks = r.reExamResult?.marksObtained;
+      const hasReExam = reExamMarks !== null && reExamMarks !== undefined;
+      const effectiveMarks = hasReExam
+        ? Number(reExamMarks)
+        : r.marksObtained !== null && r.marksObtained !== undefined
+          ? Number(r.marksObtained)
+          : null;
+      lookup[r.syncedStudentId][r.evaluationTemplateId] = {
+        marks: effectiveMarks,
+        hasReExam,
+      };
     });
     return lookup;
   }, [resultsData]);
@@ -181,7 +190,8 @@ export default function ResultCompilationTab() {
         if (templates.length === 0) continue;
         let weightedObtained = 0, weightedFull = 0, failedEvals = 0, subjectHasMarks = false;
         for (const t of templates) {
-          const obtained = marksLookup[student.id]?.[t.id] ?? null;
+          const lookup = marksLookup[student.id]?.[t.id];
+          const obtained = lookup?.marks ?? null;
           const fullMarks = Number(t.fullMarks);
           const weight = Number(t.weightage) / 100;
           weightedFull += fullMarks * weight;
