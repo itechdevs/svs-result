@@ -22,6 +22,7 @@ export const ROUTES = {
   // Admin routes
   ADMIN_DASHBOARD: "/admin/dashboard",
   ADMIN_EXAMS: "/admin/exams",
+  ADMIN_EXAM_DETAIL: "/admin/exams/[id]",
   ADMIN_ALLOCATIONS: "/admin/allocations",
   ADMIN_RE_EXAM: "/admin/re-exam-portal",
   ADMIN_MARK_ENTRY: "/admin/mark-entry",

@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { APP_NAME, APP_DESCRIPTION } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import NextTopLoader from "nextjs-toploader";
 
 const inter = Inter({
   subsets: ["latin", "latin-ext"],
@@ -68,7 +69,15 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body suppressHydrationWarning className={cn(inter.variable, lora.variable, sourceCodePro.variable, "font-sans antialiased")}>
+      <body
+        suppressHydrationWarning
+        className={cn(
+          inter.variable,
+          lora.variable,
+          sourceCodePro.variable,
+          "font-sans antialiased",
+        )}
+      >
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -78,6 +87,7 @@ export default function RootLayout({
           <QueryProvider>
             <NuqsAdapter>
               <TooltipProvider>
+                <NextTopLoader />
                 {children}
                 <Toaster />
               </TooltipProvider>
