@@ -30,6 +30,7 @@ interface CompiledStudentResult {
   grade: string;
   result: 'Pass' | 'Fail' | 'Pending';
   failedEvaluations: number;
+  hasReExam: boolean;
 }
 
 interface Props {
@@ -123,14 +124,23 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
   }, [students, selectedClass]);
 
   // Marks lookup: [studentId][templateId] = marksObtained
+  // Uses re-exam marks when available (re-exam replaces original)
   const marksLookup = useMemo(() => {
-    const lookup: Record<string, Record<string, number | null>> = {};
+    const lookup: Record<string, Record<string, { marks: number | null; hasReExam: boolean }>> = {};
     for (const r of resultsData) {
       if (!lookup[r.syncedStudentId]) lookup[r.syncedStudentId] = {};
-      lookup[r.syncedStudentId][r.evaluationTemplateId] =
-        r.marksObtained !== null && r.marksObtained !== undefined
+      const reExamMarks = r.reExamResult?.marksObtained;
+      const hasReExam = reExamMarks !== null && reExamMarks !== undefined;
+      // Use re-exam marks if available, otherwise use original marks
+      const effectiveMarks = hasReExam
+        ? Number(reExamMarks)
+        : r.marksObtained !== null && r.marksObtained !== undefined
           ? Number(r.marksObtained)
           : null;
+      lookup[r.syncedStudentId][r.evaluationTemplateId] = {
+        marks: effectiveMarks,
+        hasReExam,
+      };
     }
     return lookup;
   }, [resultsData]);
@@ -147,9 +157,12 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
       let totalFull = 0;
       let hasAnyMarks = false;
       let hasFailed = false;
+      let hasReExam = false;
 
       selectedTemplates.forEach((t) => {
-        const obtained = marksLookup[student.id]?.[t.id] ?? null;
+        const lookup = marksLookup[student.id]?.[t.id];
+        const obtained = lookup?.marks ?? null;
+        if (lookup?.hasReExam) hasReExam = true;
         subjectMarks[t.name] = obtained;
 
         if (obtained !== null) {
@@ -186,6 +199,7 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
         grade,
         result: !hasAnyMarks ? 'Pending' : hasFailed ? 'Fail' : 'Pass',
         failedEvaluations: 0,
+        hasReExam,
       };
     });
   }, [selectedEvaluations, filteredStudents, templatesData, marksLookup]);
@@ -478,6 +492,7 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
                   <th className="border border-border px-3 py-2 text-center font-bold text-foreground">Percentage</th>
                   <th className="border border-border px-3 py-2 text-center font-bold text-foreground">Grade</th>
                   <th className="border border-border px-3 py-2 text-center font-bold text-foreground">Result</th>
+                  <th className="border border-border px-3 py-2 text-center font-bold text-foreground">Re-Exam</th>
                 </tr>
               </thead>
               <tbody>
@@ -506,6 +521,13 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
                       "text-muted-foreground"
                     )}>
                       {result.result}
+                    </td>
+                    <td className="border border-border px-3 py-2 text-center">
+                      {result.hasReExam && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                          Re-Exam
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}
