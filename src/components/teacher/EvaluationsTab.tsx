@@ -93,21 +93,28 @@ export default function EvaluationsTab({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 bg-card p-5 rounded-2xl border border-border shadow-sm">
-        <div>
-          <p className="text-[10px] font-bold text-muted-foreground uppercase">Active Term Cycle</p>
-          <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-2xl font-bold text-foreground">02</span>
-            <span className="text-xs text-emerald-600 font-bold">↑ Autumn Semester 1</span>
+      {(() => {
+        const published = evaluations.filter(e => e.status === 'Published').length;
+        const drafted = evaluations.filter(e => e.status === 'Draft').length;
+        const total = evaluations.length;
+        const fmt = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+        return (
+          <div className="grid grid-cols-3 gap-6 bg-card p-5 rounded-2xl border border-border shadow-sm">
+            <div>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase">Published Cards</p>
+              <span className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1 block">{fmt(published)} Published</span>
+            </div>
+            <div className="border-l border-border pl-6">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase">Drafted Cards</p>
+              <span className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1 block">{fmt(drafted)} Drafted</span>
+            </div>
+            <div className="border-l border-border pl-6">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase">Total Evaluations</p>
+              <span className="text-2xl font-bold text-destructive mt-1 block">{fmt(total)} Evaluations</span>
+            </div>
           </div>
-        </div>
-        <div className="border-l border-border pl-6">
-          <p className="text-[10px] font-bold text-muted-foreground uppercase">Total Evaluations</p>
-          <span className="text-2xl font-bold text-destructive mt-1 block">
-            {evaluations.length < 10 ? `0${evaluations.length}` : evaluations.length} Evaluations
-          </span>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* Evaluations Plan Cards Directory */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
