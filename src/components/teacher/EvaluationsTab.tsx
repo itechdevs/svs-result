@@ -55,6 +55,8 @@ export default function EvaluationsTab({
 
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const deleteTarget = evaluations.find(e => e.id === deleteTargetId);
+  const [filter, setFilter] = useState<'All' | 'Published' | 'Draft' | 'Active'>('All');
+  const filtered = filter === 'All' ? evaluations : evaluations.filter(e => e.status === filter);
 
   return (
     <motion.div
@@ -116,9 +118,30 @@ export default function EvaluationsTab({
         );
       })()}
 
+      {/* Filter Buttons */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {(['All', 'Published', 'Draft', 'Active'] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={cn(
+              "px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors",
+              filter === f
+                ? f === 'Published' ? "bg-blue-600 text-white border-blue-600"
+                  : f === 'Draft' ? "bg-amber-500 text-white border-amber-500"
+                  : f === 'Active' ? "bg-emerald-600 text-white border-emerald-600"
+                  : "bg-foreground text-background border-foreground"
+                : "bg-card text-muted-foreground border-border hover:bg-muted"
+            )}
+          >
+            {f}
+          </button>
+        ))}
+      </div>
+
       {/* Evaluations Plan Cards Directory */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {evaluations.map((evalPlan) => (
+        {filtered.map((evalPlan) => (
           <div
             key={evalPlan.id}
             className="bg-card border border-border rounded-xl overflow-hidden hover:shadow-md transition-all flex flex-col"
