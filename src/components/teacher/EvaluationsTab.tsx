@@ -55,6 +55,8 @@ export default function EvaluationsTab({
 
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const deleteTarget = evaluations.find(e => e.id === deleteTargetId);
+  const [filter, setFilter] = useState<'All' | 'Published' | 'Draft' | 'Active'>('All');
+  const filtered = filter === 'All' ? evaluations : evaluations.filter(e => e.status === filter);
 
   return (
     <motion.div
@@ -93,25 +95,53 @@ export default function EvaluationsTab({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 bg-card p-5 rounded-2xl border border-border shadow-sm">
-        <div>
-          <p className="text-[10px] font-bold text-muted-foreground uppercase">Active Term Cycle</p>
-          <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-2xl font-bold text-foreground">02</span>
-            <span className="text-xs text-emerald-600 font-bold">↑ Autumn Semester 1</span>
+      {(() => {
+        const published = evaluations.filter(e => e.status === 'Published').length;
+        const drafted = evaluations.filter(e => e.status === 'Draft').length;
+        const total = evaluations.length;
+        const fmt = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+        return (
+          <div className="grid grid-cols-3 gap-6 bg-card p-5 rounded-2xl border border-border shadow-sm">
+            <div>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase">Published Cards</p>
+              <span className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1 block">{fmt(published)} Published</span>
+            </div>
+            <div className="border-l border-border pl-6">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase">Drafted Cards</p>
+              <span className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1 block">{fmt(drafted)} Drafted</span>
+            </div>
+            <div className="border-l border-border pl-6">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase">Total Evaluations</p>
+              <span className="text-2xl font-bold text-destructive mt-1 block">{fmt(total)} Evaluations</span>
+            </div>
           </div>
-        </div>
-        <div className="border-l border-border pl-6">
-          <p className="text-[10px] font-bold text-muted-foreground uppercase">Total Evaluations</p>
-          <span className="text-2xl font-bold text-destructive mt-1 block">
-            {evaluations.length < 10 ? `0${evaluations.length}` : evaluations.length} Evaluations
-          </span>
-        </div>
+        );
+      })()}
+
+      {/* Filter Buttons */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {(['All', 'Published', 'Draft', 'Active'] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={cn(
+              "px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors",
+              filter === f
+                ? f === 'Published' ? "bg-blue-600 text-white border-blue-600"
+                  : f === 'Draft' ? "bg-amber-500 text-white border-amber-500"
+                  : f === 'Active' ? "bg-emerald-600 text-white border-emerald-600"
+                  : "bg-foreground text-background border-foreground"
+                : "bg-card text-muted-foreground border-border hover:bg-muted"
+            )}
+          >
+            {f}
+          </button>
+        ))}
       </div>
 
       {/* Evaluations Plan Cards Directory */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {evaluations.map((evalPlan) => (
+        {filtered.map((evalPlan) => (
           <div
             key={evalPlan.id}
             className="bg-card border border-border rounded-xl overflow-hidden hover:shadow-md transition-all flex flex-col"
