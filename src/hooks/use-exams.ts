@@ -16,6 +16,23 @@ export interface Exam {
     id: string;
     name: string;
   };
+  evaluationTemplates?: Array<{
+    id: string;
+    syncedSubjectId: string;
+    name: string;
+    fullMarks: number;
+    passMarks: number;
+    weightage: number;
+    scheduledDate: string | null;
+    displayOrder: number;
+    isActive: boolean;
+    syncedSubject?: {
+      id: string;
+      name: string;
+      code: string;
+      gradeLevel: string;
+    };
+  }>;
   _count?: {
     evaluationTemplates: number;
   };
@@ -77,15 +94,14 @@ export function useCreateExam() {
   });
 }
 
-export function useUpdateExam(id: string) {
+export function useUpdateExam() {
   const queryClient = useQueryClient();
-  return useMutation<Exam, Error, UpdateExamInput>({
-    mutationFn: async (data) => {
+  return useMutation<Exam, Error, { id: string; data: UpdateExamInput }>({
+    mutationFn: async ({ id, data }) => {
       return apiClient.patch(`/admin/exams/${id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["exams"] });
-      queryClient.invalidateQueries({ queryKey: ["exam", id] });
     },
   });
 }

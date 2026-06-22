@@ -38,7 +38,8 @@ export function AdminSidebar() {
       <nav className={cn("flex-1 py-3 flex flex-col gap-0.5 overflow-y-auto", isCollapsed ? "px-2" : "px-3")} aria-label="Admin navigation">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href;
+          const isActive = pathname === item.href ||
+            (item.href === ROUTES.ADMIN_EXAMS && pathname.startsWith("/admin/exams"));
 
           return (
             <Link

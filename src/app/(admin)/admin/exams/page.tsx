@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
-import { Plus, Trash2, BookOpen, Calendar } from "lucide-react";
+import { Plus, Trash2, BookOpen, Calendar, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BSCalendarSelector } from "@/components/ui/bs-calendar-selector";
@@ -41,7 +41,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useExams, useCreateExam, useDeleteExam } from "@/hooks/use-exams";
+import { useExams, useCreateExam, useUpdateExam, useDeleteExam } from "@/hooks/use-exams";
 import { useAcademicYears } from "@/hooks/use-academic-config";
 import { useGradeLevels } from "@/hooks/use-subjects";
 import SanskarLoader from "@/components/shared/SanskarLoader";
@@ -53,10 +53,13 @@ export default function ExamsPage() {
   const { data: gradeLevels } = useGradeLevels();
   const createExam = useCreateExam();
   const deleteExam = useDeleteExam();
+  const updateExam = useUpdateExam();
 
   const currentYear = academicYears?.find((y: any) => y.isCurrent);
 
   const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingExam, setEditingExam] = useState<any>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [gradeLevel, setGradeLevel] = useState("");
@@ -93,6 +96,38 @@ export default function ExamsPage() {
       setOpen(false);
     } catch (err: any) {
       alert(err.message || "Failed to create exam");
+    }
+  };
+
+  const openEditDialog = (exam: any) => {
+    setEditingExam(exam);
+    setName(exam.name);
+    setDescription(exam.description || "");
+    setGradeLevel(exam.gradeLevel);
+    setAcademicYearId(exam.academicYearId);
+    setStartDate(exam.startDate || "");
+    setEndDate(exam.endDate || "");
+    setEditOpen(true);
+  };
+
+  const handleUpdate = async () => {
+    if (!editingExam) return;
+    try {
+      await updateExam.mutateAsync({
+        id: editingExam.id,
+        data: {
+          name,
+          description: description || undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
+        },
+      });
+
+      resetForm();
+      setEditOpen(false);
+      setEditingExam(null);
+    } catch (err: any) {
+      alert(err.message || "Failed to update exam");
     }
   };
 
@@ -232,6 +267,115 @@ export default function ExamsPage() {
             </div>
           </DialogContent>
         </Dialog>
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Edit Exam</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div>
+                <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
+                  Exam Name
+                </label>
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Mid-Term Exam"
+                  className="w-full text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
+                  Description
+                </label>
+                <Input
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Optional description"
+                  className="w-full text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
+                  Academic Year
+                </label>
+                <Select
+                  value={academicYearId}
+                  onValueChange={setAcademicYearId}
+                  disabled
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select academic year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {academicYears?.map((year: any) => (
+                      <SelectItem key={year.id} value={year.id}>
+                        {year.name} {year.isCurrent && "(Current)"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
+                  Grade Level
+                </label>
+                <Select value={gradeLevel} onValueChange={setGradeLevel} disabled>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select grade level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {gradeLevels?.map((level) => (
+                      <SelectItem key={level} value={level}>
+                        {level}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
+                    Start Date
+                  </label>
+                  <BSCalendarSelector
+                    value={startDate}
+                    onChange={setStartDate}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
+                    End Date
+                  </label>
+                  <BSCalendarSelector
+                    value={endDate}
+                    onChange={setEndDate}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  resetForm();
+                  setEditOpen(false);
+                  setEditingExam(null);
+                }}
+                className="text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleUpdate}
+                disabled={!name || updateExam.isPending}
+                className="bg-primary text-primary-foreground text-xs font-bold"
+              >
+                {updateExam.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
@@ -293,6 +437,14 @@ export default function ExamsPage() {
                       className="flex items-center justify-end gap-1"
                       onClick={(e) => e.stopPropagation()}
                     >
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-primary"
+                        onClick={() => openEditDialog(exam)}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
