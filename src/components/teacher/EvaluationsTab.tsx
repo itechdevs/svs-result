@@ -250,7 +250,11 @@ export default function EvaluationsTab({
               <Button
                 onClick={() => {
                   setSelectedEvaluationId(evalPlan.id);
-                  setCurrentTab('mark-entry', { eval: evalPlan.title });
+                  setCurrentTab('mark-entry', {
+                    class: evalPlan.gradeLevel || '',
+                    subject: evalPlan.subject || '',
+                    eval: evalPlan.title,
+                  });
                 }}
                 disabled={evalPlan.status === 'Published'}
                 className={cn(
