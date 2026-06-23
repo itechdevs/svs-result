@@ -3,7 +3,6 @@
 import React, {
   useState,
   useMemo,
-  useCallback,
   useEffect,
   useRef,
 } from "react";
@@ -14,9 +13,6 @@ import {
   AlertTriangle,
   Save,
   Send,
-  Calendar,
-  ChevronLeft,
-  ChevronRight,
   ArrowLeft,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -27,14 +23,8 @@ import {
   useStudentEvaluationResults,
 } from "@/hooks/use-evaluations";
 import { useStudents } from "@/hooks/use-students";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/shared/ui/select";
-import { useSearchParams, useRouter, usePathname } from "next/navigation";import { useMarksContext } from "@/contexts/marks-context";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useMarksContext } from "@/contexts/marks-context";
 
 export default function MarkEntryOverviewTable() {
   const { data: profile } = useProfile();
@@ -53,37 +43,16 @@ export default function MarkEntryOverviewTable() {
 
   const searchParams = useSearchParams();
   const router = useRouter();
-  const pathname = usePathname();
 
-  const [selectedClass, setSelectedClass] = useState(
-    searchParams.get("class") ?? "",
-  );
-  const [selectedSubject, setSelectedSubject] = useState(
-    searchParams.get("subject") ?? "",
-  );
-  const [selectedEvalPlan, setSelectedEvalPlan] = useState(
-    searchParams.get("eval") ?? "",
-  );
+  const selectedClass = searchParams.get("class") ?? "";
+  const selectedSubject = searchParams.get("subject") ?? "";
+  const selectedEvalPlan = searchParams.get("eval") ?? "";
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
 
   const { data: studentsData } = useStudents(
     selectedClass ? { class: selectedClass, limit: 9999 } : { limit: 1 },
   );
-
-  // Assigned classes from syncedTeacher.subjects
-  const assignedClasses = useMemo(() => {
-    const subjects = profile?.syncedTeacher?.subjects ?? [];
-    return Array.from(new Set(subjects.map((s) => s.gradeLevel)));
-  }, [profile]);
-
-  // Subjects for selected class
-  const subjects = useMemo(() => {
-    const teacherSubjects = profile?.syncedTeacher?.subjects ?? [];
-    return teacherSubjects
-      .filter((s) => s.gradeLevel === selectedClass)
-      .map((s) => s.name);
-  }, [selectedClass, profile]);
 
   const subjectObj = useMemo(() => {
     if (!selectedClass || !selectedSubject) return undefined;
@@ -96,17 +65,6 @@ export default function MarkEntryOverviewTable() {
     if (!subjectObj) return [];
     return templatesData.filter((t) => t.syncedSubjectId === subjectObj.id);
   }, [subjectObj, templatesData]);
-
-  const evalPlans = useMemo(() => {
-    const plans = new Set<string>();
-    for (const t of allSubjectTemplates) {
-      const evalTitleMatch = t.name.match(/^\[([^\]]+)\]\[/);
-      const rawEvalPart = evalTitleMatch ? evalTitleMatch[1] : "";
-      const evalTitle = rawEvalPart.split("|")[0];
-      plans.add(evalTitle || selectedSubject);
-    }
-    return Array.from(plans);
-  }, [allSubjectTemplates, selectedSubject]);
 
   const evaluations = useMemo(() => {
     if (!selectedEvalPlan) return [];
@@ -164,36 +122,6 @@ export default function MarkEntryOverviewTable() {
     updateOutcomeMark(studentId, evalId, outcomeName, { regularMark: num });
   };
 
-  const updateURL = (c: string, s: string, e: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (c) params.set("class", c);
-    else params.delete("class");
-    if (s) params.set("subject", s);
-    else params.delete("subject");
-    if (e) params.set("eval", e);
-    else params.delete("eval");
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  };
-
-  const handleClassChange = (value: string) => {
-    setSelectedClass(value);
-    setSelectedSubject("");
-    setSelectedEvalPlan("");
-    setPage(1);
-    updateURL(value, "", "");
-  };
-  const handleSubjectChange = (value: string) => {
-    setSelectedSubject(value);
-    setSelectedEvalPlan("");
-    setPage(1);
-    updateURL(selectedClass, value, "");
-  };
-  const handleEvalPlanChange = (value: string) => {
-    setSelectedEvalPlan(value);
-    setPage(1);
-    updateURL(selectedClass, selectedSubject, value);
-  };
-
   const totalPages = Math.max(1, Math.ceil(classStudents.length / PAGE_SIZE));
   const pagedStudents = classStudents.slice(
     (page - 1) * PAGE_SIZE,
@@ -206,9 +134,9 @@ export default function MarkEntryOverviewTable() {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6"
     >
-      {/* ── Filters ─────────────────────────────────────────────── */}
+      {/* ── Header ──────────────────────────────────────────────── */}
       <div className="bg-card rounded-xl border border-border shadow-sm p-5">
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => router.back()}
             className="h-8 w-8 flex items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
@@ -216,94 +144,16 @@ export default function MarkEntryOverviewTable() {
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <h1 className="text-lg font-bold text-foreground">Mark Entry</h1>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              Select Class
-            </label>
-            <Select value={selectedClass} onValueChange={handleClassChange}>
-              <SelectTrigger className="w-full text-sm">
-                <SelectValue placeholder="Select a class..." />
-              </SelectTrigger>
-              <SelectContent>
-                {assignedClasses.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              Select Subject
-            </label>
-            <Select
-              value={selectedSubject}
-              onValueChange={handleSubjectChange}
-              disabled={!selectedClass}
-            >
-              <SelectTrigger className="w-full text-sm">
-                <SelectValue
-                  placeholder={
-                    selectedClass
-                      ? "Select a subject..."
-                      : "Select a class first"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {subjects.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              Select Evaluation Plan
-            </label>
-            <Select
-              value={selectedEvalPlan}
-              onValueChange={handleEvalPlanChange}
-              disabled={!selectedSubject || evalPlans.length === 0}
-            >
-              <SelectTrigger className="w-full text-sm">
-                <SelectValue
-                  placeholder={
-                    !selectedSubject
-                      ? "Select a subject first"
-                      : evalPlans.length === 0
-                        ? "No plans available"
-                        : "Select a plan..."
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {evalPlans.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    {p}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div>
+            <h1 className="text-lg font-bold text-foreground">Mark Entry</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {selectedSubject
+                ? `${selectedClass} · ${selectedSubject} · ${selectedEvalPlan}`
+                : 'Select a class, subject, and evaluation plan to view the mark entry table.'}
+            </p>
           </div>
         </div>
       </div>
-
-      {/* ── Empty states ────────────────────────────────────────── */}
-      {(!selectedClass || !selectedSubject || !selectedEvalPlan) && (
-        <div className="bg-white dark:bg-card rounded-xl border border-dashed border-slate-300 dark:border-border p-12 text-center">
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Select a class, subject, and evaluation plan to view the mark entry
-            table.
-          </p>
-        </div>
-      )}
 
       {selectedClass &&
         selectedSubject &&

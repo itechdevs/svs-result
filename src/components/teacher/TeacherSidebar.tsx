@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutGrid, ClipboardList, PenLine, ClipboardX, ChevronDown } from "lucide-react";
+import { LayoutGrid, ClipboardList, ClipboardX, ChevronDown } from "lucide-react";
 import { ROUTES } from "@/lib/constants";
 import { useSidebar } from "@/components/shared/ui/sidebar";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/shared/ui/sheet";
@@ -14,7 +14,6 @@ import { useProfile } from "@/hooks/use-profile";
 const NAV_ITEMS: { label: string; href: string; icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>; hasSubMenu?: boolean }[] = [
   { label: "Teacher Dashboard", href: ROUTES.TEACHER_DASHBOARD, icon: LayoutGrid },
   { label: "Evaluation Plan", href: ROUTES.TEACHER_EVALUATIONS, icon: ClipboardList, hasSubMenu: true },
-  { label: "Marking Center", href: ROUTES.TEACHER_MARK_ENTRY, icon: PenLine },
   { label: "Re-Exam Panel", href: ROUTES.TEACHER_RE_EXAM, icon: ClipboardX },
 ];
 
