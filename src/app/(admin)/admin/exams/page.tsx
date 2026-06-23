@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import { Plus, Trash2, BookOpen, Calendar, Pencil } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BSCalendarSelector } from "@/components/ui/bs-calendar-selector";
@@ -85,7 +86,7 @@ export default function ExamsPage() {
   const handleCreate = async () => {
     const yearId = academicYearId || currentYear?.id;
     if (!yearId) {
-      alert("No academic year selected. Please select one first.");
+      toast.error("No academic year selected. Please select one first.");
       return;
     }
     try {
@@ -100,8 +101,9 @@ export default function ExamsPage() {
 
       resetForm();
       setOpen(false);
+      toast.success("Exam created successfully");
     } catch (err: any) {
-      alert(err.message || "Failed to create exam");
+      toast.error(err.message || "Failed to create exam");
     }
   };
 
@@ -132,8 +134,18 @@ export default function ExamsPage() {
       resetForm();
       setEditOpen(false);
       setEditingExam(null);
+      toast.success("Exam updated successfully");
     } catch (err: any) {
-      alert(err.message || "Failed to update exam");
+      toast.error(err.message || "Failed to update exam");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteExam.mutateAsync(id);
+      toast.success("Exam deleted successfully");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete exam");
     }
   };
 
@@ -492,7 +504,7 @@ export default function ExamsPage() {
                               Cancel
                             </AlertDialogCancel>
                             <AlertDialogAction
-                              onClick={() => deleteExam.mutateAsync(exam.id)}
+                              onClick={() => handleDelete(exam.id)}
                               className="bg-destructive text-destructive-foreground text-xs"
                             >
                               Delete

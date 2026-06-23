@@ -4,6 +4,7 @@ import React, { useId, useState, useCallback, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { z } from "zod";
 import { Loader2, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/shared/ui/button";
 import { Input } from "@/components/shared/ui/input";
 import { ROUTES } from "@/lib/constants";
@@ -136,11 +137,14 @@ function LoginForm() {
 
       if (result?.error) {
         setServerError("Invalid email or password. Please try again.");
+        toast.error("Invalid email or password");
       } else if (result?.url) {
+        toast.success("Signed in successfully");
         window.location.href = result.url;
       }
     } catch {
       setServerError("An unexpected error occurred. Please try again.");
+      toast.error("An unexpected error occurred");
     } finally {
       setLoading(false);
     }
