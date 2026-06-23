@@ -26,6 +26,7 @@ export function BSCalendarSelector({
 }: BSCalendarSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [popoverDirection, setPopoverDirection] = useState<"down" | "up">("down");
 
   // Initialize visibility states
   const [currentYear, setCurrentYear] = useState<number>(() => {
@@ -95,6 +96,22 @@ export function BSCalendarSelector({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
+  }, [isOpen]);
+
+  // Determine popover direction based on available screen space
+  useEffect(() => {
+    if (isOpen && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      const popoverHeight = 350; // Approximate height of the calendar popover
+
+      if (spaceBelow < popoverHeight && spaceAbove > spaceBelow) {
+        setPopoverDirection("up");
+      } else {
+        setPopoverDirection("down");
+      }
+    }
   }, [isOpen]);
 
   const handlePrevMonth = () => {
@@ -216,7 +233,10 @@ export function BSCalendarSelector({
 
       {/* Popover Calendar */}
       {isOpen && (
-        <div className="absolute left-0 mt-1 z-50 w-72 rounded-lg border border-border bg-popover p-3 text-popover-foreground shadow-md outline-hidden animate-in fade-in-0 zoom-in-95">
+        <div className={cn(
+          "absolute left-0 z-50 w-72 rounded-lg border border-border bg-popover p-3 text-popover-foreground shadow-md outline-hidden animate-in fade-in-0 zoom-in-95",
+          popoverDirection === "up" ? "bottom-full mb-1" : "top-full mt-1"
+        )}>
           {/* Header Controls */}
           <div className="flex items-center justify-between mb-3 gap-1">
             <button

@@ -7,6 +7,7 @@ import { AnimatePresence } from 'motion/react';
 import { useEvaluationTemplate, useEvaluationTemplates } from '@/hooks/use-evaluations';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { toast } from 'sonner';
 
 interface OutcomeRow { name: string; date: string; max: number; pass: number; templateId?: string; }
 interface TaskGroup { taskType: string; max: number; pass: number; outcomes: OutcomeRow[]; }
@@ -17,7 +18,6 @@ export default function EditEvaluationPage() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const id = params.id as string;
-  const [showSuccess, setShowSuccess] = useState(false);
 
   const selectedClass = searchParams.get('class') ?? '';
   const selectedSubject = searchParams.get('subject') ?? '';
@@ -114,12 +114,11 @@ export default function EditEvaluationPage() {
     // IDs that were in DB but removed from UI → delete them
     const toDelete = [...originalTemplateIds.current].filter(tid => !survivingIds.has(tid));
 
-    try {
+    const doUpdate = async () => {
       // 1. DELETE removed criteria
       for (const tid of toDelete) {
         await apiClient.delete(`/teacher/evaluation-plans/${tid}`);
       }
-
       // 2. UPDATE existing + CREATE new criteria
       for (const [i, outcome] of flatOutcomes.entries()) {
         const newName = `[${newEvalTitle}|${newSubjectTitle}][${outcome.taskType}] ${outcome.name}`;
@@ -148,24 +147,18 @@ export default function EditEvaluationPage() {
           });
         }
       }
-
-      // 3. Invalidate cache so evaluations list re-fetches immediately
       await queryClient.invalidateQueries({ queryKey: ['evaluation-templates'] });
+    };
 
-      setShowSuccess(true);
-      setTimeout(() => router.push(backUrl), 1200);
-    } catch (err: any) {
-      alert(err.message || 'Failed to update evaluation');
-    }
+    toast.promise(doUpdate(), {
+      loading: 'Updating evaluation…',
+      success: () => { router.push(backUrl); return 'Evaluation updated successfully'; },
+      error: (err: any) => err?.message || 'Failed to update evaluation',
+    });
   };
 
   return (
     <>
-      {showSuccess && (
-        <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-in fade-in slide-in-from-top-2">
-          ✓ Evaluation updated successfully
-        </div>
-      )}
       <AnimatePresence mode="wait">
         <CreateEvaluationTab
           newEvalTitle={newEvalTitle}

@@ -131,8 +131,8 @@ export default function EvaluationsTab({
               filter === f
                 ? f === 'Published' ? "bg-blue-600 text-white border-blue-600"
                   : f === 'Draft' ? "bg-amber-500 text-white border-amber-500"
-                  : f === 'Active' ? "bg-emerald-600 text-white border-emerald-600"
-                  : "bg-foreground text-background border-foreground"
+                    : f === 'Active' ? "bg-emerald-600 text-white border-emerald-600"
+                      : "bg-foreground text-background border-foreground"
                 : "bg-card text-muted-foreground border-border hover:bg-muted"
             )}
           >
