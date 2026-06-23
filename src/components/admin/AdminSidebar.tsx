@@ -13,7 +13,6 @@ const NAV_ITEMS = [
   { label: "Academic Years", href: "/admin/academic-years", icon: Calendar },
   { label: "Exam Plan", href: ROUTES.ADMIN_EXAMS, icon: BookOpen },
   { label: "Teacher Allocation", href: ROUTES.ADMIN_ALLOCATIONS, icon: Grid2X2 },
-  { label: "Result Compilation", href: ROUTES.ADMIN_RESULT_COMPILATION, icon: Sparkles },
 ] as const;
 
 export function AdminSidebar() {

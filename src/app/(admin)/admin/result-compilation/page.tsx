@@ -1,12 +1,6 @@
-"use client";
-
-import ResultCompilationTab from "@/components/admin/ResultCompilationTab";
-import { AnimatePresence } from "motion/react";
+import { redirect } from "next/navigation";
+import { ROUTES } from "@/lib/constants";
 
 export default function AdminResultCompilationPage() {
-  return (
-    <AnimatePresence mode="wait">
-      <ResultCompilationTab />
-    </AnimatePresence>
-  );
+  redirect(ROUTES.ADMIN_EXAMS);
 }
