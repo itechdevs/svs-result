@@ -3,6 +3,7 @@
 import { signOut } from "next-auth/react";
 import { LogOut, Settings, User } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { ROUTES } from "@/lib/constants";
 import { useState } from "react";
 
@@ -60,7 +61,10 @@ export function UserMenu({ user }: UserMenuProps) {
               )}
             </div>
             <button
-              onClick={() => signOut({ callbackUrl: ROUTES.LOGIN })}
+              onClick={async () => {
+                toast.success("Signed out successfully");
+                await signOut({ callbackUrl: ROUTES.LOGIN });
+              }}
               className="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-sm text-destructive hover:bg-accent transition-colors"
             >
               <LogOut className="h-4 w-4" />

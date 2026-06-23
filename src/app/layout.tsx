@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/common/theme-provider";
 import { QueryProvider } from "@/components/common/query-provider";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { Toaster } from "@/components/ui/toaster";
+import { Toaster as SonnerToaster } from "sonner";
 import { APP_NAME, APP_DESCRIPTION } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -90,6 +91,7 @@ export default function RootLayout({
                 <NextTopLoader />
                 {children}
                 <Toaster />
+                <SonnerToaster position="top-right" richColors />
               </TooltipProvider>
             </NuqsAdapter>
           </QueryProvider>

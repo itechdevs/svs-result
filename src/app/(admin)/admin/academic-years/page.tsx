@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 import { Plus, Calendar, Pencil, Trash2, Star } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BSCalendarSelector } from "@/components/ui/bs-calendar-selector";
@@ -73,8 +74,9 @@ export default function AcademicYearsPage() {
       });
       resetForm();
       setCreateOpen(false);
+      toast.success("Academic year created successfully");
     } catch (err: any) {
-      alert(err.message || "Failed to create academic year");
+      toast.error(err.message || "Failed to create academic year");
     }
   };
 
@@ -100,8 +102,9 @@ export default function AcademicYearsPage() {
       resetForm();
       setEditOpen(false);
       setEditingYear(null);
+      toast.success("Academic year updated successfully");
     } catch (err: any) {
-      alert(err.message || "Failed to update academic year");
+      toast.error(err.message || "Failed to update academic year");
     }
   };
 
@@ -111,16 +114,18 @@ export default function AcademicYearsPage() {
         id: year.id,
         data: { isCurrent: true },
       });
+      toast.success(`${year.name} set as current academic year`);
     } catch (err: any) {
-      alert(err.message || "Failed to set current year");
+      toast.error(err.message || "Failed to set current year");
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
       await deleteYear.mutateAsync(id);
+      toast.success("Academic year deleted successfully");
     } catch (err: any) {
-      alert(err.message || "Failed to delete academic year");
+      toast.error(err.message || "Failed to delete academic year");
     }
   };
 
