@@ -278,8 +278,8 @@ export default function ExamResultCompilation({ examId, examName, gradeLevel, ac
       className="space-y-6"
     >
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Result Compilation</h1>
-        <p className="text-sm text-muted-foreground mt-1">Compile student results for {gradeLevel}</p>
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">Result Compilation</h1>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1">Compile student results for {gradeLevel}</p>
       </div>
 
       <div className="bg-card rounded-xl border border-border shadow-sm p-5">
@@ -366,11 +366,11 @@ export default function ExamResultCompilation({ examId, examName, gradeLevel, ac
         {showResults && compiledResults.length > 0 && (
           <motion.div key="compiled-results" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
             className="bg-card rounded-xl border border-border shadow-sm p-5">
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
               <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
                 Compiled Results ({compiledResults.length} students · {totalSubjectsInTemplates.length} subjects)
               </h3>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2">
                 {selectedIds.size > 0 && (
                   <Button onClick={handleBulkDownload} disabled={bulkLoading} variant="outline"
                     className="flex items-center gap-2 border-[#002045] text-[#002045] hover:bg-slate-50 h-9 py-2 text-xs font-semibold cursor-pointer">

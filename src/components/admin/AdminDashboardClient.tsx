@@ -38,8 +38,8 @@ export default function AdminDashboardClient() {
     >
       <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Admin Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-1">Overview of academic performance and results</p>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-foreground">Admin Dashboard</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">Overview of academic performance and results</p>
         </div>
       </div>
 
@@ -133,16 +133,16 @@ export default function AdminDashboardClient() {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
 
         {/* Class-wise Performance */}
-        <div className="lg:col-span-2 bg-card text-card-foreground border border-border rounded-xl shadow-sm p-6">
-          <div className="flex justify-between items-start mb-6">
+        <div className="lg:col-span-2 bg-card text-card-foreground border border-border rounded-xl shadow-sm p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4 sm:mb-6">
             <div>
-              <h2 className="font-bold text-lg text-foreground">Class-wise Performance</h2>
+              <h2 className="font-bold text-base sm:text-lg text-foreground">Class-wise Performance</h2>
               <p className="text-xs text-muted-foreground mt-1">Average GPA Comparison across Departments</p>
             </div>
-            <span className="text-xs font-semibold text-primary bg-primary/10 px-3 py-1.5 rounded-lg border border-primary/20">
+            <span className="text-xs font-semibold text-primary bg-primary/10 px-3 py-1.5 rounded-lg border border-primary/20 self-start sm:self-auto whitespace-nowrap">
               Annual Term 2023-24
             </span>
           </div>
