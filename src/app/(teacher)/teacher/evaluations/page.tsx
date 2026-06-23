@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { useEvaluationTemplates } from "@/hooks/use-evaluations";
+import { useEvaluationTemplates, useStudentEvaluationResults } from "@/hooks/use-evaluations";
 import { useProfile } from "@/hooks/use-profile";
 import { useDeleteEvaluationTemplate } from "@/hooks/use-evaluations";
 import EvaluationsTab from "@/components/teacher/EvaluationsTab";
@@ -19,21 +19,23 @@ export default function TeacherEvaluationsPage() {
 
   const { data: profile } = useProfile();
 
-  // Find the teacher's subject object matching the URL params
-  const matchedSubject = useMemo(() => {
-    if (!hasSubject || !profile?.syncedTeacher?.subjects) return null;
-    return profile.syncedTeacher.subjects.find(
-      (s) => s.name === selectedSubject && s.gradeLevel === selectedClass,
-    );
-  }, [hasSubject, selectedSubject, selectedClass, profile]);
+  const { data: templatesData = [] } = useEvaluationTemplates();
+  
+  const { data: resultsData = [] } = useStudentEvaluationResults({ limit: 5000 });
 
-  // Only fetch templates when a specific subject is selected
-  const { data: templatesData = [] } = useEvaluationTemplates(
-    matchedSubject
-      ? { syncedSubjectId: matchedSubject.id, isActive: true }
-      : {},
-    { enabled: !!matchedSubject },
-  );
+  // Build a map: templateId → highest status in that template
+  const templateStatusMap = useMemo(() => {
+    const map = new Map<string, 'SUBMITTED' | 'DRAFT'>();
+    for (const r of resultsData) {
+      const prev = map.get(r.evaluationTemplateId);
+      if (r.status === 'SUBMITTED' || r.status === 'VERIFIED' || r.status === 'LOCKED') {
+        map.set(r.evaluationTemplateId, 'SUBMITTED');
+      } else if (!prev) {
+        map.set(r.evaluationTemplateId, 'DRAFT');
+      }
+    }
+    return map;
+  }, [resultsData]);
 
   const [selectedEvaluationId, setSelectedEvaluationId] = useState("");
   const [newEvalTitle, setNewEvalTitle] = useState("");
@@ -46,11 +48,15 @@ export default function TeacherEvaluationsPage() {
   );
 
   const evaluations: EvaluationPlan[] = useMemo(() => {
-    if (!profile?.syncedTeacher || !matchedSubject) return [];
+    if (!profile?.syncedTeacher) return [];
 
-    const templates = templatesData.filter((t) =>
+    let templates = templatesData.filter((t) =>
       assignedSubjectIds.has(t.syncedSubjectId),
     );
+
+    if (selectedSubject) {
+      templates = templates.filter(t => (t.syncedSubject?.name ?? '') === selectedSubject);
+    }
 
     // Group by gradeConfigId+syncedSubjectId+evalTitle → one card per distinct evaluation plan
     const groups = new Map<string, typeof templates>();
@@ -76,8 +82,16 @@ export default function TeacherEvaluationsPage() {
       const totalPassMarks = group.reduce((s, t) => s + Number(t.passMarks), 0);
       const anyActive = group.some((t) => t.isActive);
 
-      // Without results fetch, all plans default to Active/Inactive
-      const marksStatus = anyActive ? "Active" : "Inactive";
+      const groupStatuses = group.map(t => templateStatusMap.get(t.id));
+      let marksStatus: string;
+      if (groupStatuses.some(s => s === 'SUBMITTED')) {
+        marksStatus = 'Published';
+      } else if (groupStatuses.some(s => s === 'DRAFT')) {
+        marksStatus = 'Draft';
+      } else {
+        marksStatus = anyActive ? 'Active' : 'Inactive';
+      }
+
       const latestDate = group
         .map((t) => (t.scheduledDate ? new Date(t.scheduledDate) : null))
         .filter(Boolean)
@@ -99,10 +113,10 @@ export default function TeacherEvaluationsPage() {
         passMarks: totalPassMarks,
         date: latestDate
           ? latestDate.toLocaleDateString("en-US", {
-              month: "short",
-              day: "2-digit",
-              year: "numeric",
-            })
+            month: "short",
+            day: "2-digit",
+            year: "numeric",
+          })
           : "TBD",
         unit: unitTitle,
         learningOutcomes: group.map((t) => {
@@ -160,7 +174,7 @@ export default function TeacherEvaluationsPage() {
         templateIds: group.map((t) => t.id),
       } satisfies EvaluationPlan;
     });
-  }, [templatesData, assignedSubjectIds, matchedSubject]);
+  }, [templatesData, assignedSubjectIds, selectedSubject, templateStatusMap]);
 
   const setCurrentTab = (tab: string, extraParams?: Record<string, string>) => {
     const params = new URLSearchParams();
