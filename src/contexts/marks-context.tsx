@@ -146,9 +146,16 @@ export function MarksProvider({ children }: { children: React.ReactNode }) {
               : '',
             supportMark: null,
             supportDate: '',
-            reExamMark: null,
-            reExamDate: '',
-            remarks: r.remarks ?? '',
+            // Populate re-exam data from the reExamResult relation saved via /teacher/re-exam-portal
+            reExamMark:
+              r.reExamResult?.marksObtained !== null &&
+              r.reExamResult?.marksObtained !== undefined
+                ? Number(r.reExamResult.marksObtained)
+                : null,
+            reExamDate: r.reExamResult?.createdAt
+              ? new Date(r.reExamResult.createdAt).toISOString().split('T')[0]
+              : '',
+            remarks: r.reExamResult?.remarks ?? r.remarks ?? '',
           },
         },
       });
