@@ -29,9 +29,11 @@ export function calcObtainedMarks(
     if (!lo.templateId) return sum;
     const mark = getStudentMark(studentId, lo.templateId);
     const m = mark?.outcomeMarks[lo.name];
-    // Support marks replace regular marks when present
+    // Effective mark priority: re-exam > support > regular
     const finalMark =
-      m?.supportMark !== null && m?.supportMark !== undefined
+      m?.reExamMark !== null && m?.reExamMark !== undefined
+        ? m.reExamMark
+        : m?.supportMark !== null && m?.supportMark !== undefined
         ? m.supportMark
         : m?.regularMark;
     return sum + (finalMark ?? 0);
@@ -65,9 +67,11 @@ export function calcPassFail(
     if (!lo.templateId) return false;
     const mark = getStudentMark(studentId, lo.templateId);
     const m = mark?.outcomeMarks[lo.name];
-    // Support marks replace regular marks when determining pass/fail
+    // Effective mark priority: re-exam > support > regular
     const finalMark =
-      m?.supportMark !== null && m?.supportMark !== undefined
+      m?.reExamMark !== null && m?.reExamMark !== undefined
+        ? m.reExamMark
+        : m?.supportMark !== null && m?.supportMark !== undefined
         ? m.supportMark
         : m?.regularMark;
     if (finalMark === null || finalMark === undefined) return false;
@@ -159,7 +163,19 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
     triggerAutoSave();
   };
 
-  const obtained = calcObtainedMarks(student.id, outcomes, getStudentMark);
+  // For display: use effective mark (re-exam > support > regular)
+  const obtained = outcomes.reduce((sum, lo) => {
+    if (!lo.templateId) return sum;
+    const mark = getStudentMark(student.id, lo.templateId);
+    const m = mark?.outcomeMarks[lo.name];
+    const finalMark =
+      m?.reExamMark !== null && m?.reExamMark !== undefined
+        ? m.reExamMark
+        : m?.supportMark !== null && m?.supportMark !== undefined
+        ? m.supportMark
+        : m?.regularMark ?? 0;
+    return sum + finalMark;
+  }, 0);
   const fullTotal = calcFullMarks(outcomes);
   const status = calcPassFail(student.id, outcomes, getStudentMark);
 
@@ -235,6 +251,9 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
               <TableHead className="text-[10px] font-bold text-purple-700 dark:text-purple-400 uppercase tracking-wider text-center border-r border-border bg-purple-500/5" colSpan={2}>
                 Assessment After Support
               </TableHead>
+              <TableHead className="text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider text-center border-r border-border bg-orange-500/5" colSpan={2}>
+                Re-Exam Assessment
+              </TableHead>
               <TableHead className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Remarks</TableHead>
             </TableRow>
             <TableRow className="bg-muted/40 border-t border-border text-[9px] font-semibold text-muted-foreground uppercase">
@@ -245,6 +264,8 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
               <TableHead className="text-center border-r border-border">Marks</TableHead>
               <TableHead className="text-center border-r border-border">Date</TableHead>
               <TableHead className="text-center border-r border-border">Marks</TableHead>
+              <TableHead className="text-center border-r border-border bg-orange-50/30 dark:bg-orange-950/10">Date</TableHead>
+              <TableHead className="text-center border-r border-border bg-orange-50/30 dark:bg-orange-950/10">Marks</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
@@ -255,10 +276,24 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
                 const m = markObj?.outcomeMarks[lo.name];
                 const max = lo.fullMarks ?? 100;
                 const pass = lo.passMarks ?? 0;
+                // Effective mark: re-exam > support > regular
+                const effectiveMark =
+                  m?.reExamMark !== null && m?.reExamMark !== undefined
+                    ? m.reExamMark
+                    : m?.supportMark !== null && m?.supportMark !== undefined
+                    ? m.supportMark
+                    : m?.regularMark ?? null;
                 const regFail =
                   m?.regularMark !== null &&
                   m?.regularMark !== undefined &&
                   m.regularMark < pass;
+                // Outcome fails based on effective mark
+                const effectiveFail =
+                  effectiveMark !== null &&
+                  effectiveMark !== undefined &&
+                  effectiveMark < pass;
+                const hasReExam =
+                  m?.reExamMark !== null && m?.reExamMark !== undefined;
                 const rowSn = groupIdx + 1;
 
                 return (
@@ -266,7 +301,7 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
                     key={lo.name}
                     className={cn(
                       'hover:bg-muted/20 transition-colors',
-                      regFail && 'bg-red-50/30 dark:bg-red-950/10'
+                      effectiveFail && 'bg-red-50/30 dark:bg-red-950/10'
                     )}
                   >
                     {idx === 0 && (
@@ -289,7 +324,7 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
                     {/* Sub-outcome label */}
                     <TableCell className="border-r border-border whitespace-normal max-w-xs">
                       <div className="flex items-start gap-2">
-                        {regFail && (
+                        {effectiveFail && (
                           <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
                         )}
                         <div>
@@ -297,9 +332,19 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
                           <p className="text-[9px] text-muted-foreground mt-1 font-mono">
                             Full: {max} · Pass: {pass}
                           </p>
-                          {regFail && (
+                          {regFail && !hasReExam && (
                             <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-red-700 dark:text-red-400 bg-red-100 dark:bg-red-950/40 px-1.5 py-0.5 rounded-full mt-1">
                               Failed
+                            </span>
+                          )}
+                          {hasReExam && (
+                            <span className={cn(
+                              'inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full mt-1',
+                              effectiveFail
+                                ? 'text-red-700 dark:text-red-400 bg-red-100 dark:bg-red-950/40'
+                                : 'text-orange-700 dark:text-orange-400 bg-orange-100 dark:bg-orange-950/40'
+                            )}>
+                              Re-Exam{effectiveFail ? ' Failed' : ' Passed'}
                             </span>
                           )}
                         </div>
@@ -351,7 +396,7 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
 
                     {/* Support: Date */}
                     <TableCell className="text-center border-r border-border">
-                      {regFail ? (
+                      {regFail && !hasReExam ? (
                         <Input
                           type="date"
                           value={m?.supportDate ?? ''}
@@ -365,7 +410,7 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
 
                     {/* Support: Marks */}
                     <TableCell className="text-center border-r border-border">
-                      {regFail ? (
+                      {regFail && !hasReExam ? (
                         <Input
                           type="number"
                           min={0}
@@ -378,6 +423,44 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
                         />
                       ) : (
                         <span className="text-muted-foreground/30">—</span>
+                      )}
+                    </TableCell>
+
+                    {/* Re-Exam: Date (read-only) */}
+                    <TableCell className="text-center border-r border-border bg-orange-50/20 dark:bg-orange-950/5">
+                      {hasReExam && m?.reExamDate ? (
+                        <div className="flex items-center justify-center gap-1 bg-orange-50 dark:bg-orange-950/30 py-1 px-2 rounded-md border border-orange-200 dark:border-orange-900/50 w-fit mx-auto">
+                          <Calendar className="w-3 h-3 text-orange-500 shrink-0" />
+                          <span className="text-[10px] font-semibold text-orange-600 dark:text-orange-400">
+                            {new Date(
+                              Number(m.reExamDate.split('-')[0]),
+                              Number(m.reExamDate.split('-')[1]) - 1,
+                              Number(m.reExamDate.split('-')[2])
+                            ).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: '2-digit',
+                              year: 'numeric',
+                            })}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground/30">—</span>
+                      )}
+                    </TableCell>
+
+                    {/* Re-Exam: Marks (read-only badge) */}
+                    <TableCell className="text-center border-r border-border bg-orange-50/20 dark:bg-orange-950/5">
+                      {hasReExam ? (
+                        <span className={cn(
+                          'inline-flex items-center justify-center w-14 px-2 py-1 rounded text-sm font-bold font-mono border',
+                          !effectiveFail
+                            ? 'bg-emerald-100 dark:bg-emerald-950/40 border-emerald-400 dark:border-emerald-700 text-emerald-900 dark:text-emerald-300'
+                            : 'bg-red-100 dark:bg-red-950/40 border-red-400 dark:border-red-700 text-red-900 dark:text-red-300'
+                        )}>
+                          {m!.reExamMark}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground/30">—</span>
                       )}
                     </TableCell>
 
