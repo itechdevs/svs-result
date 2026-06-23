@@ -2,36 +2,36 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { useEvaluationTemplates, useStudentEvaluationResults } from "@/hooks/use-evaluations";
+import { useEvaluationTemplates } from "@/hooks/use-evaluations";
 import { useProfile } from "@/hooks/use-profile";
 import { useDeleteEvaluationTemplate } from "@/hooks/use-evaluations";
 import EvaluationsTab from "@/components/teacher/EvaluationsTab";
-import { AnimatePresence } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { EvaluationPlan } from "@/types/academic";
+import { BookOpen } from "lucide-react";
 
 export default function TeacherEvaluationsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedClass = searchParams.get("class") ?? "";
   const selectedSubject = searchParams.get("subject") ?? "";
+  const hasSubject = !!(selectedClass && selectedSubject);
 
-  const { data: templatesData = [] } = useEvaluationTemplates();
   const { data: profile } = useProfile();
-  const { data: resultsData = [] } = useStudentEvaluationResults({ limit: 5000 });
 
-  // Build a map: templateId → highest status in that template
-  const templateStatusMap = useMemo(() => {
-    const map = new Map<string, 'SUBMITTED' | 'DRAFT'>();
-    for (const r of resultsData) {
-      const prev = map.get(r.evaluationTemplateId);
-      if (r.status === 'SUBMITTED' || r.status === 'VERIFIED' || r.status === 'LOCKED') {
-        map.set(r.evaluationTemplateId, 'SUBMITTED');
-      } else if (!prev) {
-        map.set(r.evaluationTemplateId, 'DRAFT');
-      }
-    }
-    return map;
-  }, [resultsData]);
+  // Find the teacher's subject object matching the URL params
+  const matchedSubject = useMemo(() => {
+    if (!hasSubject || !profile?.syncedTeacher?.subjects) return null;
+    return profile.syncedTeacher.subjects.find(
+      (s) => s.name === selectedSubject && s.gradeLevel === selectedClass,
+    );
+  }, [hasSubject, selectedSubject, selectedClass, profile]);
+
+  // Only fetch templates when a specific subject is selected
+  const { data: templatesData = [] } = useEvaluationTemplates(
+    matchedSubject ? { syncedSubjectId: matchedSubject.id, isActive: true } : {},
+    { enabled: !!matchedSubject },
+  );
 
   const [selectedEvaluationId, setSelectedEvaluationId] = useState('');
   const [newEvalTitle, setNewEvalTitle] = useState('');
@@ -44,21 +44,15 @@ export default function TeacherEvaluationsPage() {
   );
 
   const evaluations: EvaluationPlan[] = useMemo(() => {
-    if (!profile?.syncedTeacher) return [];
+    if (!profile?.syncedTeacher || !matchedSubject) return [];
 
-    let templates = templatesData.filter(t => assignedSubjectIds.has(t.syncedSubjectId));
-
-    if (selectedSubject) {
-      templates = templates.filter(t => (t.syncedSubject?.name ?? '') === selectedSubject);
-    }
+    const templates = templatesData.filter(t => assignedSubjectIds.has(t.syncedSubjectId));
 
     // Group by gradeConfigId+syncedSubjectId+evalTitle → one card per distinct evaluation plan
     const groups = new Map<string, typeof templates>();
     for (const t of templates) {
-      // Name format: [EvalTitle|UnitTitle][TaskType] OutcomeName  OR legacy: [EvalTitle][TaskType] or [TaskType]
       const evalTitleMatch = t.name.match(/^\[([^\]]+)\]\[/);
       const rawEvalPart = evalTitleMatch ? evalTitleMatch[1] : '__legacy__';
-      // Strip unit title from key so same eval title+unit = same card
       const evalTitle = rawEvalPart.split('|')[0];
       const key = `${t.gradeConfigId}::${t.syncedSubjectId}::${evalTitle}`;
       if (!groups.has(key)) groups.set(key, []);
@@ -70,7 +64,6 @@ export default function TeacherEvaluationsPage() {
       const subjectName = first.syncedSubject?.name ?? 'Unknown';
       const gradeLevel = first.syncedSubject?.gradeLevel ?? first.gradeConfig?.gradeLevel ?? '';
       const academicYear = first.gradeConfig?.academicYear?.name ?? '';
-      // Parse [EvalTitle|UnitTitle] from first template's name
       const evalTitleMatch = first.name.match(/^\[([^\]]+)\]\[/);
       const rawEvalPart = evalTitleMatch ? evalTitleMatch[1] : '';
       const [evalTitle, unitTitle = ''] = rawEvalPart.split('|');
@@ -78,17 +71,8 @@ export default function TeacherEvaluationsPage() {
       const totalPassMarks = group.reduce((s, t) => s + Number(t.passMarks), 0);
       const anyActive = group.some(t => t.isActive);
 
-      // Derive marks status: if any template in the group has been submitted → Published
-      // if any has been drafted → Draft, else fall back to Active/Inactive
-      const groupStatuses = group.map(t => templateStatusMap.get(t.id));
-      let marksStatus: string;
-      if (groupStatuses.some(s => s === 'SUBMITTED')) {
-        marksStatus = 'Published';
-      } else if (groupStatuses.some(s => s === 'DRAFT')) {
-        marksStatus = 'Draft';
-      } else {
-        marksStatus = anyActive ? 'Active' : 'Inactive';
-      }
+      // Without results fetch, all plans default to Active/Inactive
+      const marksStatus = anyActive ? 'Active' : 'Inactive';
       const latestDate = group
         .map(t => t.scheduledDate ? new Date(t.scheduledDate) : null)
         .filter(Boolean)
@@ -147,7 +131,7 @@ export default function TeacherEvaluationsPage() {
         templateIds: group.map(t => t.id),
       } satisfies EvaluationPlan;
     });
-  }, [templatesData, assignedSubjectIds, selectedSubject, templateStatusMap]);
+  }, [templatesData, assignedSubjectIds, matchedSubject]);
 
   const setCurrentTab = (tab: string, extraParams?: Record<string, string>) => {
     const params = new URLSearchParams();
@@ -165,21 +149,40 @@ export default function TeacherEvaluationsPage() {
 
   return (
     <AnimatePresence mode="wait">
-      <EvaluationsTab
-        evaluations={evaluations}
-        setSelectedEvaluationId={setSelectedEvaluationId}
-        setCurrentTab={setCurrentTab as any}
-        setNewEvalTitle={setNewEvalTitle}
-        setNewEvalSubject={setNewEvalSubject}
-        newEvalSubject={newEvalSubject}
-        selectedClass={selectedClass}
-        selectedSubject={selectedSubject}
-        onDelete={async (id) => {
-          const plan = evaluations.find(e => e.id === id);
-          const ids = plan?.templateIds ?? [id];
-          for (const tid of ids) await deleteTemplate.mutateAsync(tid);
-        }}
-      />
+      {!hasSubject ? (
+        <motion.div
+          key="select-subject"
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -15 }}
+          className="bg-card rounded-xl border border-border shadow-sm p-12 text-center"
+        >
+          <BookOpen className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+          <h2 className="text-lg font-bold text-foreground mb-2">
+            Select a Subject
+          </h2>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            Choose a class and subject from the sidebar to view and manage
+            evaluation plans.
+          </p>
+        </motion.div>
+      ) : (
+        <EvaluationsTab
+          evaluations={evaluations}
+          setSelectedEvaluationId={setSelectedEvaluationId}
+          setCurrentTab={setCurrentTab as any}
+          setNewEvalTitle={setNewEvalTitle}
+          setNewEvalSubject={setNewEvalSubject}
+          newEvalSubject={newEvalSubject}
+          selectedClass={selectedClass}
+          selectedSubject={selectedSubject}
+          onDelete={async (id) => {
+            const plan = evaluations.find(e => e.id === id);
+            const ids = plan?.templateIds ?? [id];
+            for (const tid of ids) await deleteTemplate.mutateAsync(tid);
+          }}
+        />
+      )}
     </AnimatePresence>
   );
 }

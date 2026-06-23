@@ -124,7 +124,7 @@ export interface BulkSaveResultsInput {
 
 // ─── Evaluation Template Hooks ────────────────────────────────────────────────
 
-export function useEvaluationTemplates(filters: ListTemplatesFilters = {}) {
+export function useEvaluationTemplates(filters: ListTemplatesFilters = {}, options?: { enabled?: boolean }) {
   return useQuery<EvaluationTemplate[]>({
     queryKey: ["evaluation-templates", filters],
     queryFn: async () => {
@@ -136,6 +136,7 @@ export function useEvaluationTemplates(filters: ListTemplatesFilters = {}) {
       if (filters.isActive !== undefined) params.set("isActive", String(filters.isActive));
       return apiClient.get(`/admin/evaluation-templates?${params.toString()}`);
     },
+    enabled: options?.enabled,
   });
 }
 
@@ -188,7 +189,7 @@ export function useDeleteEvaluationTemplate() {
 
 // ─── Evaluation Results Hooks ──────────────────────────────────────────────────
 
-export function useStudentEvaluationResults(filters: ListResultsFilters = {}) {
+export function useStudentEvaluationResults(filters: ListResultsFilters = {}, options?: { enabled?: boolean }) {
   return useQuery<StudentEvaluationResult[]>({
     queryKey: ["student-evaluation-results", filters],
     queryFn: async () => {
@@ -200,6 +201,7 @@ export function useStudentEvaluationResults(filters: ListResultsFilters = {}) {
       if (filters.limit) params.set("limit", String(filters.limit));
       return apiClient.get(`/evaluations?${params.toString()}`);
     },
+    enabled: options?.enabled,
   });
 }
 
