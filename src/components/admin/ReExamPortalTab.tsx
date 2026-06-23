@@ -16,6 +16,7 @@ import { useStudentEvaluationResults } from "@/hooks/use-evaluations";
 import { useStudents } from "@/hooks/use-students";
 import { useProfile } from "@/hooks/use-profile";
 import { useSubjects } from "@/hooks/use-subjects";
+import { useReExamSchedules } from "@/hooks/use-re-exams";
 import { SyncedStudent } from "@/hooks/use-students";
 import SanskarLoader from "@/components/shared/SanskarLoader";
 import {
@@ -45,6 +46,7 @@ export default function ReExamPortalTab() {
   const { data: resultsData = [], isLoading: resultsLoading } =
     useStudentEvaluationResults({ limit: 2000 });
   const { data: subjectsData = [], isLoading: subjectsLoading } = useSubjects();
+  const { data: scheduledReExams = [] } = useReExamSchedules("SCHEDULED");
 
   const [selectedClass, setSelectedClass] = useState("_all");
   const [selectedSubject, setSelectedSubject] = useState("_all");
@@ -272,7 +274,7 @@ export default function ReExamPortalTab() {
               Scheduled
             </p>
             <h4 className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">
-              0 Scheduled
+              {scheduledReExams.length} Scheduled
             </h4>
           </div>
         </div>
