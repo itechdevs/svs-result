@@ -24,29 +24,25 @@ export default function TeacherEvaluationsPage() {
 
   const { data: profile, isLoading: isProfileLoading } = useProfile();
 
-  const { data: templatesData = [] } = useEvaluationTemplates();
+  // Find the teacher's subject object matching the URL params
+  const matchedSubject = useMemo(() => {
+    if (!hasSubject || !profile?.syncedTeacher?.subjects) return null;
+    return profile.syncedTeacher.subjects.find(
+      (s) => s.name === selectedSubject && s.gradeLevel === selectedClass,
+    );
+  }, [hasSubject, selectedSubject, selectedClass, profile]);
 
-  const { data: resultsData = [] } = useStudentEvaluationResults({
-    limit: 5000,
-  });
+  // Only fetch templates when a specific subject is selected
+  const { data: templatesData = [], isLoading: isTemplatesLoading } =
+    useEvaluationTemplates(
+      matchedSubject
+        ? { syncedSubjectId: matchedSubject.id, isActive: true }
+        : {},
+      { enabled: !!matchedSubject },
+    );
 
-  // Build a map: templateId → highest status in that template
-  const templateStatusMap = useMemo(() => {
-    const map = new Map<string, "SUBMITTED" | "DRAFT">();
-    for (const r of resultsData) {
-      const prev = map.get(r.evaluationTemplateId);
-      if (
-        r.status === "SUBMITTED" ||
-        r.status === "VERIFIED" ||
-        r.status === "LOCKED"
-      ) {
-        map.set(r.evaluationTemplateId, "SUBMITTED");
-      } else if (!prev) {
-        map.set(r.evaluationTemplateId, "DRAFT");
-      }
-    }
-    return map;
-  }, [resultsData]);
+  const isLoading =
+    isProfileLoading || (!!matchedSubject && isTemplatesLoading);
 
   const [selectedEvaluationId, setSelectedEvaluationId] = useState("");
   const [newEvalTitle, setNewEvalTitle] = useState("");
