@@ -139,10 +139,10 @@ export default function AcademicYearsPage() {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6"
     >
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Academic Years</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-foreground">Academic Years</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Manage academic year periods
           </p>
         </div>
@@ -169,7 +169,7 @@ export default function AcademicYearsPage() {
                   className="w-full text-sm"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
                     Start Date
@@ -206,7 +206,7 @@ export default function AcademicYearsPage() {
         </Dialog>
       </div>
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-card border border-border rounded-xl shadow-sm overflow-x-auto w-full">
         {years && years.length > 0 ? (
           <Table>
             <TableHeader>
@@ -341,7 +341,7 @@ export default function AcademicYearsPage() {
                 className="w-full text-sm"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
                   Start Date

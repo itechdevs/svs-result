@@ -41,22 +41,22 @@ export default function TeacherEvaluationsViewTab({ teacher, evaluations, onView
           <ArrowLeft className="w-4 h-4 text-[#002045] dark:text-blue-300" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-[#002045] dark:text-white">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">
             {teacher.teacher}'s Evaluation Boards
           </h1>
-          <p className="text-xs text-slate-500 mt-1">{teacher.title} · View Only</p>
+          <p className="text-xs text-muted-foreground mt-1">{teacher.title} · View Only</p>
         </div>
       </div>
 
       {/* Teacher Info Card */}
-      <div className="bg-white dark:bg-card border border-slate-200 dark:border-border rounded-xl p-5 shadow-sm">
+      <div className="bg-card text-card-foreground border border-border rounded-xl p-5 shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-slate-200 dark:border-border">
+          <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-border">
             <img src={teacher.avatar} alt={teacher.teacher} className="w-full h-full object-cover" />
           </div>
           <div className="flex-1">
-            <h3 className="font-bold text-sm text-[#002045] dark:text-white">{teacher.teacher}</h3>
-            <p className="text-xs text-slate-500 mt-0.5">{teacher.title}</p>
+            <h3 className="font-bold text-sm text-foreground">{teacher.teacher}</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">{teacher.title}</p>
             <div className="flex flex-wrap gap-2 mt-2">
               <div className="flex items-center gap-1 text-[10px] text-slate-600 dark:text-slate-400">
                 <BookOpen className="w-3 h-3" />
@@ -72,8 +72,8 @@ export default function TeacherEvaluationsViewTab({ teacher, evaluations, onView
       </div>
 
       {/* Filters */}
-      <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-border shadow-sm p-5">
-        <h3 className="text-xs font-bold text-[#002045] dark:text-white uppercase tracking-wider mb-3">Filter Evaluations</h3>
+      <div className="bg-card rounded-xl border border-border shadow-sm p-5 text-card-foreground">
+        <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-3">Filter Evaluations</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Filter by Class</label>
@@ -103,9 +103,9 @@ export default function TeacherEvaluationsViewTab({ teacher, evaluations, onView
       </div>
 
       {/* Evaluations Table */}
-      <div className="bg-white dark:bg-card border border-slate-200 dark:border-border rounded-xl shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-200 dark:border-border bg-slate-50 dark:bg-slate-900/50">
-          <h3 className="text-xs font-bold text-[#002045] dark:text-white uppercase tracking-wider">
+      <div className="bg-card border border-border text-card-foreground rounded-xl shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-border bg-muted/40">
+          <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
             Evaluation Boards ({filteredEvaluations.length})
           </h3>
         </div>

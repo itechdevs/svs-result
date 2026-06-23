@@ -57,6 +57,7 @@ import SanskarLoader from "@/components/shared/SanskarLoader";
 import { ROUTES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import ExamResultCompilation from "@/components/admin/ExamResultCompilation";
+import { toast } from "sonner";
 
 interface Props {
   examId: string;
@@ -148,8 +149,9 @@ export default function ExamDetailClient({ examId }: Props) {
         },
       });
       setEditOpen(false);
+      toast.success("Exam updated successfully");
     } catch (err: any) {
-      alert(err.message || "Failed to update exam");
+      toast.error(err.message || "Failed to update exam");
     }
   };
 
@@ -157,9 +159,10 @@ export default function ExamDetailClient({ examId }: Props) {
     if (!exam) return;
     try {
       await deleteExam.mutateAsync(exam.id);
+      toast.success("Exam deleted successfully");
       router.push(ROUTES.ADMIN_EXAMS);
     } catch (err: any) {
-      alert(err.message || "Failed to delete exam");
+      toast.error(err.message || "Failed to delete exam");
     }
   };
 
@@ -200,34 +203,33 @@ export default function ExamDetailClient({ examId }: Props) {
           Back to Exams
         </Link>
 
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="space-y-1.5 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
                 {exam.name}
               </h1>
               <span
-                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                  exam.isActive
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${exam.isActive
                     ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
                     : "bg-muted text-muted-foreground"
-                }`}
+                  }`}
               >
                 {exam.isActive ? (
                   <CheckCircle2 className="w-3 h-3" />
-      ) : (
-        <ExamResultCompilation
-          examId={examId}
-          examName={exam.name}
-          gradeLevel={exam.gradeLevel}
-          academicYearId={exam.academicYearId}
-          linkedTemplates={linkedTemplates}
-        />
-      )}
+                ) : (
+                  <ExamResultCompilation
+                    examId={examId}
+                    examName={exam.name}
+                    gradeLevel={exam.gradeLevel}
+                    academicYearId={exam.academicYearId}
+                    linkedTemplates={linkedTemplates}
+                  />
+                )}
                 {exam.isActive ? "Active" : "Inactive"}
               </span>
             </div>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1.5">
                 <BookOpen className="w-3.5 h-3.5" />
                 {exam.gradeLevel}
@@ -304,113 +306,189 @@ export default function ExamDetailClient({ examId }: Props) {
 
       {/* ─── Tab Content ─── */}
       {activeTab === 'overview' && (
-      <>
-      {/* ─── Summary Stats ─── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard
-          label="Subjects"
-          value={String(allGradeSubjects.length)}
-          sub="For this grade level"
-          icon={<BookOpen className="w-4 h-4" />}
-          colorClass="text-violet-600 bg-violet-100 dark:text-violet-400 dark:bg-violet-900/30"
-        />
-        <StatCard
-          label="Evaluations"
-          value={String(linkedTemplates.length)}
-          sub="Templates linked"
-          icon={<FileText className="w-4 h-4" />}
-          colorClass="text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30"
-        />
-        <StatCard
-          label="Weightage"
-          value={`${totalWeightage}%`}
-          sub="Total allocated"
-          icon={<CheckCircle2 className="w-4 h-4" />}
-          colorClass="text-emerald-600 bg-emerald-100 dark:text-emerald-400 dark:bg-emerald-900/30"
-        />
-        <StatCard
-          label="Days Left"
-          value={
-            daysRemaining !== null
-              ? daysRemaining > 0
-                ? String(daysRemaining)
-                : "Ended"
-              : "—"
-          }
-          sub={
-            daysRemaining !== null
-              ? daysRemaining > 0
-                ? "Until end date"
-                : "Exam period ended"
-              : "No end date set"
-          }
-          icon={<Clock className="w-4 h-4" />}
-          colorClass={
-            daysRemaining !== null && daysRemaining <= 7
-              ? "text-amber-600 bg-amber-100 dark:text-amber-400 dark:bg-amber-900/30"
-              : "text-slate-600 bg-slate-100 dark:text-slate-400 dark:bg-slate-800/30"
-          }
-        />
-      </div>
+        <>
+          {/* ─── Summary Stats ─── */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <StatCard
+              label="Subjects"
+              value={String(allGradeSubjects.length)}
+              sub="For this grade level"
+              icon={<BookOpen className="w-4 h-4" />}
+              colorClass="text-violet-600 bg-violet-100 dark:text-violet-400 dark:bg-violet-900/30"
+            />
+            <StatCard
+              label="Evaluations"
+              value={String(linkedTemplates.length)}
+              sub="Templates linked"
+              icon={<FileText className="w-4 h-4" />}
+              colorClass="text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30"
+            />
+            <StatCard
+              label="Weightage"
+              value={`${totalWeightage}%`}
+              sub="Total allocated"
+              icon={<CheckCircle2 className="w-4 h-4" />}
+              colorClass="text-emerald-600 bg-emerald-100 dark:text-emerald-400 dark:bg-emerald-900/30"
+            />
+            <StatCard
+              label="Days Left"
+              value={
+                daysRemaining !== null
+                  ? daysRemaining > 0
+                    ? String(daysRemaining)
+                    : "Ended"
+                  : "—"
+              }
+              sub={
+                daysRemaining !== null
+                  ? daysRemaining > 0
+                    ? "Until end date"
+                    : "Exam period ended"
+                  : "No end date set"
+              }
+              icon={<Clock className="w-4 h-4" />}
+              colorClass={
+                daysRemaining !== null && daysRemaining <= 7
+                  ? "text-amber-600 bg-amber-100 dark:text-amber-400 dark:bg-amber-900/30"
+                  : "text-slate-600 bg-slate-100 dark:text-slate-400 dark:bg-slate-800/30"
+              }
+            />
+          </div>
 
-      {/* ─── Subjects Table ─── */}
-      <div className="bg-card rounded-xl border border-border shadow-sm">
-        <div className="px-5 py-4 border-b border-border">
-          <h2 className="text-sm font-bold text-foreground">
-            Exam Subjects
-          </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {examSubjects.length} subject(s) — teachers create
-            evaluations for these subjects
-          </p>
-        </div>
+          {/* ─── Subjects Table ─── */}
+          <div className="bg-card rounded-xl border border-border shadow-sm">
+            <div className="px-5 py-4 border-b border-border">
+              <h2 className="text-sm font-bold text-foreground">
+                Exam Subjects
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {examSubjects.length} subject(s) — teachers create
+                evaluations for these subjects
+              </p>
+            </div>
 
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Subject</TableHead>
-                <TableHead className="text-center">Evaluations</TableHead>
-                <TableHead className="text-center">Weightage</TableHead>
-                <TableHead>Evaluations Breakdown</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {examSubjects.map((subject) => (
-                <TableRow key={subject.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-primary" />
-                      <div>
-                        <span className="text-sm font-medium text-foreground">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Subject</TableHead>
+                    <TableHead className="text-center">Evaluations</TableHead>
+                    <TableHead className="text-center">Weightage</TableHead>
+                    <TableHead>Evaluations Breakdown</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {examSubjects.map((subject) => (
+                    <TableRow key={subject.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-primary" />
+                          <div>
+                            <span className="text-sm font-medium text-foreground">
+                              {subject.name}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground ml-1.5">
+                              {subject.code}
+                            </span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-xs font-bold text-primary">
+                          {subject.templates.length}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span
+                          className={`inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-bold ${subject.totalWeightage >= 100
+                              ? "bg-emerald-100 text-emerald-700"
+                              : subject.totalWeightage >= 80
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-primary/10 text-primary"
+                            }`}
+                        >
+                          {subject.totalWeightage}%
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {subject.templates.map((t) => (
+                            <span
+                              key={t.id}
+                              className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-full"
+                            >
+                              {t.name}
+                              <span className="text-foreground/60">
+                                {Number(t.weightage)}%
+                              </span>
+                            </span>
+                          ))}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          {/* ─── Weightage Per Subject ─── */}
+          <div className="bg-card rounded-xl border border-border shadow-sm">
+            <div className="px-5 py-4 border-b border-border">
+              <h2 className="text-sm font-bold text-foreground">
+                Subject Weightage Breakdown
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Each subject's evaluations must sum to 100% weightage
+              </p>
+            </div>
+            <div className="p-5 space-y-4">
+              {examSubjects.map((subject) => {
+                const pct = subject.totalWeightage;
+                const remaining = 100 - pct;
+                const barColor =
+                  pct >= 100
+                    ? "bg-emerald-500"
+                    : pct >= 80
+                      ? "bg-amber-500"
+                      : "bg-primary";
+                return (
+                  <div
+                    key={subject.id}
+                    className="border border-border rounded-lg p-4 space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-bold text-foreground">
                           {subject.name}
                         </span>
-                        <span className="text-[10px] text-muted-foreground ml-1.5">
+                        <span className="text-[10px] font-semibold text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                           {subject.code}
                         </span>
                       </div>
+                      <div className="flex items-center gap-3 text-xs">
+                        <span className="font-semibold text-foreground">
+                          {pct}% allocated
+                        </span>
+                        <span
+                          className={
+                            remaining === 0
+                              ? "text-emerald-600 font-semibold"
+                              : "text-muted-foreground"
+                          }
+                        >
+                          {remaining}% remaining
+                        </span>
+                      </div>
                     </div>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-xs font-bold text-primary">
-                      {subject.templates.length}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <span
-                      className={`inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        subject.totalWeightage >= 100
-                          ? "bg-emerald-100 text-emerald-700"
-                          : subject.totalWeightage >= 80
-                            ? "bg-amber-100 text-amber-700"
-                            : "bg-primary/10 text-primary"
-                      }`}
-                    >
-                      {subject.totalWeightage}%
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
+                    <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+                        style={{ width: `${Math.min(pct, 100)}%` }}
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
                       {subject.templates.map((t) => (
                         <span
                           key={t.id}
@@ -423,88 +501,11 @@ export default function ExamDetailClient({ examId }: Props) {
                         </span>
                       ))}
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-
-      {/* ─── Weightage Per Subject ─── */}
-        <div className="bg-card rounded-xl border border-border shadow-sm">
-          <div className="px-5 py-4 border-b border-border">
-            <h2 className="text-sm font-bold text-foreground">
-              Subject Weightage Breakdown
-            </h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Each subject's evaluations must sum to 100% weightage
-            </p>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          <div className="p-5 space-y-4">
-            {examSubjects.map((subject) => {
-              const pct = subject.totalWeightage;
-              const remaining = 100 - pct;
-              const barColor =
-                pct >= 100
-                  ? "bg-emerald-500"
-                  : pct >= 80
-                    ? "bg-amber-500"
-                    : "bg-primary";
-              return (
-                <div
-                  key={subject.id}
-                  className="border border-border rounded-lg p-4 space-y-2"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <BookOpen className="w-4 h-4 text-primary" />
-                      <span className="text-sm font-bold text-foreground">
-                        {subject.name}
-                      </span>
-                      <span className="text-[10px] font-semibold text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                        {subject.code}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 text-xs">
-                      <span className="font-semibold text-foreground">
-                        {pct}% allocated
-                      </span>
-                      <span
-                        className={
-                          remaining === 0
-                            ? "text-emerald-600 font-semibold"
-                            : "text-muted-foreground"
-                        }
-                      >
-                        {remaining}% remaining
-                      </span>
-                    </div>
-                  </div>
-                  <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${barColor}`}
-                      style={{ width: `${Math.min(pct, 100)}%` }}
-                    />
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {subject.templates.map((t) => (
-                      <span
-                        key={t.id}
-                        className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-full"
-                      >
-                        {t.name}
-                        <span className="text-foreground/60">
-                          {Number(t.weightage)}%
-                        </span>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
         </>
       )}
       {activeTab === 'compilation' && (
@@ -550,7 +551,7 @@ export default function ExamDetailClient({ examId }: Props) {
               <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
                 Academic Year
               </label>
-              <Select value={academicYearId} onValueChange={() => {}} disabled>
+              <Select value={academicYearId} onValueChange={() => { }} disabled>
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -567,7 +568,7 @@ export default function ExamDetailClient({ examId }: Props) {
               <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
                 Grade Level
               </label>
-              <Select value={gradeLevel} onValueChange={() => {}} disabled>
+              <Select value={gradeLevel} onValueChange={() => { }} disabled>
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -580,7 +581,7 @@ export default function ExamDetailClient({ examId }: Props) {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
                   Start Date

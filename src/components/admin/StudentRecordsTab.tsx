@@ -44,15 +44,15 @@ export default function StudentRecordsTab({
       exit={{ opacity: 0, y: -15 }}
       className="space-y-6"
     >
-      <div className="flex justify-between items-end">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Student Academic Archives</h1>
-          <p className="text-sm text-muted-foreground mt-1">Query and print detailed semester marks sheets and GPA transcript records.</p>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">Student Academic Archives</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">Query and print detailed semester marks sheets and GPA transcript records.</p>
         </div>
         {isAdmin && (
           <button 
             onClick={() => setCurrentTab('result-compilation')}
-            className={cn(buttonVariants({ variant: 'default' }), "h-10 text-xs px-5 shadow-sm")}
+            className={cn(buttonVariants({ variant: 'default' }), "h-10 text-xs px-5 shadow-sm shrink-0")}
           >
             Results Center
           </button>
@@ -150,7 +150,7 @@ export default function StudentRecordsTab({
           <div className="space-y-4 pt-2">
             <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">Subject Performance Matrix</h3>
             
-            <div className="overflow-hidden border border-border rounded-xl">
+            <div className="overflow-x-auto w-full border border-border rounded-xl">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/40 text-muted-foreground font-bold text-[10px] uppercase border-b border-border">

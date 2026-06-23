@@ -306,13 +306,13 @@ export default function ResultCompilationTab() {
       className="space-y-6"
     >
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Result Compilation</h1>
-        <p className="text-sm text-muted-foreground mt-1">Select filters and compile student results</p>
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">Result Compilation</h1>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1">Select filters and compile student results</p>
       </div>
 
       {/* Filters */}
-      <div className="bg-card text-card-foreground rounded-xl border border-border shadow-sm p-5">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+      <div className="bg-card text-card-foreground rounded-xl border border-border shadow-sm p-4 sm:p-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
           <div>
             <label className="text-xs text-muted-foreground mb-2 block">Academic Year</label>
             <Select value={selectedAcademicYear} onValueChange={setSelectedAcademicYear}>
@@ -443,11 +443,11 @@ export default function ResultCompilationTab() {
         {showResults && compiledResults.length > 0 && (
           <motion.div key="compiled-results" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
             className="bg-card text-card-foreground rounded-xl border border-border shadow-sm p-5">
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
               <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
                 Compiled Results ({compiledResults.length} students · {totalSubjectsInTemplates.length} subjects)
               </h3>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2">
                 {selectedIds.size > 0 && (
                   <Button onClick={handleBulkDownload} disabled={bulkLoading} variant="outline"
                     className="flex items-center gap-2 border-[#002045] text-[#002045] hover:bg-slate-50 h-9 py-2 text-xs font-semibold cursor-pointer">
