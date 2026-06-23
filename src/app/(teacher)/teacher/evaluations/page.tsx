@@ -2,13 +2,18 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { useEvaluationTemplates, useStudentEvaluationResults } from "@/hooks/use-evaluations";
+import {
+  useEvaluationTemplates,
+  useStudentEvaluationResults,
+} from "@/hooks/use-evaluations";
 import { useProfile } from "@/hooks/use-profile";
 import { useDeleteEvaluationTemplate } from "@/hooks/use-evaluations";
 import EvaluationsTab from "@/components/teacher/EvaluationsTab";
 import { AnimatePresence, motion } from "motion/react";
 import { EvaluationPlan } from "@/types/academic";
 import { BookOpen } from "lucide-react";
+
+import SanskarLoader from "@/components/shared/SanskarLoader";
 
 export default function TeacherEvaluationsPage() {
   const router = useRouter();
@@ -17,25 +22,27 @@ export default function TeacherEvaluationsPage() {
   const selectedSubject = searchParams.get("subject") ?? "";
   const hasSubject = !!(selectedClass && selectedSubject);
 
-  const { data: profile } = useProfile();
+  const { data: profile, isLoading: isProfileLoading } = useProfile();
 
-  const { data: templatesData = [] } = useEvaluationTemplates();
-  
-  const { data: resultsData = [] } = useStudentEvaluationResults({ limit: 5000 });
+  // Find the teacher's subject object matching the URL params
+  const matchedSubject = useMemo(() => {
+    if (!hasSubject || !profile?.syncedTeacher?.subjects) return null;
+    return profile.syncedTeacher.subjects.find(
+      (s) => s.name === selectedSubject && s.gradeLevel === selectedClass,
+    );
+  }, [hasSubject, selectedSubject, selectedClass, profile]);
 
-  // Build a map: templateId → highest status in that template
-  const templateStatusMap = useMemo(() => {
-    const map = new Map<string, 'SUBMITTED' | 'DRAFT'>();
-    for (const r of resultsData) {
-      const prev = map.get(r.evaluationTemplateId);
-      if (r.status === 'SUBMITTED' || r.status === 'VERIFIED' || r.status === 'LOCKED') {
-        map.set(r.evaluationTemplateId, 'SUBMITTED');
-      } else if (!prev) {
-        map.set(r.evaluationTemplateId, 'DRAFT');
-      }
-    }
-    return map;
-  }, [resultsData]);
+  // Only fetch templates when a specific subject is selected
+  const { data: templatesData = [], isLoading: isTemplatesLoading } =
+    useEvaluationTemplates(
+      matchedSubject
+        ? { syncedSubjectId: matchedSubject.id, isActive: true }
+        : {},
+      { enabled: !!matchedSubject },
+    );
+
+  const isLoading =
+    isProfileLoading || (!!matchedSubject && isTemplatesLoading);
 
   const [selectedEvaluationId, setSelectedEvaluationId] = useState("");
   const [newEvalTitle, setNewEvalTitle] = useState("");
@@ -55,7 +62,9 @@ export default function TeacherEvaluationsPage() {
     );
 
     if (selectedSubject) {
-      templates = templates.filter(t => (t.syncedSubject?.name ?? '') === selectedSubject);
+      templates = templates.filter(
+        (t) => (t.syncedSubject?.name ?? "") === selectedSubject,
+      );
     }
 
     // Group by gradeConfigId+syncedSubjectId+evalTitle → one card per distinct evaluation plan
@@ -82,14 +91,14 @@ export default function TeacherEvaluationsPage() {
       const totalPassMarks = group.reduce((s, t) => s + Number(t.passMarks), 0);
       const anyActive = group.some((t) => t.isActive);
 
-      const groupStatuses = group.map(t => templateStatusMap.get(t.id));
+      const groupStatuses = group.map((t) => templateStatusMap.get(t.id));
       let marksStatus: string;
-      if (groupStatuses.some(s => s === 'SUBMITTED')) {
-        marksStatus = 'Published';
-      } else if (groupStatuses.some(s => s === 'DRAFT')) {
-        marksStatus = 'Draft';
+      if (groupStatuses.some((s) => s === "SUBMITTED")) {
+        marksStatus = "Published";
+      } else if (groupStatuses.some((s) => s === "DRAFT")) {
+        marksStatus = "Draft";
       } else {
-        marksStatus = anyActive ? 'Active' : 'Inactive';
+        marksStatus = anyActive ? "Active" : "Inactive";
       }
 
       const latestDate = group
@@ -113,10 +122,10 @@ export default function TeacherEvaluationsPage() {
         passMarks: totalPassMarks,
         date: latestDate
           ? latestDate.toLocaleDateString("en-US", {
-            month: "short",
-            day: "2-digit",
-            year: "numeric",
-          })
+              month: "short",
+              day: "2-digit",
+              year: "numeric",
+            })
           : "TBD",
         unit: unitTitle,
         learningOutcomes: group.map((t) => {
@@ -191,6 +200,10 @@ export default function TeacherEvaluationsPage() {
       router.push(`/teacher/result-compilation${suffix}`);
     else router.push("/teacher/dashboard");
   };
+
+  if (isLoading) {
+    return <SanskarLoader variant="skeleton" />;
+  }
 
   return (
     <AnimatePresence mode="wait">

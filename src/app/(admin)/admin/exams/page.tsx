@@ -160,12 +160,12 @@ export default function ExamsPage() {
       exit={{ opacity: 0, y: -15 }}
       className="space-y-6"
     >
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-foreground">
             Exam Plans
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Create and manage exam groupings across subjects
           </p>
         </div>
@@ -241,7 +241,7 @@ export default function ExamsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
                     Start Date
@@ -351,7 +351,7 @@ export default function ExamsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
                     Start Date
@@ -414,7 +414,7 @@ export default function ExamsPage() {
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-card border border-border rounded-xl shadow-sm overflow-x-auto w-full">
         {filteredExams && filteredExams.length > 0 ? (
           <Table>
             <TableHeader>

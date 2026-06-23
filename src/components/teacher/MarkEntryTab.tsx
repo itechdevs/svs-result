@@ -72,8 +72,8 @@ export default function MarkEntryTab({
     >
       {/* Student Navigation Bar */}
       <div className="bg-card rounded-xl border border-border shadow-sm p-4">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex-1 max-w-md">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+          <div className="flex-1">
             <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-2">
               Student Selection
             </label>
@@ -91,25 +91,27 @@ export default function MarkEntryTab({
             </Select>
           </div>
           
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="outline"
-              onClick={handlePrevStudent}
-            >
-              ←
-            </Button>
-            <Button 
-              variant="outline"
-              className="font-semibold"
-              onClick={handleNextStudent}
-            >
-              Next →
+          <div className="flex items-center justify-between sm:justify-start gap-2">
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline"
+                onClick={handlePrevStudent}
+              >
+                ←
+              </Button>
+              <Button 
+                variant="outline"
+                className="font-semibold"
+                onClick={handleNextStudent}
+              >
+                Next →
+              </Button>
+            </div>
+
+            <Button variant="outline" className="flex items-center gap-2">
+              <span>📄</span> Export
             </Button>
           </div>
-
-          <Button variant="outline" className="flex items-center gap-2">
-            <span>📄</span> Export
-          </Button>
         </div>
       </div>
 
@@ -142,7 +144,7 @@ export default function MarkEntryTab({
       </div>
 
       {/* Learning Outcomes Table */}
-      <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+      <div className="bg-card rounded-xl border border-border shadow-sm overflow-x-auto w-full">
         <Table>
           <TableHeader>
             <TableRow className="bg-gradient-to-r from-blue-50/50 to-purple-50/50 dark:from-slate-800/50 dark:to-slate-900/50">
@@ -239,43 +241,43 @@ export default function MarkEntryTab({
       </div>
 
       {/* Calculation Footer */}
-      <div className="bg-muted/30 rounded-xl border border-border shadow-sm p-6">
+      <div className="bg-muted/30 rounded-xl border border-border shadow-sm p-4 sm:p-6">
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-          <div className="flex flex-wrap gap-8">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-4 sm:gap-8 w-full lg:w-auto">
             <div>
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
                 Total Obtained Marks
               </p>
-              <p className="text-3xl font-bold text-foreground">
+              <p className="text-2xl sm:text-3xl font-bold text-foreground">
                 {studentTotalMarks} <span className="text-lg text-muted-foreground">/ {activeEval.fullMarks}</span>
               </p>
             </div>
-            <div className="border-l border-border pl-8">
+            <div className="sm:border-l sm:border-border sm:pl-8">
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
                 Score Percentage
               </p>
-              <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
+              <p className="text-2xl sm:text-3xl font-bold text-emerald-600 dark:text-emerald-400">
                 {studentPercentage.toFixed(2)} <span className="text-lg">/ 100</span>
               </p>
             </div>
-            <div className="border-l border-border pl-8">
+            <div className="sm:border-l sm:border-border sm:pl-8 w-full sm:w-auto">
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
                 Unit-wise Achievement Formula
               </p>
-              <code className="text-xs text-muted-foreground bg-muted px-3 py-1.5 rounded border border-border font-mono">
+              <code className="text-xs text-muted-foreground bg-muted px-3 py-1.5 rounded border border-border font-mono block sm:inline-block">
                 Achieved % = (Total obtained ÷ {activeEval.fullMarks}) × 100
               </code>
             </div>
           </div>
-          <div className="flex gap-3">
-            <Button variant="outline" className="px-6 py-3 text-sm font-semibold">
+          <div className="flex gap-3 w-full sm:w-auto justify-end">
+            <Button variant="outline" className="px-4 py-2 sm:px-6 sm:py-3 text-xs sm:text-sm font-semibold">
               Export Draft
             </Button>
             <Button
               onClick={handleSave}
-              className="px-6 py-3 text-sm font-bold text-primary-foreground bg-primary hover:bg-primary/90"
+              className="px-4 py-2 sm:px-6 sm:py-3 text-xs sm:text-sm font-bold text-primary-foreground bg-primary hover:bg-primary/90"
             >
-              Save & Continue
+              Save &amp; Continue
             </Button>
           </div>
         </div>

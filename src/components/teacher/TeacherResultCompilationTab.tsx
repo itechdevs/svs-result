@@ -404,7 +404,7 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
           </button>
         )}
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Result Compilation</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground">Result Compilation</h2>
           <p className="text-xs text-muted-foreground mt-1">
             {selectedSubject
               ? `Compiling results for ${selectedClass} — ${selectedSubject}`
@@ -515,7 +515,7 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {evalPlanGroups.map((group) => {
               const isSelected = selectedPlanTitles.includes(group.planTitle);
               const isExpanded = expandedPlans.has(group.planTitle);
@@ -638,7 +638,7 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
       {/* Compiled Results Table */}
       {activeGroups.length > 0 && compiledResults.length > 0 && (
         <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-border">
             <h3 className="text-sm font-bold text-foreground">
               Compiled Results ({compiledResults.length} students)
             </h3>
@@ -658,8 +658,8 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
               >
                 <Send className="w-3.5 h-3.5 mr-1.5" />
                 {existingCompilation?.status === 'SUBMITTED'
-                  ? 'Re-Submit to Admin'
-                  : 'Submit to Admin'}
+                  ? 'Re-Submit'
+                  : 'Submit'}
               </Button>
             </div>
           </div>

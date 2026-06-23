@@ -184,13 +184,9 @@ export default function ReExamPortalTab() {
       {/* Header */}
       <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">
             Re-Examination Management
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Coordinate and score supplemental sessions for failed learning
-            outcome targets.
-          </p>
         </div>
       </div>
 
@@ -237,7 +233,7 @@ export default function ReExamPortalTab() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-destructive/5 border border-destructive/15 p-5 rounded-xl shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
           <div className="w-12 h-12 rounded-lg bg-destructive/10 text-destructive flex items-center justify-center border border-destructive/20 shadow-sm">
             <AlertCircle className="w-6 h-6" />
@@ -284,7 +280,7 @@ export default function ReExamPortalTab() {
       {/* Failed Students Table */}
       <div className="bg-card text-card-foreground border border-border rounded-xl shadow-sm overflow-hidden">
         {/* Table Header Bar */}
-        <div className="px-5 py-4 border-b border-border bg-muted/40 flex items-center justify-between">
+        <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-border bg-muted/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
             <h3 className="font-bold text-sm text-foreground">
               Failed Students Registry
@@ -303,6 +299,7 @@ export default function ReExamPortalTab() {
         </div>
 
         {/* Table */}
+        <div className="overflow-x-auto w-full">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/30">
@@ -353,9 +350,9 @@ export default function ReExamPortalTab() {
                 const percentage =
                   item.fullMarks > 0
                     ? Math.round(
-                        (Number(item.marksObtained) / Number(item.fullMarks)) *
-                          100,
-                      )
+                      (Number(item.marksObtained) / Number(item.fullMarks)) *
+                      100,
+                    )
                     : 0;
 
                 return (
@@ -448,10 +445,11 @@ export default function ReExamPortalTab() {
             )}
           </TableBody>
         </Table>
+        </div>
 
         {/* Pagination Footer */}
         {totalPages > 1 && (
-          <div className="px-5 py-3 border-t border-border flex items-center justify-between bg-muted/20">
+          <div className="px-4 sm:px-5 py-3 border-t border-border flex flex-wrap items-center justify-between gap-2 bg-muted/20">
             <p className="text-[11px] text-muted-foreground">
               Showing {(page - 1) * PAGE_SIZE + 1}–
               {Math.min(page * PAGE_SIZE, filteredItems.length)} of{" "}

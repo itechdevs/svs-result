@@ -41,8 +41,8 @@ export default function SyncManagementClient() {
       className="space-y-6"
     >
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Data Synchronization</h1>
-        <p className="text-sm text-muted-foreground mt-1">Sync data from Dhalpa School management system</p>
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">Data Synchronization</h1>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1">Sync data from Dhalpa School management system</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -206,13 +206,13 @@ export default function SyncManagementClient() {
             <div className="space-y-2">
               <div>
                 <p className="text-xs font-medium text-foreground mb-1">Sync All Entities:</p>
-                <code className="block p-2 bg-muted rounded text-xs font-mono text-foreground border border-border">
+                <code className="block p-2 bg-muted rounded text-xs font-mono text-foreground border border-border break-all whitespace-pre-wrap">
                   0 * * * * curl -X GET {origin}/api/sync/all/cron
                 </code>
               </div>
               <div>
                 <p className="text-xs font-medium text-foreground mb-1">Sync Teachers Only:</p>
-                <code className="block p-2 bg-muted rounded text-xs font-mono text-foreground border border-border">
+                <code className="block p-2 bg-muted rounded text-xs font-mono text-foreground border border-border break-all whitespace-pre-wrap">
                   0 * * * * curl -X GET {origin}/api/sync/teachers/cron
                 </code>
               </div>

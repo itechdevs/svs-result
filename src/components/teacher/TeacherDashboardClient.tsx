@@ -10,14 +10,17 @@ import {
 import { useReExamSchedules } from "@/hooks/use-re-exams";
 import { useProfile } from "@/hooks/use-profile";
 import { ClipboardList, AlertCircle, CalendarClock, ArrowRight } from "lucide-react";
+import SanskarLoader from "@/components/shared/SanskarLoader";
 
 export default function DashboardPage() {
-  const { data: templatesData = [] } = useEvaluationTemplates();
-  const { data: reExamData = [] } = useReExamSchedules("SCHEDULED");
-  const { data: allResults = [] } = useStudentEvaluationResults({
+  const { data: templatesData = [], isLoading: isTemplatesLoading } = useEvaluationTemplates();
+  const { data: reExamData = [], isLoading: isReExamsLoading } = useReExamSchedules("SCHEDULED");
+  const { data: allResults = [], isLoading: isResultsLoading } = useStudentEvaluationResults({
     limit: 1000,
   });
-  const { data: profile } = useProfile();
+  const { data: profile, isLoading: isProfileLoading } = useProfile();
+
+  const isLoading = isTemplatesLoading || isReExamsLoading || isResultsLoading || isProfileLoading;
 
   const assignedSubjectIds = useMemo(() => {
     return new Set(profile?.syncedTeacher?.subjects.map((s) => s.id) ?? []);
@@ -28,7 +31,6 @@ export default function DashboardPage() {
     return templatesData.filter((t) => assignedSubjectIds.has(t.syncedSubjectId));
   }, [templatesData, profile, assignedSubjectIds]);
 
-  // Total Evaluations: same grouping logic as EvaluationsTab — one card per distinct eval plan
   const totalEvaluations = useMemo(() => {
     const keys = new Set(
       filteredTemplates.map((t) => {
@@ -41,7 +43,6 @@ export default function DashboardPage() {
     return keys.size;
   }, [filteredTemplates]);
 
-  // Pending Re-Exam: students where marksObtained < passMarks (matches ReExamPortalTab logic)
   const pendingReExam = useMemo(() => {
     if (!profile?.syncedTeacher) return 0;
     const validTemplateIds = new Set(filteredTemplates.map((t) => t.id));
@@ -60,9 +61,7 @@ export default function DashboardPage() {
     );
   }, [reExamData, profile, assignedSubjectIds]);
 
-  // Re-Exam Scheduled: count of SCHEDULED re-exam records (source for ReExamDetailedView entries)
   const reExamScheduled = filteredReExams.length;
-
   const recentEvaluations = filteredTemplates.slice(0, 4);
   const reExamAlerts = filteredReExams.slice(0, 2);
 
@@ -96,45 +95,48 @@ export default function DashboardPage() {
     },
   ];
 
+  if (isLoading) {
+    return <SanskarLoader variant="skeleton" />;
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
+      className="space-y-4 sm:space-y-6"
     >
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">
           Dashboard Overview
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">Welcome back, here's what's happening with your classes.</p>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+          Welcome back, here's what's happening with your classes.
+        </p>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         {kpis.map((kpi) => (
           <Link
             key={kpi.label}
             href={kpi.href}
-            className="bg-card rounded-xl border border-border p-5 relative overflow-hidden hover:border-primary/50 hover:shadow-md transition-all group flex flex-col justify-between"
+            className="bg-card rounded-xl border border-border p-4 sm:p-5 relative overflow-hidden hover:border-primary/50 hover:shadow-md transition-all group flex flex-col justify-between min-h-[90px]"
           >
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground mb-1">
                   {kpi.label}
                 </p>
-                <p
-                  className={`text-3xl font-extrabold ${kpi.danger ? "text-destructive" : "text-foreground"
-                    }`}
-                >
+                <p className={`text-2xl sm:text-3xl font-extrabold ${kpi.danger ? "text-destructive" : "text-foreground"}`}>
                   {kpi.value}
                 </p>
               </div>
-              <div className={`p-2.5 rounded-xl ${kpi.colorClass}`}>
+              <div className={`p-2 sm:p-2.5 rounded-xl ${kpi.colorClass}`}>
                 {kpi.icon}
               </div>
             </div>
-            <div className="mt-4 flex items-center justify-between">
+            <div className="mt-3 sm:mt-4 flex items-center justify-between">
               <p className="text-xs font-medium text-muted-foreground">{kpi.sub}</p>
               <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors opacity-0 group-hover:opacity-100 transform translate-x-[-10px] group-hover:translate-x-0 transition-all duration-300" />
             </div>
@@ -143,17 +145,12 @@ export default function DashboardPage() {
       </div>
 
       {/* Main content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Evaluations table */}
         <div className="lg:col-span-2 bg-card rounded-xl border border-border shadow-sm flex flex-col">
-          <div className="flex items-center justify-between p-5 border-b border-border">
-            <h2 className="text-sm font-bold text-foreground">
-              Recent Evaluations
-            </h2>
-            <Link
-              href="/teacher/evaluations"
-              className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
-            >
+          <div className="flex items-center justify-between p-4 sm:p-5 border-b border-border">
+            <h2 className="text-sm font-bold text-foreground">Recent Evaluations</h2>
+            <Link href="/teacher/evaluations" className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors">
               View all →
             </Link>
           </div>
@@ -161,13 +158,13 @@ export default function DashboardPage() {
             <table className="w-full text-sm text-left">
               <thead>
                 <tr className="bg-muted/40">
-                  <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                  <th className="px-3 sm:px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                     Evaluation Title
                   </th>
-                  <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                    Subject & Class
+                  <th className="px-3 sm:px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">
+                    Subject &amp; Class
                   </th>
-                  <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">
+                  <th className="px-3 sm:px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">
                     Actions
                   </th>
                 </tr>
@@ -176,36 +173,35 @@ export default function DashboardPage() {
                 {recentEvaluations.map((ev) => {
                   const newFmt = ev.name.match(/^\[([^\]]+)\]\[([^\]]+)\]\s*(.+)$/);
                   const legacyFmt = ev.name.match(/^\[([^\]]+)\]\s*(.+)$/);
-
                   const evalTitleRaw = newFmt ? newFmt[1] : legacyFmt ? legacyFmt[1] : "";
                   const evalTitle = evalTitleRaw.split("|")[0] || ev.name;
                   const taskType = newFmt ? newFmt[2] : legacyFmt ? legacyFmt[1] : "Standard";
                   const subTask = newFmt ? newFmt[3] : legacyFmt ? legacyFmt[2] : ev.name;
-
                   const gradeLevel = ev.gradeConfig?.gradeLevel ?? "";
                   const subjectName = ev.syncedSubject?.name ?? "";
                   const query = new URLSearchParams({ class: gradeLevel, subject: subjectName, eval: evalTitle });
-
                   return (
-                    <tr
-                      key={ev.id}
-                      className="hover:bg-muted/30 transition-colors group"
-                    >
-                      <td className="px-5 py-4">
+                    <tr key={ev.id} className="hover:bg-muted/30 transition-colors group">
+                      <td className="px-3 sm:px-5 py-3 sm:py-4">
                         <div className="font-semibold text-sm text-foreground">{evalTitle}</div>
-                        <div className="text-[10px] text-muted-foreground mt-0.5 max-w-[250px] truncate" title={subTask}>
+                        <div className="text-[10px] text-muted-foreground mt-0.5 max-w-[180px] sm:max-w-[250px] truncate" title={subTask}>
                           {subTask}
                         </div>
+                        <div className="sm:hidden mt-1">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-muted text-muted-foreground">
+                            {subjectName} {gradeLevel ? `· ${gradeLevel}` : ''}
+                          </span>
+                        </div>
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="px-3 sm:px-5 py-3 sm:py-4 hidden sm:table-cell">
                         <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold bg-muted text-muted-foreground">
                           {subjectName} {gradeLevel ? `· ${gradeLevel}` : ''}
                         </span>
                       </td>
-                      <td className="px-5 py-4 text-center">
+                      <td className="px-3 sm:px-5 py-3 sm:py-4 text-center">
                         <Link
                           href={`/teacher/mark-entry?${query.toString()}`}
-                          className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                          className="inline-flex items-center justify-center px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors whitespace-nowrap"
                         >
                           Details
                         </Link>
@@ -227,32 +223,24 @@ export default function DashboardPage() {
 
         {/* Re-exam alerts */}
         <div className="bg-card rounded-xl border border-border shadow-sm flex flex-col">
-          <div className="p-5 border-b border-border bg-destructive/5 flex items-center gap-2">
+          <div className="p-4 sm:p-5 border-b border-border bg-destructive/5 flex items-center gap-2">
             <AlertCircle className="w-5 h-5 text-destructive" />
-            <h2 className="text-sm font-bold text-destructive">
-              Re-Exam Alerts
-            </h2>
+            <h2 className="text-sm font-bold text-destructive">Re-Exam Alerts</h2>
           </div>
-          <div className="p-5 flex-1 flex flex-col">
+          <div className="p-4 sm:p-5 flex-1 flex flex-col">
             <p className="text-xs text-muted-foreground mb-4">
               Students with NG / Fail status requiring re-exam scheduling or mark entry.
             </p>
-
             <div className="flex flex-col gap-3 flex-1">
               {reExamAlerts.map((s) => {
                 const newFmt = s.evaluationTemplate?.name.match(/^\[([^\]]+)\]\[([^\]]+)\]\s*(.+)$/);
                 const legacyFmt = s.evaluationTemplate?.name.match(/^\[([^\]]+)\]\s*(.+)$/);
-
                 const evalTitleRaw = newFmt ? newFmt[1] : legacyFmt ? legacyFmt[1] : "";
                 const evalTitle = evalTitleRaw.split("|")[0] || (s.evaluationTemplate?.name ?? "Re-Exam");
                 const taskType = newFmt ? newFmt[2] : legacyFmt ? legacyFmt[1] : "Standard";
                 const subTask = newFmt ? newFmt[3] : legacyFmt ? legacyFmt[2] : (s.evaluationTemplate?.name ?? "Re-Exam");
-
                 return (
-                  <div
-                    key={s.id}
-                    className="border border-border rounded-xl p-3 bg-muted/20 hover:border-destructive/30 transition-colors"
-                  >
+                  <div key={s.id} className="border border-border rounded-xl p-3 bg-muted/20 hover:border-destructive/30 transition-colors">
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <div className="flex flex-col min-w-0">
                         <span className="text-xs font-bold text-foreground truncate" title={evalTitle}>
@@ -286,7 +274,6 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
-
             {reExamAlerts.length > 0 && (
               <>
                 <div className="my-4 h-px bg-border" />
@@ -304,4 +291,3 @@ export default function DashboardPage() {
     </motion.div>
   );
 }
-

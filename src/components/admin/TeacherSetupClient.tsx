@@ -96,18 +96,18 @@ export default function TeacherSetupClient() {
       className="space-y-6"
     >
       <div>
-        <h1 className="text-2xl font-bold text-[#002045] dark:text-white">Teacher Setup</h1>
-        <p className="text-sm text-slate-500 mt-1">Create login accounts for synced teachers</p>
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">Teacher Setup</h1>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1">Create login accounts for synced teachers</p>
       </div>
 
-      <div className="bg-white dark:bg-card border rounded-xl shadow-sm p-6">
+      <div className="bg-card text-card-foreground border border-border rounded-xl shadow-sm p-4 sm:p-6">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-2">Select Teacher</label>
             <select
               value={formData.syncedTeacherId}
               onChange={(e) => setFormData({ ...formData, syncedTeacherId: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border border-input bg-transparent text-foreground rounded-lg"
               required
             >
               <option value="">-- Select Teacher --</option>
@@ -125,7 +125,7 @@ export default function TeacherSetupClient() {
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border border-input bg-transparent text-foreground rounded-lg"
               required
             />
           </div>
@@ -136,7 +136,7 @@ export default function TeacherSetupClient() {
               type="password"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border border-input bg-transparent text-foreground rounded-lg"
               required
               minLength={6}
             />
@@ -147,7 +147,7 @@ export default function TeacherSetupClient() {
             <select
               value={formData.gradeLevel}
               onChange={(e) => setFormData({ ...formData, gradeLevel: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border border-input bg-transparent text-foreground rounded-lg"
               required
             >
               <option>Playgroup</option>
@@ -165,7 +165,7 @@ export default function TeacherSetupClient() {
             <select
               value={formData.subjectId}
               onChange={(e) => setFormData({ ...formData, subjectId: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border border-input bg-transparent text-foreground rounded-lg"
               required
             >
               <option value="">-- Select Subject --</option>
@@ -180,7 +180,7 @@ export default function TeacherSetupClient() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-[#002045] text-white rounded-lg hover:bg-[#003366] disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50"
           >
             <UserPlus className="w-4 h-4" />
             {loading ? 'Setting up...' : 'Setup Teacher Account'}
@@ -214,9 +214,9 @@ export default function TeacherSetupClient() {
         )}
       </div>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h3 className="font-semibold text-blue-900 mb-2">Next Steps</h3>
-        <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+      <div className="bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/50 rounded-lg p-4">
+        <h3 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">Next Steps</h3>
+        <ol className="text-sm text-blue-800 dark:text-blue-400 space-y-1 list-decimal list-inside">
           <li>Teacher can login at /login with the email/password</li>
           <li>Admin must create Evaluation Templates for subjects</li>
           <li>Teacher can enter marks in Mark Entry section</li>

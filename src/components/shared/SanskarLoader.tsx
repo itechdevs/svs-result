@@ -155,21 +155,21 @@ const FullpageLoader = ({
 }) => {
   const wrapStyle: React.CSSProperties = overlay
     ? {
-        position: "fixed",
-        inset: 0,
-        zIndex: 9999,
-        backgroundColor: "rgba(255,255,255,0.88)",
-        backdropFilter: "blur(4px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }
+      position: "fixed",
+      inset: 0,
+      zIndex: 9999,
+      backgroundColor: "rgba(255,255,255,0.88)",
+      backdropFilter: "blur(4px)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+    }
     : {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: "100vh",
-      };
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      minHeight: "100vh",
+    };
 
   return (
     <div

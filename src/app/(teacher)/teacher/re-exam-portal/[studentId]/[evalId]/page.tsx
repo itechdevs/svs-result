@@ -8,13 +8,17 @@ import ReExamDetailedView from '@/components/admin/ReExamDetailedView';
 import { AnimatePresence } from 'motion/react';
 import { Student, EvaluationPlan } from '@/types/academic';
 
+import SanskarLoader from '@/components/shared/SanskarLoader';
+
 export default function TeacherReExamDetailPage() {
   const params = useParams();
   const studentId = params.studentId as string;
   const evalId = params.evalId as string;
 
-  const { data: studentsData } = useStudents({ limit: 500 });
-  const { data: templatesData = [] } = useEvaluationTemplates();
+  const { data: studentsData, isLoading: isStudentsLoading } = useStudents({ limit: 500 });
+  const { data: templatesData = [], isLoading: isTemplatesLoading } = useEvaluationTemplates();
+
+  const isLoading = isStudentsLoading || isTemplatesLoading;
 
   const student: Student | undefined = useMemo(() => {
     const s = studentsData?.students.find(s => s.id === studentId);
@@ -45,6 +49,10 @@ export default function TeacherReExamDetailPage() {
       }],
     };
   }, [templatesData, evalId]);
+
+  if (isLoading) {
+    return <SanskarLoader variant="skeleton" />;
+  }
 
   if (!student || !evaluation) {
     return (

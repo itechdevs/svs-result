@@ -253,7 +253,7 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
       className="space-y-6"
     >
       {/* Header */}
-      <div className="flex items-center justify-between bg-card text-card-foreground p-4 rounded-xl border border-border shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-card text-card-foreground p-4 rounded-xl border border-border shadow-sm gap-4">
         <div className="flex items-center gap-3">
           <button
             onClick={saveAndGoBack}
@@ -316,6 +316,7 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
             unchanged.
           </p>
         </div>
+        <div className="overflow-x-auto w-full">
         <Table>
           <TableHeader>
             <TableRow className="bg-gradient-to-r from-muted/50 to-muted/80 hover:bg-muted/60">
@@ -429,6 +430,7 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
             })}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       {/* Summary Footer */}
