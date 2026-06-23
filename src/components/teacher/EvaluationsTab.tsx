@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Plus, MoreVertical, Pencil, Trash2, Sparkles } from 'lucide-react';
+import { Plus, MoreVertical, Pencil, Trash2, Sparkles, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EvaluationPlan } from '@/types/academic';
 import Link from 'next/link';
@@ -171,33 +171,44 @@ export default function EvaluationsTab({
                   <span className="text-[10px] font-bold px-2.5 py-0.5 bg-muted text-foreground rounded-full uppercase tracking-wider border border-border">
                     {evalPlan.subject}
                   </span>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md shrink-0">
-                        <MoreVertical className="w-4 h-4 text-muted-foreground" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild>
-                        <Link href={`/teacher/edit-evaluation/${evalPlan.subEvaluations?.[0]?.id ?? evalPlan.id}${suffix}`} className="flex items-center gap-2 cursor-pointer w-full">
-                          <Pencil className="w-3.5 h-3.5" />
-                          Edit
-                        </Link>
-                      </DropdownMenuItem>
-                      {onDelete && (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive focus:bg-destructive/10 flex items-center gap-2 cursor-pointer"
-                            onSelect={() => setDeleteTargetId(evalPlan.id)}
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            Delete
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+
+                  {evalPlan.status === 'Published' ? (
+                    /* Locked — no edit/delete for published plans */
+                    <div
+                      title="Published plans cannot be edited or deleted"
+                      className="h-8 w-8 flex items-center justify-center rounded-md text-blue-400 dark:text-blue-500 cursor-not-allowed"
+                    >
+                      <Lock className="w-4 h-4" />
+                    </div>
+                  ) : (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md shrink-0">
+                          <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link href={`/teacher/edit-evaluation/${evalPlan.subEvaluations?.[0]?.id ?? evalPlan.id}${suffix}`} className="flex items-center gap-2 cursor-pointer w-full">
+                            <Pencil className="w-3.5 h-3.5" />
+                            Edit
+                          </Link>
+                        </DropdownMenuItem>
+                        {onDelete && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive focus:bg-destructive/10 flex items-center gap-2 cursor-pointer"
+                              onSelect={() => setDeleteTargetId(evalPlan.id)}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              Delete
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
               </div>
 
