@@ -197,11 +197,10 @@ export default function MarkEntryOverviewTable() {
                   router.push(`/teacher/evaluations${query ? `?${query}` : ""}`);
                 }}
                 disabled={isSaving || evalGroupStatus === 'SUBMITTED'}
-                className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 ${
-                  evalGroupStatus === 'SUBMITTED'
+                className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 ${evalGroupStatus === 'SUBMITTED'
                     ? 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-200 dark:border-slate-700'
                     : 'text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-60 disabled:cursor-not-allowed border border-slate-200 dark:border-slate-700'
-                }`}
+                  }`}
               >
                 {isSaving ? (
                   <svg
@@ -235,11 +234,10 @@ export default function MarkEntryOverviewTable() {
                   router.push(`/teacher/evaluations${query ? `?${query}` : ""}`);
                 }}
                 disabled={isSaving || evalGroupStatus === 'SUBMITTED'}
-                className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors shadow-sm flex items-center gap-1.5 ${
-                  evalGroupStatus === 'SUBMITTED'
+                className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors shadow-sm flex items-center gap-1.5 ${evalGroupStatus === 'SUBMITTED'
                     ? 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed'
                     : 'text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed'
-                }`}
+                  }`}
               >
                 {isSaving ? (
                   <svg
@@ -361,8 +359,8 @@ export default function MarkEntryOverviewTable() {
                         className={cn(
                           "hover:bg-slate-50/70 dark:hover:bg-slate-800/20 transition-colors",
                           anyFail &&
-                            hasMarks &&
-                            "bg-red-50/40 dark:bg-red-950/10",
+                          hasMarks &&
+                          "bg-red-50/40 dark:bg-red-950/10",
                         )}
                       >
                         <td className="px-4 py-3 font-mono text-xs font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">
@@ -551,7 +549,7 @@ export default function MarkEntryOverviewTable() {
             exit={{ opacity: 0, y: -10 }}
             className="fixed top-4 right-4 p-4 bg-emerald-500 text-white font-semibold text-sm rounded-lg shadow-lg flex items-center gap-2 z-50"
           >
-        <CheckCircle className="w-5 h-5" />
+            <CheckCircle className="w-5 h-5" />
             Marks saved successfully!
           </motion.div>
         )}

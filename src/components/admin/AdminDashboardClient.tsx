@@ -18,7 +18,16 @@ const failRate = 12;
 const totalPassed = 2194;
 const totalFailed = 288;
 
+import SanskarLoader from '@/components/shared/SanskarLoader';
+import { useProfile } from '@/hooks/use-profile';
+
 export default function AdminDashboardClient() {
+  const { isLoading } = useProfile();
+
+  if (isLoading) {
+    return <SanskarLoader variant="skeleton" />;
+  }
+
   return (
     <motion.div
       key="admin-dashboard-view"

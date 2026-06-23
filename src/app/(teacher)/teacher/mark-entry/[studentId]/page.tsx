@@ -8,16 +8,20 @@ import DetailedMarkEntryView from '@/components/teacher/DetailedMarkEntryView';
 import { Student, EvaluationPlan } from '@/types/academic';
 import { useMarksContext } from '@/contexts/marks-context';
 
+import SanskarLoader from '@/components/shared/SanskarLoader';
+
 export default function StudentMarkEntryPage() {
   const { studentId } = useParams<{ studentId: string }>();
   const searchParams = useSearchParams();
   const evalId = searchParams.get('evalId') ?? '';
 
-  const { data: studentsData } = useStudents({ limit: 500 });
-  const { data: templatesData = [] } = useEvaluationTemplates();
+  const { data: studentsData, isLoading: isStudentsLoading } = useStudents({ limit: 500 });
+  const { data: templatesData = [], isLoading: isTemplatesLoading } = useEvaluationTemplates();
 
   // Pull shared marks state from context (same instance as MarkEntryOverviewTable)
   const { getStudentMark, updateOutcomeMark, setEvaluations, handleSaveAll } = useMarksContext();
+
+  const isLoading = isStudentsLoading || isTemplatesLoading;
 
   // Find the base template clicked from the overview
   const baseTemplate = templatesData.find((t) => t.id === evalId);
@@ -54,7 +58,7 @@ export default function StudentMarkEntryPage() {
   // Build Student shapes
   const studentsToRender: Student[] = useMemo(() => {
     if (!studentsData?.students) return [];
-    
+
     let list = studentsData.students;
     if (studentId !== 'all') {
       list = list.filter((s) => s.id === studentId);
@@ -113,10 +117,10 @@ export default function StudentMarkEntryPage() {
       passMarks: totalPassMarks,
       date: baseTemplate.scheduledDate
         ? new Date(baseTemplate.scheduledDate).toLocaleDateString('en-US', {
-            month: 'short',
-            day: '2-digit',
-            year: 'numeric',
-          })
+          month: 'short',
+          day: '2-digit',
+          year: 'numeric',
+        })
         : 'TBD',
       unit: unitTitle,
       learningOutcomes: groupTemplates.map((t) => {
@@ -125,13 +129,13 @@ export default function StudentMarkEntryPage() {
         const taskType = newFmt
           ? newFmt[1]
           : legacyFmt
-          ? legacyFmt[1]
-          : 'Standard';
+            ? legacyFmt[1]
+            : 'Standard';
         const outcomeName = newFmt
           ? newFmt[2]
           : legacyFmt
-          ? legacyFmt[2]
-          : t.name;
+            ? legacyFmt[2]
+            : t.name;
 
         return {
           name: t.name,
@@ -150,6 +154,10 @@ export default function StudentMarkEntryPage() {
       }),
     };
   }, [baseTemplate, groupTemplates]);
+
+  if (isLoading) {
+    return <SanskarLoader variant="skeleton" />;
+  }
 
   if (studentsToRender.length === 0 || !evaluation) {
     return (
