@@ -8,6 +8,7 @@ import { useDeleteEvaluationTemplate } from "@/hooks/use-evaluations";
 import EvaluationsTab from "@/components/teacher/EvaluationsTab";
 import { AnimatePresence } from "motion/react";
 import { EvaluationPlan } from "@/types/academic";
+import { toast } from "sonner";
 
 export default function TeacherEvaluationsPage() {
   const router = useRouter();
