@@ -11,13 +11,17 @@ import { useReExamSchedules } from "@/hooks/use-re-exams";
 import { useProfile } from "@/hooks/use-profile";
 import { ClipboardList, AlertCircle, CalendarClock, ArrowRight } from "lucide-react";
 
+import SanskarLoader from "@/components/shared/SanskarLoader";
+
 export default function DashboardPage() {
-  const { data: templatesData = [] } = useEvaluationTemplates();
-  const { data: reExamData = [] } = useReExamSchedules("SCHEDULED");
-  const { data: allResults = [] } = useStudentEvaluationResults({
+  const { data: templatesData = [], isLoading: isTemplatesLoading } = useEvaluationTemplates();
+  const { data: reExamData = [], isLoading: isReExamsLoading } = useReExamSchedules("SCHEDULED");
+  const { data: allResults = [], isLoading: isResultsLoading } = useStudentEvaluationResults({
     limit: 1000,
   });
-  const { data: profile } = useProfile();
+  const { data: profile, isLoading: isProfileLoading } = useProfile();
+
+  const isLoading = isTemplatesLoading || isReExamsLoading || isResultsLoading || isProfileLoading;
 
   const assignedSubjectIds = useMemo(() => {
     return new Set(profile?.syncedTeacher?.subjects.map((s) => s.id) ?? []);
@@ -95,6 +99,10 @@ export default function DashboardPage() {
       colorClass: "text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40",
     },
   ];
+
+  if (isLoading) {
+    return <SanskarLoader variant="skeleton" />;
+  }
 
   return (
     <motion.div

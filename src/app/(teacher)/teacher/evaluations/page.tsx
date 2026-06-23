@@ -10,6 +10,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { EvaluationPlan } from "@/types/academic";
 import { BookOpen } from "lucide-react";
 
+import SanskarLoader from "@/components/shared/SanskarLoader";
+
 export default function TeacherEvaluationsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -17,7 +19,7 @@ export default function TeacherEvaluationsPage() {
   const selectedSubject = searchParams.get("subject") ?? "";
   const hasSubject = !!(selectedClass && selectedSubject);
 
-  const { data: profile } = useProfile();
+  const { data: profile, isLoading: isProfileLoading } = useProfile();
 
   // Find the teacher's subject object matching the URL params
   const matchedSubject = useMemo(() => {
@@ -28,12 +30,14 @@ export default function TeacherEvaluationsPage() {
   }, [hasSubject, selectedSubject, selectedClass, profile]);
 
   // Only fetch templates when a specific subject is selected
-  const { data: templatesData = [] } = useEvaluationTemplates(
+  const { data: templatesData = [], isLoading: isTemplatesLoading } = useEvaluationTemplates(
     matchedSubject
       ? { syncedSubjectId: matchedSubject.id, isActive: true }
       : {},
     { enabled: !!matchedSubject },
   );
+
+  const isLoading = isProfileLoading || (!!matchedSubject && isTemplatesLoading);
 
   const [selectedEvaluationId, setSelectedEvaluationId] = useState("");
   const [newEvalTitle, setNewEvalTitle] = useState("");
@@ -177,6 +181,10 @@ export default function TeacherEvaluationsPage() {
       router.push(`/teacher/result-compilation${suffix}`);
     else router.push("/teacher/dashboard");
   };
+
+  if (isLoading) {
+    return <SanskarLoader variant="skeleton" />;
+  }
 
   return (
     <AnimatePresence mode="wait">

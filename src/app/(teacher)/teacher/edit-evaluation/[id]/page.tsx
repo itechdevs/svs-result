@@ -12,6 +12,8 @@ import { toast } from 'sonner';
 interface OutcomeRow { name: string; date: string; max: number; pass: number; templateId?: string; }
 interface TaskGroup { taskType: string; max: number; pass: number; outcomes: OutcomeRow[]; }
 
+import SanskarLoader from '@/components/shared/SanskarLoader';
+
 export default function EditEvaluationPage() {
   const router = useRouter();
   const params = useParams();
@@ -25,14 +27,16 @@ export default function EditEvaluationPage() {
     ? `?${new URLSearchParams({ ...(selectedClass && { class: selectedClass }), ...(selectedSubject && { subject: selectedSubject }) })}`
     : ''}`;
 
-  const { data: template } = useEvaluationTemplate(id);
-  const { data: allTemplates = [] } = useEvaluationTemplates();
+  const { data: template, isLoading: isTemplateLoading } = useEvaluationTemplate(id);
+  const { data: allTemplates = [], isLoading: isTemplatesLoading } = useEvaluationTemplates();
 
   const [newEvalTitle, setNewEvalTitle] = useState('');
   const [newEvalSubject, setNewEvalSubject] = useState('');
   const [newSubjectTitle, setNewSubjectTitle] = useState('');
   const [targetMarks, setTargetMarks] = useState(55);
   const [newOutcomes, setNewOutcomes] = useState<TaskGroup[]>([]);
+
+  const isLoading = isTemplateLoading || isTemplatesLoading;
 
   // Track original DB state for diffing on save
   const originalTemplateIds = useRef<Set<string>>(new Set());
@@ -156,6 +160,10 @@ export default function EditEvaluationPage() {
       error: (err: any) => err?.message || 'Failed to update evaluation',
     });
   };
+
+  if (isLoading) {
+    return <SanskarLoader variant="skeleton" />;
+  }
 
   return (
     <>
