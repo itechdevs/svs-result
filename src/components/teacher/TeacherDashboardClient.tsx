@@ -41,13 +41,16 @@ export default function DashboardPage() {
     return keys.size;
   }, [filteredTemplates]);
 
-  // Pending Re-Exam: students where isPassed === false and eval template is assigned to teacher
+  // Pending Re-Exam: students where marksObtained < passMarks (matches ReExamPortalTab logic)
   const pendingReExam = useMemo(() => {
     if (!profile?.syncedTeacher) return 0;
     const validTemplateIds = new Set(filteredTemplates.map((t) => t.id));
-    return allResults.filter(
-      (r) => r.isPassed === false && validTemplateIds.has(r.evaluationTemplateId)
-    ).length;
+    return allResults.filter((r) => {
+      if (r.marksObtained === null || r.marksObtained === undefined) return false;
+      if (!validTemplateIds.has(r.evaluationTemplateId)) return false;
+      const passMarks = r.evaluationTemplate?.passMarks ?? 0;
+      return r.marksObtained < passMarks;
+    }).length;
   }, [allResults, filteredTemplates, profile]);
 
   const filteredReExams = useMemo(() => {

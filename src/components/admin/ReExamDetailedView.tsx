@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle, Calendar } from "lucide-react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
@@ -32,9 +32,11 @@ import {
 interface Props {
   student: Student;
   evaluation: EvaluationPlan;
+  backHref?: string;
 }
 
-export default function ReExamDetailedView({ student, evaluation }: Props) {
+export default function ReExamDetailedView({ student, evaluation, backHref = "admin/re-exam-portal" }: Props) {
+  const router = useRouter();
   const { data: resultsData = [], isLoading } = useStudentEvaluationResults({
     syncedStudentId: student.id,
     evaluationTemplateId: evaluation.id,
@@ -155,6 +157,35 @@ export default function ReExamDetailedView({ student, evaluation }: Props) {
     [],
   );
 
+  const saveAndGoBack = useCallback(() => {
+    // Cancel pending debounce and save immediately
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    const marks = localMarksRef.current;
+    if (marks) {
+      const firstFailedOutcome = evaluation.learningOutcomes.find((lo) => {
+        const m = marks.outcomeMarks[lo.name];
+        return m?.reExamMark !== null && m?.reExamMark !== undefined;
+      });
+      if (firstFailedOutcome) {
+        const m = marks.outcomeMarks[firstFailedOutcome.name];
+        if (m?.reExamMark !== null && m?.reExamMark !== undefined) {
+          reExamAssessment.mutate(
+            {
+              evaluationTemplateId: evaluation.id,
+              syncedStudentId: student.id,
+              marksObtained: m.reExamMark,
+              scheduledDate: m.reExamDate || new Date().toISOString(),
+              remarks: m.remarks,
+            },
+            { onSettled: () => router.push(backHref) },
+          );
+          return;
+        }
+      }
+    }
+    router.push(backHref);
+  }, [evaluation, student.id, reExamAssessment, backHref, router]);
+
   const handleReExamMark = (
     outcomeName: string,
     value: string,
@@ -224,12 +255,12 @@ export default function ReExamDetailedView({ student, evaluation }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between bg-card text-card-foreground p-4 rounded-xl border border-border shadow-sm">
         <div className="flex items-center gap-3">
-          <Link
-            href="/admin/re-exam-portal"
+          <button
+            onClick={saveAndGoBack}
             className="p-1.5 hover:bg-muted rounded-full transition-colors border border-border"
           >
             <ArrowLeft className="w-4 h-4 text-foreground" />
-          </Link>
+          </button>
           <div>
             <h2 className="font-bold text-sm text-foreground">
               {student.name} - Re-Exam Entry
