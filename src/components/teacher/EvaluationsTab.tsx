@@ -256,15 +256,14 @@ export default function EvaluationsTab({
                     eval: evalPlan.title,
                   });
                 }}
-                disabled={evalPlan.status === 'Published'}
                 className={cn(
                   "w-full font-bold text-xs",
                   evalPlan.status === 'Published'
-                    ? "bg-muted text-muted-foreground cursor-not-allowed"
+                    ? "bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-950/60"
                     : "bg-primary text-primary-foreground hover:bg-primary/90"
                 )}
               >
-                {evalPlan.status === 'Published' ? 'Published' : 'Enter Marks'}
+                {evalPlan.status === 'Published' ? 'Preview' : 'Enter Marks'}
               </Button>
             </div>
           </div>

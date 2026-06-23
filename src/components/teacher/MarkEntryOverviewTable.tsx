@@ -541,6 +541,8 @@ export default function MarkEntryOverviewTable() {
                                 step="any"
                                 value={val ?? ""}
                                 placeholder="—"
+                                readOnly={evalGroupStatus === 'SUBMITTED'}
+                                tabIndex={evalGroupStatus === 'SUBMITTED' ? -1 : 0}
                                 onChange={(e) =>
                                   handleMarkChange(
                                     student.id,
@@ -552,6 +554,7 @@ export default function MarkEntryOverviewTable() {
                                 }
                                 className={cn(
                                   "w-16 px-2 py-1.5 text-center text-xs font-bold rounded border-2 focus:outline-none focus:ring-2 transition-colors",
+                                  evalGroupStatus === 'SUBMITTED' && "opacity-80 cursor-default",
                                   isFail
                                     ? "bg-red-50 dark:bg-red-950/20 border-red-300 dark:border-red-800 text-red-900 dark:text-red-300 focus:ring-red-400"
                                     : val !== null && val !== undefined

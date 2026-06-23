@@ -10,12 +10,10 @@ import {
   BookOpen,
   Trash2,
   Pencil,
-  Plus,
   AlertCircle,
   CheckCircle2,
   Clock,
   FileText,
-  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/shared/ui/button";
 import { Input } from "@/components/shared/ui/input";
@@ -53,13 +51,12 @@ import {
   AlertDialogTitle,
 } from "@/components/shared/ui/alert-dialog";
 import { useExam, useUpdateExam, useDeleteExam } from "@/hooks/use-exams";
-import { useEvaluationTemplates } from "@/hooks/use-evaluations";
 import { useAcademicYears } from "@/hooks/use-academic-config";
 import { useSubjects, useGradeLevels } from "@/hooks/use-subjects";
-import { apiClient } from "@/lib/api-client";
-import { useQueryClient } from "@tanstack/react-query";
 import SanskarLoader from "@/components/shared/SanskarLoader";
 import { ROUTES } from "@/lib/constants";
+import { cn } from "@/lib/utils";
+import ExamResultCompilation from "@/components/admin/ExamResultCompilation";
 
 interface Props {
   examId: string;
@@ -72,12 +69,9 @@ export default function ExamDetailClient({ examId }: Props) {
   const { data: gradeLevels } = useGradeLevels();
   const updateExam = useUpdateExam();
   const deleteExam = useDeleteExam();
-  const queryClient = useQueryClient();
 
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [addSubjectOpen, setAddSubjectOpen] = useState(false);
-  const [removeSubjectId, setRemoveSubjectId] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -85,12 +79,7 @@ export default function ExamDetailClient({ examId }: Props) {
   const [academicYearId, setAcademicYearId] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-
-  // Fetch all evaluation templates for this academic year
-  const { data: allTemplates = [] } = useEvaluationTemplates({
-    academicYearId: exam?.academicYearId,
-    isActive: true,
-  });
+  const [activeTab, setActiveTab] = useState<'overview' | 'compilation'>('overview');
 
   // Templates linked to this exam
   const linkedTemplates = useMemo(
@@ -98,48 +87,27 @@ export default function ExamDetailClient({ examId }: Props) {
     [exam],
   );
 
-  // Subjects already in this exam (derived from linked templates)
-  const examSubjects = useMemo(() => {
-    const map = new Map<
-      string,
-      {
-        id: string;
-        name: string;
-        code: string;
-        templates: typeof linkedTemplates;
-        totalWeightage: number;
-      }
-    >();
-    for (const t of linkedTemplates) {
-      if (!t.syncedSubject) continue;
-      const sub = t.syncedSubject;
-      if (!map.has(sub.id)) {
-        map.set(sub.id, {
-          id: sub.id,
-          name: sub.name,
-          code: sub.code,
-          templates: [],
-          totalWeightage: 0,
-        });
-      }
-      const entry = map.get(sub.id)!;
-      entry.templates.push(t);
-      entry.totalWeightage += Number(t.weightage);
-    }
-    return Array.from(map.values());
-  }, [linkedTemplates]);
-
   // All subjects for this exam's grade level
   const { data: allGradeSubjects = [] } = useSubjects({
     gradeLevel: exam?.gradeLevel,
     isActive: true,
   });
 
-  // Subjects not yet in this exam
-  const availableSubjects = useMemo(() => {
-    const examSubjectIds = new Set(examSubjects.map((s) => s.id));
-    return allGradeSubjects.filter((s) => !examSubjectIds.has(s.id));
-  }, [allGradeSubjects, examSubjects]);
+  // Subjects table: all grade-level subjects, enriched with linked templates
+  const examSubjects = useMemo(() => {
+    const templateMap = new Map<string, typeof linkedTemplates>();
+    for (const t of linkedTemplates) {
+      if (!t.syncedSubject) continue;
+      const sid = t.syncedSubject.id;
+      if (!templateMap.has(sid)) templateMap.set(sid, []);
+      templateMap.get(sid)!.push(t);
+    }
+    return allGradeSubjects.map((s) => {
+      const templates = templateMap.get(s.id) ?? [];
+      const totalWeightage = templates.reduce((sum, t) => sum + Number(t.weightage), 0);
+      return { id: s.id, name: s.name, code: s.code, templates, totalWeightage };
+    });
+  }, [linkedTemplates, allGradeSubjects]);
 
   // Stats
   const totalWeightage = useMemo(
@@ -195,52 +163,6 @@ export default function ExamDetailClient({ examId }: Props) {
     }
   };
 
-  // Add subject: link ALL templates for this subject (matching grade + year) to this exam
-  const handleAddSubject = async (subjectId: string) => {
-    if (!exam) return;
-    try {
-      const templatesToLink = allTemplates.filter(
-        (t) =>
-          t.syncedSubjectId === subjectId &&
-          (!t.examId || t.examId === examId),
-      );
-
-      for (const t of templatesToLink) {
-        if (t.examId !== examId) {
-          await apiClient.patch(`/admin/evaluation-templates/${t.id}`, {
-            examId: examId,
-          });
-        }
-      }
-
-      queryClient.invalidateQueries({ queryKey: ["exam", examId] });
-      setAddSubjectOpen(false);
-    } catch (err: any) {
-      alert(err.message || "Failed to add subject");
-    }
-  };
-
-  // Remove subject: unlink ALL templates for this subject from this exam
-  const handleRemoveSubject = async (subjectId: string) => {
-    if (!exam) return;
-    try {
-      const templatesToUnlink = linkedTemplates.filter(
-        (t) => t.syncedSubjectId === subjectId,
-      );
-
-      for (const t of templatesToUnlink) {
-        await apiClient.patch(`/admin/evaluation-templates/${t.id}`, {
-          examId: null,
-        });
-      }
-
-      queryClient.invalidateQueries({ queryKey: ["exam", examId] });
-      setRemoveSubjectId(null);
-    } catch (err: any) {
-      alert(err.message || "Failed to remove subject");
-    }
-  };
-
   if (isLoading) {
     return <SanskarLoader message="Loading exam details..." />;
   }
@@ -293,9 +215,15 @@ export default function ExamDetailClient({ examId }: Props) {
               >
                 {exam.isActive ? (
                   <CheckCircle2 className="w-3 h-3" />
-                ) : (
-                  <AlertCircle className="w-3 h-3" />
-                )}
+      ) : (
+        <ExamResultCompilation
+          examId={examId}
+          examName={exam.name}
+          gradeLevel={exam.gradeLevel}
+          academicYearId={exam.academicYearId}
+          linkedTemplates={linkedTemplates}
+        />
+      )}
                 {exam.isActive ? "Active" : "Inactive"}
               </span>
             </div>
@@ -348,12 +276,41 @@ export default function ExamDetailClient({ examId }: Props) {
         </div>
       </div>
 
+      {/* ─── Tab Navigation ─── */}
+      <div className="flex items-center gap-1 border-b border-border pb-0">
+        <button
+          onClick={() => setActiveTab('overview')}
+          className={cn(
+            "px-4 py-2.5 text-xs font-bold transition-colors rounded-t-lg border-b-2",
+            activeTab === 'overview'
+              ? "border-primary text-foreground bg-card"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          Overview
+        </button>
+        <button
+          onClick={() => setActiveTab('compilation')}
+          className={cn(
+            "px-4 py-2.5 text-xs font-bold transition-colors rounded-t-lg border-b-2",
+            activeTab === 'compilation'
+              ? "border-primary text-foreground bg-card"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          Result Compilation
+        </button>
+      </div>
+
+      {/* ─── Tab Content ─── */}
+      {activeTab === 'overview' && (
+      <>
       {/* ─── Summary Stats ─── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard
           label="Subjects"
-          value={String(examSubjects.length)}
-          sub={`of ${allGradeSubjects.length} total`}
+          value={String(allGradeSubjects.length)}
+          sub="For this grade level"
           icon={<BookOpen className="w-4 h-4" />}
           colorClass="text-violet-600 bg-violet-100 dark:text-violet-400 dark:bg-violet-900/30"
         />
@@ -398,119 +355,83 @@ export default function ExamDetailClient({ examId }: Props) {
 
       {/* ─── Subjects Table ─── */}
       <div className="bg-card rounded-xl border border-border shadow-sm">
-        <div className="px-5 py-4 border-b border-border flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-bold text-foreground">
-              Exam Subjects
-            </h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {examSubjects.length} subject(s) in this exam — teachers create
-              evaluations for these subjects
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs gap-1.5"
-            onClick={() => setAddSubjectOpen(true)}
-            disabled={availableSubjects.length === 0}
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Add Subject
-          </Button>
+        <div className="px-5 py-4 border-b border-border">
+          <h2 className="text-sm font-bold text-foreground">
+            Exam Subjects
+          </h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {examSubjects.length} subject(s) — teachers create
+            evaluations for these subjects
+          </p>
         </div>
 
-        {examSubjects.length > 0 ? (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Subject</TableHead>
-                  <TableHead className="text-center">Evaluations</TableHead>
-                  <TableHead className="text-center">Weightage</TableHead>
-                  <TableHead>Evaluations Breakdown</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Subject</TableHead>
+                <TableHead className="text-center">Evaluations</TableHead>
+                <TableHead className="text-center">Weightage</TableHead>
+                <TableHead>Evaluations Breakdown</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {examSubjects.map((subject) => (
+                <TableRow key={subject.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-primary" />
+                      <div>
+                        <span className="text-sm font-medium text-foreground">
+                          {subject.name}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground ml-1.5">
+                          {subject.code}
+                        </span>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-xs font-bold text-primary">
+                      {subject.templates.length}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <span
+                      className={`inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        subject.totalWeightage >= 100
+                          ? "bg-emerald-100 text-emerald-700"
+                          : subject.totalWeightage >= 80
+                            ? "bg-amber-100 text-amber-700"
+                            : "bg-primary/10 text-primary"
+                      }`}
+                    >
+                      {subject.totalWeightage}%
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {subject.templates.map((t) => (
+                        <span
+                          key={t.id}
+                          className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-full"
+                        >
+                          {t.name}
+                          <span className="text-foreground/60">
+                            {Number(t.weightage)}%
+                          </span>
+                        </span>
+                      ))}
+                    </div>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {examSubjects.map((subject) => (
-                  <TableRow key={subject.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-primary" />
-                        <div>
-                          <span className="text-sm font-medium text-foreground">
-                            {subject.name}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground ml-1.5">
-                            {subject.code}
-                          </span>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-xs font-bold text-primary">
-                        {subject.templates.length}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <span
-                        className={`inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          subject.totalWeightage >= 100
-                            ? "bg-emerald-100 text-emerald-700"
-                            : subject.totalWeightage >= 80
-                              ? "bg-amber-100 text-amber-700"
-                              : "bg-primary/10 text-primary"
-                        }`}
-                      >
-                        {subject.totalWeightage}%
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {subject.templates.map((t) => (
-                          <span
-                            key={t.id}
-                            className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-full"
-                          >
-                            {t.name}
-                            <span className="text-foreground/60">
-                              {Number(t.weightage)}%
-                            </span>
-                          </span>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-xs gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => setRemoveSubjectId(subject.id)}
-                      >
-                        Remove
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        ) : (
-          <div className="p-12 text-center">
-            <BookOpen className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
-            <p className="text-sm font-medium text-muted-foreground">
-              No subjects added yet
-            </p>
-            <p className="text-xs text-muted-foreground/60 mt-1">
-              Click "Add Subject" to include subjects in this exam
-            </p>
-          </div>
-        )}
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       {/* ─── Weightage Per Subject ─── */}
-      {examSubjects.length > 0 && (
         <div className="bg-card rounded-xl border border-border shadow-sm">
           <div className="px-5 py-4 border-b border-border">
             <h2 className="text-sm font-bold text-foreground">
@@ -584,6 +505,16 @@ export default function ExamDetailClient({ examId }: Props) {
             })}
           </div>
         </div>
+        </>
+      )}
+      {activeTab === 'compilation' && (
+        <ExamResultCompilation
+          examId={examId}
+          examName={exam.name}
+          gradeLevel={exam.gradeLevel}
+          academicYearId={exam.academicYearId}
+          linkedTemplates={linkedTemplates}
+        />
       )}
 
       {/* ─── Edit Dialog ─── */}
@@ -705,81 +636,6 @@ export default function ExamDetailClient({ examId }: Props) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ─── Remove Subject Confirmation ─── */}
-      <AlertDialog
-        open={removeSubjectId !== null}
-        onOpenChange={(v) => !v && setRemoveSubjectId(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove Subject</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to remove "
-              {examSubjects.find((s) => s.id === removeSubjectId)?.name}" from
-              this exam? This will unlink all its evaluation templates.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="text-xs">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => removeSubjectId && handleRemoveSubject(removeSubjectId)}
-              className="bg-destructive text-destructive-foreground text-xs"
-            >
-              Remove
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* ─── Add Subject Dialog ─── */}
-      <Dialog open={addSubjectOpen} onOpenChange={setAddSubjectOpen}>
-        <DialogContent className="sm:max-w-[450px] max-h-[70vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Add Subject to Exam</DialogTitle>
-          </DialogHeader>
-          <p className="text-xs text-muted-foreground -mt-2">
-            Select subjects for {exam.gradeLevel}. All existing evaluations for
-            the selected subject will be linked to this exam.
-          </p>
-
-          <div className="flex-1 overflow-y-auto border border-border rounded-lg max-h-[350px]">
-            {availableSubjects.length === 0 ? (
-              <div className="p-8 text-center text-sm text-muted-foreground">
-                All subjects for this grade level are already in the exam.
-              </div>
-            ) : (
-              availableSubjects.map((subject) => (
-                <button
-                  key={subject.id}
-                  className="w-full flex items-center gap-3 px-4 py-3 border-b border-border last:border-0 hover:bg-muted/30 transition-colors text-left"
-                  onClick={() => handleAddSubject(subject.id)}
-                >
-                  <BookOpen className="w-4 h-4 text-primary shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm font-medium text-foreground">
-                      {subject.name}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground ml-1.5">
-                      {subject.code}
-                    </span>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-                </button>
-              ))
-            )}
-          </div>
-
-          <div className="flex justify-end pt-2">
-            <Button
-              variant="outline"
-              onClick={() => setAddSubjectOpen(false)}
-              className="text-xs"
-            >
-              Cancel
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </motion.div>
   );
 }
