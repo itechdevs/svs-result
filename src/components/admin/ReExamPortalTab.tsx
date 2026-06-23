@@ -184,13 +184,13 @@ export default function ReExamPortalTab() {
       {/* Header */}
       <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">
             Re-Examination Management
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          {/* <p className="text-sm text-muted-foreground mt-1">
             Coordinate and score supplemental sessions for failed learning
             outcome targets.
-          </p>
+          </p> */}
         </div>
       </div>
 
@@ -353,9 +353,9 @@ export default function ReExamPortalTab() {
                 const percentage =
                   item.fullMarks > 0
                     ? Math.round(
-                        (Number(item.marksObtained) / Number(item.fullMarks)) *
-                          100,
-                      )
+                      (Number(item.marksObtained) / Number(item.fullMarks)) *
+                      100,
+                    )
                     : 0;
 
                 return (

@@ -192,7 +192,7 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
     <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 relative">
 
       {/* ── Sticky Header ───────────────────────────────────────────────────── */}
-      <div className="sticky top-4 z-40 flex items-center justify-between bg-card/95 backdrop-blur-sm p-4 rounded-xl border border-border shadow-md">
+      <div className="sticky top-4 z-40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card/95 backdrop-blur-sm p-4 rounded-xl border border-border shadow-md">
         <div className="flex items-center gap-3">
           <Button
             variant="outline"
@@ -202,9 +202,9 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
           >
             <ArrowLeft className="w-4 h-4" />
           </Button>
-          <div>
-            <h2 className="font-bold text-sm text-foreground">{student.name}</h2>
-            <p className="text-[11px] text-muted-foreground">
+          <div className="min-w-0">
+            <h2 className="font-bold text-sm text-foreground truncate">{student.name}</h2>
+            <p className="text-[11px] text-muted-foreground truncate">
               {student.rollNo} · {evaluation.subject} · {evaluation.title}
               {evaluation.date && evaluation.date !== 'TBD' && (
                 <span className="ml-2 inline-flex items-center gap-1 text-[10px] text-blue-600 dark:text-blue-400">
@@ -215,7 +215,7 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <span className={cn(
             'px-3 py-1 rounded-full text-xs font-bold uppercase',
             statusStyles[status]
@@ -238,7 +238,7 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
 
 
       {/* ── Marks Table ─────────────────────────────────────────────────────── */}
-      <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+      <div className="bg-card rounded-xl border border-border shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="bg-gradient-to-r from-blue-50/50 to-purple-50/50 dark:from-slate-800/50 dark:to-slate-900/50">
@@ -483,7 +483,7 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
       </div>
 
       {/* ── Footer Summary ───────────────────────────────────────────────────── */}
-      <div className="bg-muted/30 rounded-xl border border-border p-5 flex flex-wrap items-center gap-8">
+      <div className="bg-muted/30 rounded-xl border border-border p-4 sm:p-5 grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-4 sm:gap-8">
         <div>
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Total Obtained</p>
           <p className="text-2xl font-bold text-foreground">
