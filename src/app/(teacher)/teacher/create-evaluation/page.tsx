@@ -6,6 +6,7 @@ import { AnimatePresence } from 'motion/react';
 import { useCreateTeacherEvaluationPlan } from '@/hooks/use-evaluations';
 import { useProfile } from '@/hooks/use-profile';
 import CreateEvaluationTab from '@/components/teacher/CreateEvaluationTab';
+import { toast } from 'sonner';
 
 interface OutcomeRow { name: string; date: string; max: number; pass: number; }
 interface TaskGroup { taskType: string; max: number; pass: number; outcomes: OutcomeRow[]; }
@@ -41,7 +42,7 @@ export default function CreateEvaluationPage() {
 
   const handleCreateEvaluation = async () => {
     if (!selectedClass) {
-      alert('Please select a class from the sidebar first');
+      toast.error('Please select a class from the sidebar first');
       return;
     }
 
@@ -49,7 +50,7 @@ export default function CreateEvaluationPage() {
       s => s.name === (newEvalSubject || selectedSubject) && s.gradeLevel === selectedClass
     );
     if (!subject) {
-      alert(`Subject "${newEvalSubject || selectedSubject}" not found for ${selectedClass}`);
+      toast.error(`Subject "${newEvalSubject || selectedSubject}" not found for ${selectedClass}`);
       return;
     }
 
@@ -58,7 +59,7 @@ export default function CreateEvaluationPage() {
     );
     const weightage = parseFloat((flatOutcomes.length > 0 ? 100 / flatOutcomes.length : 100).toFixed(2));
 
-    try {
+    const doCreate = async () => {
       for (const [i, item] of flatOutcomes.entries()) {
         // Name format: [EvalTitle|UnitTitle][TaskType] OutcomeName
         await createPlan.mutateAsync({
@@ -72,14 +73,19 @@ export default function CreateEvaluationPage() {
           displayOrder: i,
         });
       }
-    } catch (err: any) {
-      const detail = err.details ? JSON.stringify(err.details) : '';
-      alert(`${err.message || 'Failed to create evaluation plan'}${detail ? `\n${detail}` : ''}`);
-      return;
-    }
+    };
 
-    // Redirect back to evaluations list so the new card is immediately visible
-    router.push(`/teacher/evaluations${suffix}`);
+    toast.promise(doCreate(), {
+      loading: 'Creating evaluation plan…',
+      success: () => {
+        router.push(`/teacher/evaluations${suffix}`);
+        return 'Evaluation created successfully';
+      },
+      error: (err: any) => {
+        const detail = err?.details ? JSON.stringify(err.details) : '';
+        return `${err?.message || 'Failed to create evaluation plan'}${detail ? ': ' + detail : ''}`;
+      },
+    });
   };
 
   return (

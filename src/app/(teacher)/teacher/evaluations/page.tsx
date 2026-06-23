@@ -29,31 +29,35 @@ export default function TeacherEvaluationsPage() {
 
   // Only fetch templates when a specific subject is selected
   const { data: templatesData = [] } = useEvaluationTemplates(
-    matchedSubject ? { syncedSubjectId: matchedSubject.id, isActive: true } : {},
+    matchedSubject
+      ? { syncedSubjectId: matchedSubject.id, isActive: true }
+      : {},
     { enabled: !!matchedSubject },
   );
 
-  const [selectedEvaluationId, setSelectedEvaluationId] = useState('');
-  const [newEvalTitle, setNewEvalTitle] = useState('');
+  const [selectedEvaluationId, setSelectedEvaluationId] = useState("");
+  const [newEvalTitle, setNewEvalTitle] = useState("");
   const [newEvalSubject, setNewEvalSubject] = useState(selectedSubject);
   const deleteTemplate = useDeleteEvaluationTemplate();
 
-  const assignedSubjectIds = useMemo(() =>
-    new Set(profile?.syncedTeacher?.subjects.map(s => s.id) ?? []),
-    [profile]
+  const assignedSubjectIds = useMemo(
+    () => new Set(profile?.syncedTeacher?.subjects.map((s) => s.id) ?? []),
+    [profile],
   );
 
   const evaluations: EvaluationPlan[] = useMemo(() => {
     if (!profile?.syncedTeacher || !matchedSubject) return [];
 
-    const templates = templatesData.filter(t => assignedSubjectIds.has(t.syncedSubjectId));
+    const templates = templatesData.filter((t) =>
+      assignedSubjectIds.has(t.syncedSubjectId),
+    );
 
     // Group by gradeConfigId+syncedSubjectId+evalTitle → one card per distinct evaluation plan
     const groups = new Map<string, typeof templates>();
     for (const t of templates) {
       const evalTitleMatch = t.name.match(/^\[([^\]]+)\]\[/);
-      const rawEvalPart = evalTitleMatch ? evalTitleMatch[1] : '__legacy__';
-      const evalTitle = rawEvalPart.split('|')[0];
+      const rawEvalPart = evalTitleMatch ? evalTitleMatch[1] : "__legacy__";
+      const evalTitle = rawEvalPart.split("|")[0];
       const key = `${t.gradeConfigId}::${t.syncedSubjectId}::${evalTitle}`;
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(t);
@@ -61,63 +65,88 @@ export default function TeacherEvaluationsPage() {
 
     return Array.from(groups.entries()).map(([, group]) => {
       const first = group[0];
-      const subjectName = first.syncedSubject?.name ?? 'Unknown';
-      const gradeLevel = first.syncedSubject?.gradeLevel ?? first.gradeConfig?.gradeLevel ?? '';
-      const academicYear = first.gradeConfig?.academicYear?.name ?? '';
+      const subjectName = first.syncedSubject?.name ?? "Unknown";
+      const gradeLevel =
+        first.syncedSubject?.gradeLevel ?? first.gradeConfig?.gradeLevel ?? "";
+      const academicYear = first.gradeConfig?.academicYear?.name ?? "";
       const evalTitleMatch = first.name.match(/^\[([^\]]+)\]\[/);
-      const rawEvalPart = evalTitleMatch ? evalTitleMatch[1] : '';
-      const [evalTitle, unitTitle = ''] = rawEvalPart.split('|');
+      const rawEvalPart = evalTitleMatch ? evalTitleMatch[1] : "";
+      const [evalTitle, unitTitle = ""] = rawEvalPart.split("|");
       const totalFullMarks = group.reduce((s, t) => s + Number(t.fullMarks), 0);
       const totalPassMarks = group.reduce((s, t) => s + Number(t.passMarks), 0);
-      const anyActive = group.some(t => t.isActive);
+      const anyActive = group.some((t) => t.isActive);
 
       // Without results fetch, all plans default to Active/Inactive
-      const marksStatus = anyActive ? 'Active' : 'Inactive';
+      const marksStatus = anyActive ? "Active" : "Inactive";
       const latestDate = group
-        .map(t => t.scheduledDate ? new Date(t.scheduledDate) : null)
+        .map((t) => (t.scheduledDate ? new Date(t.scheduledDate) : null))
         .filter(Boolean)
         .sort((a, b) => b!.getTime() - a!.getTime())[0];
 
       return {
         id: first.id,
         title: evalTitle || subjectName,
-        subjectTitle: gradeLevel ? `${subjectName} — ${gradeLevel}` : subjectName,
+        subjectTitle: gradeLevel
+          ? `${subjectName} — ${gradeLevel}`
+          : subjectName,
         subject: subjectName,
         gradeLevel,
         syncedSubjectId: first.syncedSubjectId,
         status: marksStatus,
-        testTypes: `${group.length} Task${group.length !== 1 ? 's' : ''}`,
-        outcomes: `${group.length} Outcome${group.length !== 1 ? 's' : ''}`,
+        testTypes: `${group.length} Task${group.length !== 1 ? "s" : ""}`,
+        outcomes: `${group.length} Outcome${group.length !== 1 ? "s" : ""}`,
         fullMarks: totalFullMarks,
         passMarks: totalPassMarks,
         date: latestDate
-          ? latestDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
-          : 'TBD',
+          ? latestDate.toLocaleDateString("en-US", {
+              month: "short",
+              day: "2-digit",
+              year: "numeric",
+            })
+          : "TBD",
         unit: unitTitle,
-        learningOutcomes: group.map(t => {
+        learningOutcomes: group.map((t) => {
           const newFormat = t.name.match(/^\[[^\]]+\]\[([^\]]+)\]\s*(.+)$/);
           const legacyFormat = t.name.match(/^\[([^\]]+)\]\s*(.+)$/);
-          const taskType = newFormat ? newFormat[1] : (legacyFormat ? legacyFormat[1] : 'Standard');
-          const outcomeName = newFormat ? newFormat[2] : (legacyFormat ? legacyFormat[2] : t.name);
+          const taskType = newFormat
+            ? newFormat[1]
+            : legacyFormat
+              ? legacyFormat[1]
+              : "Standard";
+          const outcomeName = newFormat
+            ? newFormat[2]
+            : legacyFormat
+              ? legacyFormat[2]
+              : t.name;
 
           return {
             name: t.name,
             text: outcomeName,
             regularRating: 0,
             afterSupportRating: null,
-            regularDate: t.scheduledDate ? new Date(t.scheduledDate).toISOString().split('T')[0] : '',
-            supportDate: '',
+            regularDate: t.scheduledDate
+              ? new Date(t.scheduledDate).toISOString().split("T")[0]
+              : "",
+            supportDate: "",
             fullMarks: Number(t.fullMarks),
             passMarks: Number(t.passMarks),
             taskType: taskType,
           };
         }),
-        subEvaluations: group.map(t => {
+        subEvaluations: group.map((t) => {
           // Supports both [EvalTitle][TaskType] OutcomeName and legacy [TaskType] OutcomeName
           const newFormat = t.name.match(/^\[[^\]]+\]\[([^\]]+)\]\s*(.+)$/);
           const legacyFormat = t.name.match(/^\[([^\]]+)\]\s*(.+)$/);
-          const taskType = newFormat ? newFormat[1] : (legacyFormat ? legacyFormat[1] : 'Standard');
-          const outcomeName = newFormat ? newFormat[2] : (legacyFormat ? legacyFormat[2] : t.name);
+          const taskType = newFormat
+            ? newFormat[1]
+            : legacyFormat
+              ? legacyFormat[1]
+              : "Standard";
+          const outcomeName = newFormat
+            ? newFormat[2]
+            : legacyFormat
+              ? legacyFormat[2]
+              : t.name;
           return {
             id: t.id,
             name: outcomeName,
@@ -128,7 +157,7 @@ export default function TeacherEvaluationsPage() {
             taskType,
           };
         }),
-        templateIds: group.map(t => t.id),
+        templateIds: group.map((t) => t.id),
       } satisfies EvaluationPlan;
     });
   }, [templatesData, assignedSubjectIds, matchedSubject]);
@@ -141,9 +170,11 @@ export default function TeacherEvaluationsPage() {
       Object.entries(extraParams).forEach(([k, v]) => params.set(k, v));
     }
     const suffix = params.toString() ? `?${params}` : "";
-    if (tab === "create-evaluation") router.push(`/teacher/create-evaluation${suffix}`);
+    if (tab === "create-evaluation")
+      router.push(`/teacher/create-evaluation${suffix}`);
     else if (tab === "mark-entry") router.push(`/teacher/mark-entry${suffix}`);
-    else if (tab === "result-compilation") router.push(`/teacher/result-compilation${suffix}`);
+    else if (tab === "result-compilation")
+      router.push(`/teacher/result-compilation${suffix}`);
     else router.push("/teacher/dashboard");
   };
 
@@ -177,7 +208,7 @@ export default function TeacherEvaluationsPage() {
           selectedClass={selectedClass}
           selectedSubject={selectedSubject}
           onDelete={async (id) => {
-            const plan = evaluations.find(e => e.id === id);
+            const plan = evaluations.find((e) => e.id === id);
             const ids = plan?.templateIds ?? [id];
             for (const tid of ids) await deleteTemplate.mutateAsync(tid);
           }}
