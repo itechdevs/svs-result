@@ -67,6 +67,12 @@ export default function ExamsPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
+  const [gradeLevelFilter, setGradeLevelFilter] = useState("");
+
+  const filteredExams = exams?.filter(
+    (exam) => !gradeLevelFilter || exam.gradeLevel === gradeLevelFilter
+  );
+
   const resetForm = () => {
     setName("");
     setDescription("");
@@ -378,8 +384,26 @@ export default function ExamsPage() {
         </Dialog>
       </div>
 
+      <div className="bg-card border border-border rounded-xl shadow-sm p-4">
+        <div className="w-full sm:w-56">
+          <Select value={gradeLevelFilter} onValueChange={(val) => setGradeLevelFilter(val === "all" ? "" : val)}>
+            <SelectTrigger className="w-full text-sm h-9">
+              <SelectValue placeholder="All Grade Levels" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Grade Levels</SelectItem>
+              {gradeLevels?.map((level) => (
+                <SelectItem key={level} value={level}>
+                  {level}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
-        {exams && exams.length > 0 ? (
+        {filteredExams && filteredExams.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow>
@@ -392,7 +416,7 @@ export default function ExamsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {exams.map((exam) => (
+              {filteredExams.map((exam) => (
                 <TableRow
                   key={exam.id}
                   className="cursor-pointer hover:bg-muted/50"
@@ -486,10 +510,10 @@ export default function ExamsPage() {
           <div className="p-12 text-center">
             <BookOpen className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
             <p className="text-sm font-medium text-muted-foreground">
-              No exams yet
+              {gradeLevelFilter ? "No exams for this grade level" : "No exams yet"}
             </p>
             <p className="text-xs text-muted-foreground/60 mt-1">
-              Create your first exam to get started
+              {gradeLevelFilter ? "Try selecting a different grade level" : "Create your first exam to get started"}
             </p>
           </div>
         )}
