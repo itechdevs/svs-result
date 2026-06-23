@@ -42,8 +42,8 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
   const { data: profile } = useProfile();
   const { data: academicYears = [] } = useAcademicYears();
 
-  const [selectedClass, setSelectedClass] = useState(searchParams.get('class') ?? '');
-  const [selectedSubject, setSelectedSubject] = useState(searchParams.get('subject') ?? '');
+  const selectedClass = searchParams.get('class') ?? '';
+  const selectedSubject = searchParams.get('subject') ?? '';
   const [selectedAcademicYear, setSelectedAcademicYear] = useState('');
   const [selectedExam, setSelectedExam] = useState('all');
   const [selectedEvaluations, setSelectedEvaluations] = useState<string[]>([]);
@@ -95,11 +95,6 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
     const subjects = profile?.syncedTeacher?.subjects ?? [];
     return Array.from(new Set(subjects.map((s) => ({ id: s.id, name: s.name, gradeLevel: s.gradeLevel }))));
   }, [profile]);
-
-  // Classes from assigned subjects
-  const classes = useMemo(() => {
-    return Array.from(new Set(assignedSubjects.map((s) => s.gradeLevel)));
-  }, [assignedSubjects]);
 
   // Subjects for selected class
   const subjects = useMemo(() => {
@@ -282,44 +277,16 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
         <div>
           <h2 className="text-2xl font-bold text-foreground">Result Compilation</h2>
           <p className="text-xs text-muted-foreground mt-1">
-            Select a subject and evaluations to compile results
+            {selectedSubject
+              ? `Compiling results for ${selectedClass} — ${selectedSubject}`
+              : 'Select a subject and evaluations to compile results'}
           </p>
         </div>
       </div>
 
       {/* Filters */}
       <div className="bg-card rounded-xl border border-border shadow-sm p-5">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-              Select Class
-            </label>
-            <Select value={selectedClass} onValueChange={(v) => { setSelectedClass(v); setSelectedSubject(''); setSelectedEvaluations([]); }}>
-              <SelectTrigger className="w-full text-sm">
-                <SelectValue placeholder="Select a class..." />
-              </SelectTrigger>
-              <SelectContent>
-                {classes.map((c) => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-              Select Subject
-            </label>
-            <Select value={selectedSubject} onValueChange={(v) => { setSelectedSubject(v); setSelectedEvaluations([]); }} disabled={!selectedClass}>
-              <SelectTrigger className="w-full text-sm">
-                <SelectValue placeholder={selectedClass ? "Select a subject..." : "Select a class first"} />
-              </SelectTrigger>
-              <SelectContent>
-                {subjects.map((s) => (
-                  <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
               Select Exam

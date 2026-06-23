@@ -76,23 +76,25 @@ export default function EvaluationsTab({
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => setCurrentTab('result-compilation')}
-            variant="outline"
-            className="font-bold flex items-center gap-2 text-xs shadow-sm"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>Result Compilation</span>
-          </Button>
-          <Button
-            onClick={() => setCurrentTab('create-evaluation')}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold flex items-center gap-2 text-xs shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Create Evaluation Plan</span>
-          </Button>
-        </div>
+        {selectedClass && selectedSubject && (
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setCurrentTab('result-compilation')}
+              variant="outline"
+              className="font-bold flex items-center gap-2 text-xs shadow-sm"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Result Compilation</span>
+            </Button>
+            <Button
+              onClick={() => setCurrentTab('create-evaluation')}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold flex items-center gap-2 text-xs shadow-sm"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Create Evaluation Plan</span>
+            </Button>
+          </div>
+        )}
       </div>
 
       {(() => {
