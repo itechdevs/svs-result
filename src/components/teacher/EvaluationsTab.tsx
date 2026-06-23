@@ -64,11 +64,11 @@ export default function EvaluationsTab({
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -15 }}
-      className="space-y-6"
+      className="space-y-4 sm:space-y-6"
     >
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Academic Evaluations Plan</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground">Academic Evaluations Plan</h2>
           {(selectedClass || selectedSubject) && (
             <p className="text-xs text-muted-foreground mt-1">
               Showing: <span className="font-semibold text-foreground">{selectedClass}</span>
@@ -77,7 +77,7 @@ export default function EvaluationsTab({
           )}
         </div>
         {selectedClass && selectedSubject && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button
               onClick={() => setCurrentTab('result-compilation')}
               variant="outline"
@@ -91,7 +91,7 @@ export default function EvaluationsTab({
               className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold flex items-center gap-2 text-xs shadow-sm"
             >
               <Plus className="w-4 h-4" />
-              <span>Create Evaluation Plan</span>
+              <span>Create Evaluation</span>
             </Button>
           </div>
         )}
@@ -103,18 +103,18 @@ export default function EvaluationsTab({
         const total = evaluations.length;
         const fmt = (n: number) => (n < 10 ? `0${n}` : `${n}`);
         return (
-          <div className="grid grid-cols-3 gap-6 bg-card p-5 rounded-2xl border border-border shadow-sm">
+          <div className="grid grid-cols-3 gap-2 sm:gap-6 bg-card p-3 sm:p-5 rounded-2xl border border-border shadow-sm">
             <div>
               <p className="text-[10px] font-bold text-muted-foreground uppercase">Published Cards</p>
-              <span className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1 block">{fmt(published)} Published</span>
+              <span className="text-lg sm:text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1 block">{fmt(published)} <span className="hidden sm:inline">Published</span></span>
             </div>
-            <div className="border-l border-border pl-6">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase">Drafted Cards</p>
-              <span className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1 block">{fmt(drafted)} Drafted</span>
+            <div className="border-l border-border pl-2 sm:pl-6">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase">Drafted</p>
+              <span className="text-lg sm:text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1 block">{fmt(drafted)} <span className="hidden sm:inline">Drafted</span></span>
             </div>
-            <div className="border-l border-border pl-6">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase">Total Evaluations</p>
-              <span className="text-2xl font-bold text-destructive mt-1 block">{fmt(total)} Evaluations</span>
+            <div className="border-l border-border pl-2 sm:pl-6">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase">Total</p>
+              <span className="text-lg sm:text-2xl font-bold text-destructive mt-1 block">{fmt(total)} <span className="hidden sm:inline">Evaluations</span></span>
             </div>
           </div>
         );
@@ -142,7 +142,7 @@ export default function EvaluationsTab({
       </div>
 
       {/* Evaluations Plan Cards Directory */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {filtered.map((evalPlan) => (
           <div
             key={evalPlan.id}
@@ -286,7 +286,7 @@ export default function EvaluationsTab({
         <Button
           variant="outline"
           onClick={() => setCurrentTab('create-evaluation')}
-          className="border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center p-8 hover:bg-muted/40 transition-colors text-center group min-h-[300px] h-full"
+          className="border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center p-6 sm:p-8 hover:bg-muted/40 transition-colors text-center group min-h-[200px] sm:min-h-[300px] h-full"
         >
           <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground mb-4 group-hover:scale-110 transition-transform shadow-inner border border-border">
             <Plus className="w-6 h-6 text-foreground" />

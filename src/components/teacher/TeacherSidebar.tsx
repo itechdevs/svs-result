@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutGrid, ClipboardList, ClipboardX, ChevronDown } from "lucide-react";
+import { LayoutGrid, ClipboardList, ClipboardX, ChevronDown, X } from "lucide-react";
 import { ROUTES } from "@/lib/constants";
 import { useSidebar } from "@/components/shared/ui/sidebar";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/shared/ui/sheet";
@@ -39,10 +39,19 @@ export function TeacherSidebar() {
         isCollapsed ? "w-[72px]" : "w-[260px]"
       )}
     >
-      <div className={cn("pt-6 pb-3 border-b border-sidebar-border", isCollapsed ? "px-2 text-center" : "px-6")}>
+      <div className={cn("pt-6 pb-3 border-b border-sidebar-border flex items-center justify-between", isCollapsed ? "px-2 text-center" : "px-6")}>
         <p className="text-[9.5px] font-semibold text-sidebar-foreground/40 uppercase tracking-[0.12em] whitespace-nowrap overflow-hidden">
           {isCollapsed ? "TP" : "Teacher Portal"}
         </p>
+        {isMobile && (
+          <button
+            onClick={() => setOpenMobile(false)}
+            className="p-1 -mr-1 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors"
+            aria-label="Close sidebar"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       <nav className={cn("flex-1 py-3 flex flex-col gap-0.5 overflow-y-auto", isCollapsed ? "px-2" : "px-3")} aria-label="Teacher navigation">

@@ -104,7 +104,7 @@ export default function CreateEvaluationTab({
       exit={{ opacity: 0, y: -15 }}
       className="space-y-6 relative"
     >
-      <div className="sticky top-4 z-50 flex items-center gap-4 bg-card/95 backdrop-blur-sm p-4 rounded-xl border border-border justify-between shadow-md">
+      <div className="sticky top-4 z-50 flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-card/95 backdrop-blur-sm p-4 rounded-xl border border-border justify-between shadow-md">
         <div className="flex items-center gap-3">
           <Button
             variant="outline"
@@ -121,13 +121,13 @@ export default function CreateEvaluationTab({
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto justify-end">
           <Button
             onClick={() => {
               handleCreateEvaluation();
               setCurrentTab('evaluations');
             }}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold w-full sm:w-auto"
           >
             {isEditMode ? 'Update Evaluation' : 'Save Evaluation Plan'}
           </Button>
@@ -186,10 +186,10 @@ export default function CreateEvaluationTab({
         <div className="p-6 space-y-8">
           {newOutcomes.map((group, groupIndex) => (
             <div key={groupIndex} className="space-y-4 border border-border rounded-xl p-4 bg-muted/10 relative">
-              <div className="flex items-center justify-between border-b border-border pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-3">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
-                    <label className="text-[10px] font-extrabold text-muted-foreground uppercase">Task Type Name</label>
+                    <label className="text-[10px] font-extrabold text-muted-foreground uppercase shrink-0">Task Type Name</label>
                     <Input
                       type="text"
                       value={group.taskType}
@@ -198,11 +198,11 @@ export default function CreateEvaluationTab({
                         copy[groupIndex].taskType = e.target.value;
                         setNewOutcomes(copy);
                       }}
-                      className="w-48 text-xs font-bold text-foreground"
+                      className="w-full sm:w-48 text-xs font-bold text-foreground"
                     />
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap justify-end">
                   <Button
                     variant="outline"
                     size="xs"
@@ -231,14 +231,15 @@ export default function CreateEvaluationTab({
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <div className="grid grid-cols-12 gap-4 font-bold text-muted-foreground text-[10px] uppercase pb-1 px-2">
-                  <div className="col-span-4">Sub Learning outcome criteria</div>
-                  <div className="col-span-2">Assessment Date</div>
-                  <div className="col-span-2 text-center">Full Marks</div>
-                  <div className="col-span-2 text-center">Pass Marks</div>
-                  <div className="col-span-2 text-center">Actions</div>
-                </div>
+              <div className="overflow-x-auto w-full pb-2">
+                <div className="space-y-3 min-w-[700px]">
+                  <div className="grid grid-cols-12 gap-4 font-bold text-muted-foreground text-[10px] uppercase pb-1 px-2">
+                    <div className="col-span-4">Sub Learning outcome criteria</div>
+                    <div className="col-span-2">Assessment Date</div>
+                    <div className="col-span-2 text-center">Full Marks</div>
+                    <div className="col-span-2 text-center">Pass Marks</div>
+                    <div className="col-span-2 text-center">Actions</div>
+                  </div>
 
                 {group.outcomes.map((item, idx) => (
                   <div key={idx} className="grid grid-cols-12 gap-4 items-center bg-card p-2.5 rounded-lg border border-border shadow-sm">
@@ -304,6 +305,7 @@ export default function CreateEvaluationTab({
                 ))}
               </div>
             </div>
+          </div>
           ))}
         </div>
       </div>

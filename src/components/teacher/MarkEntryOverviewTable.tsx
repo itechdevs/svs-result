@@ -135,7 +135,7 @@ export default function MarkEntryOverviewTable() {
       className="space-y-6"
     >
       {/* ── Header ──────────────────────────────────────────────── */}
-      <div className="bg-card rounded-xl border border-border shadow-sm p-5">
+      <div className="bg-card rounded-xl border border-border shadow-sm p-3 sm:p-5">
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.back()}
@@ -144,9 +144,9 @@ export default function MarkEntryOverviewTable() {
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <div>
-            <h1 className="text-lg font-bold text-foreground">Mark Entry</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
+          <div className="min-w-0">
+            <h1 className="text-base sm:text-lg font-bold text-foreground">Mark Entry</h1>
+            <p className="text-xs text-muted-foreground mt-0.5 truncate">
               {selectedSubject
                 ? `${selectedClass} · ${selectedSubject} · ${selectedEvalPlan}`
                 : 'Select a class, subject, and evaluation plan to view the mark entry table.'}
@@ -171,9 +171,9 @@ export default function MarkEntryOverviewTable() {
       {evaluations.length > 0 && (
         <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-border shadow-sm overflow-hidden">
           {/* Table header bar */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-border">
-            <div>
-              <p className="font-bold text-sm text-[#002045] dark:text-white">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-slate-200 dark:border-border">
+            <div className="min-w-0">
+              <p className="font-bold text-sm text-[#002045] dark:text-white truncate">
                 {selectedSubject}
               </p>
               <p className="text-[11px] text-slate-400 mt-0.5">
@@ -182,7 +182,7 @@ export default function MarkEntryOverviewTable() {
                 {totalPages > 1 && ` · Page ${page} of ${totalPages}`}
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Link
                 href={`/teacher/mark-entry/all?class=${selectedClass}&evalId=${evaluations[0].id}`}
                 className="px-4 py-2 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
