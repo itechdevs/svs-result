@@ -193,7 +193,8 @@ export default function MarkEntryOverviewTable() {
               <button
                 onClick={async () => {
                   await handleSaveAll(false);
-                  router.push("/teacher/evaluations");
+                  const query = searchParams.toString();
+                  router.push(`/teacher/evaluations${query ? `?${query}` : ""}`);
                 }}
                 disabled={isSaving || evalGroupStatus === 'SUBMITTED'}
                 className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 ${
@@ -230,7 +231,8 @@ export default function MarkEntryOverviewTable() {
               <button
                 onClick={async () => {
                   await handleSaveAll(true);
-                  router.push("/teacher/evaluations");
+                  const query = searchParams.toString();
+                  router.push(`/teacher/evaluations${query ? `?${query}` : ""}`);
                 }}
                 disabled={isSaving || evalGroupStatus === 'SUBMITTED'}
                 className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors shadow-sm flex items-center gap-1.5 ${
