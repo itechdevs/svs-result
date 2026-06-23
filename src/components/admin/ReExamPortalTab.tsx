@@ -134,6 +134,7 @@ export default function ReExamPortalTab() {
           marksObtained: r.marksObtained,
           passMarks: r.evaluationTemplate?.passMarks ?? 0,
           fullMarks: r.evaluationTemplate?.fullMarks ?? 0,
+          reExamMarks: r.reExamResult?.marksObtained ?? null,
         };
       });
   }, [resultsData, studentsMap]);
@@ -321,6 +322,9 @@ export default function ReExamPortalTab() {
               <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground text-center">
                 Marks
               </TableHead>
+              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 text-center">
+                Re-Exam
+              </TableHead>
               <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground text-center">
                 Status
               </TableHead>
@@ -333,7 +337,7 @@ export default function ReExamPortalTab() {
             {pagedItems.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={8}
+                  colSpan={9}
                   className="py-12 text-center text-sm text-muted-foreground"
                 >
                   No failed students found matching the current filters.
@@ -405,6 +409,17 @@ export default function ReExamPortalTab() {
                       <div className="text-[10px] text-muted-foreground mt-0.5">
                         {percentage}%
                       </div>
+                    </TableCell>
+
+                    {/* Re-Exam Marks */}
+                    <TableCell className="text-center">
+                      {item.reExamMarks !== null ? (
+                        <div className={`text-sm font-bold ${item.reExamMarks >= item.passMarks ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}>
+                          {item.reExamMarks} / {item.passMarks}
+                        </div>
+                      ) : (
+                        <span className="text-[11px] text-muted-foreground">—</span>
+                      )}
                     </TableCell>
 
                     {/* Status */}

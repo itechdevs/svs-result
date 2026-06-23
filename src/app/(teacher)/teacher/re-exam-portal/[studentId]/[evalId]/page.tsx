@@ -59,7 +59,7 @@ export default function TeacherReExamDetailPage() {
 
   return (
     <AnimatePresence mode="wait">
-      <ReExamDetailedView student={student} evaluation={evaluation} />
+      <ReExamDetailedView student={student} evaluation={evaluation} backHref="/teacher/re-exam-portal" />
     </AnimatePresence>
   );
 }
