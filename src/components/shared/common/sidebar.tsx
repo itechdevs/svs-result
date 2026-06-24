@@ -11,9 +11,14 @@ import {
   ClipboardX,
   Grid2X2,
   Sparkles,
+  LogOut,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { signOut } from "next-auth/react";
+import { toast } from "sonner";
+import { useState } from "react";
+import { useProfile } from "@/hooks/use-profile";
 
 interface SidebarProps {
   role?: string;
@@ -38,6 +43,8 @@ export function Sidebar({ role = "teacher" }: SidebarProps) {
   const isAdmin = role === "admin";
   const { state, isMobile, openMobile, setOpenMobile } = useSidebar();
   const isCollapsed = state === "collapsed" && !isMobile;
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const { data: profile } = useProfile();
 
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (item.adminOnly && !isAdmin) return false;
@@ -141,35 +148,52 @@ export function Sidebar({ role = "teacher" }: SidebarProps) {
       </nav>
 
       {/* Footer */}
-      <div
-        className={cn(
-          "p-3 border-t border-sidebar-border space-y-3",
-          isCollapsed && "flex flex-col items-center"
+      <div className="relative border-t border-sidebar-border">
+        {userMenuOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
+            <div className={cn(
+              "absolute bottom-[110%] z-50 rounded-md border border-border bg-popover p-1 shadow-md",
+              isCollapsed ? "left-2 w-12" : "left-3 right-3"
+            )}>
+              <button
+                onClick={async () => {
+                  toast.success("Signed out successfully");
+                  await signOut({ callbackUrl: "/login" });
+                }}
+                className={cn(
+                  "flex w-full items-center gap-2 rounded-sm py-2 text-sm text-destructive hover:bg-accent transition-colors",
+                  isCollapsed ? "justify-center px-0" : "px-3"
+                )}
+                title="Sign out"
+              >
+                <LogOut className="h-4 w-4 shrink-0" />
+                {!isCollapsed && <span>Sign out</span>}
+              </button>
+            </div>
+          </>
         )}
-      >
-        <div className={cn("flex items-center gap-2.5", isCollapsed ? "justify-center" : "px-1")}>
-          <div className="w-[34px] h-[34px] rounded-full overflow-hidden border border-sidebar-border shrink-0">
-            <img
-              src={
-                isAdmin
-                  ? "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=80&q=80"
-                  : "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=80&q=80"
-              }
-              alt="Avatar"
-              className="object-cover w-full h-full"
-            />
+        <button
+          onClick={() => setUserMenuOpen(!userMenuOpen)}
+          className={cn(
+            "w-full flex items-center gap-2.5 px-3 py-3 hover:bg-sidebar-accent transition-colors text-left",
+            isCollapsed ? "justify-center" : ""
+          )}
+        >
+          <div className="w-8 h-8 rounded-full overflow-hidden border border-sidebar-border shrink-0 bg-primary text-primary-foreground flex items-center justify-center font-semibold text-xs">
+            {profile?.name ? profile.name.charAt(0).toUpperCase() : (isAdmin ? "A" : "T")}
           </div>
           {!isCollapsed && (
-            <div className="overflow-hidden">
-              <p className="text-[12.5px] font-semibold text-sidebar-foreground truncate">
-                {isAdmin ? "A. Portal Executive" : "Prof. Henderson"}
+            <div className="overflow-hidden min-w-0">
+              <p className="text-[12.5px] font-semibold text-sidebar-foreground truncate leading-tight">
+                {profile?.name || (isAdmin ? "A. Portal Executive" : "Teacher")}
               </p>
-              <p className="text-[10px] font-semibold text-sidebar-foreground/50 uppercase tracking-[0.08em]">
+              <p className="text-[10px] font-medium text-sidebar-foreground/50 uppercase tracking-[0.05em] truncate mt-0.5">
                 {isAdmin ? "Administrator" : "Faculty Teacher"}
               </p>
             </div>
           )}
-        </div>
+        </button>
       </div>
     </aside>
   );
