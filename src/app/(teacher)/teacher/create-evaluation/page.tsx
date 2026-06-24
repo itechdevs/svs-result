@@ -23,7 +23,7 @@ export default function CreateEvaluationPage() {
   const [targetMarks, setTargetMarks] = useState(55);
   const [newOutcomes, setNewOutcomes] = useState<TaskGroup[]>([
     { taskType: '', max: 4, pass: 2, outcomes: [{ name: '', date: '', max: 4, pass: 2 }] },
-    { taskType: '', max: 1, pass: 0, outcomes: [{ name: '', date: '', max: 1, pass: 0 }] },
+    { taskType: '', max: 4, pass: 2, outcomes: [{ name: '', date: '', max: 4, pass: 2 }] },
   ]);
 
   const { data: profile } = useProfile();
