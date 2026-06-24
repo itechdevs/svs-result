@@ -10,7 +10,7 @@ import {
 import { useReExamSchedules } from "@/hooks/use-re-exams";
 import { useProfile } from "@/hooks/use-profile";
 import { ClipboardList, AlertCircle, CalendarClock, ArrowRight } from "lucide-react";
-import SanskarLoader from "@/components/shared/SanskarLoader";
+import TeacherDashboardSkeleton from "@/components/teacher/TeacherDashboardSkeleton";
 
 export default function DashboardPage() {
   const { data: templatesData = [], isLoading: isTemplatesLoading } = useEvaluationTemplates();
@@ -96,7 +96,7 @@ export default function DashboardPage() {
   ];
 
   if (isLoading) {
-    return <SanskarLoader variant="skeleton" />;
+    return <TeacherDashboardSkeleton />;
   }
 
   return (
