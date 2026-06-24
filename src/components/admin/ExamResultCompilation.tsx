@@ -33,6 +33,7 @@ import { Student } from "@/types/academic";
 import { apiClient } from "@/lib/api-client";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
+import ExamResultCompilationSkeleton from "./ExamResultCompilationSkeleton";
 
 
 const TranscriptModal = dynamic(
@@ -139,20 +140,26 @@ export default function ExamResultCompilation({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkGradeSheets, setBulkGradeSheets] = useState<Student[] | null>(null);
 
-  const { data: studentsData } = useStudents({ class: gradeLevel, limit: 500 });
-  const { data: resultsData = [] } = useStudentEvaluationResults({
+  const { data: studentsData, isLoading: studentsLoading } = useStudents({ class: gradeLevel, limit: 500 });
+  const { data: resultsData = [], isLoading: resultsLoading } = useStudentEvaluationResults({
     limit: 5000,
   });
-  const { data: teacherCompilations = [] } = useAdminTeacherCompilations({
+  const { data: teacherCompilations = [], isLoading: compilationsLoading } = useAdminTeacherCompilations({
     status: "SUBMITTED",
     academicYearId: academicYearId || undefined,
     gradeLevel: gradeLevel || undefined,
   });
 
-  const { data: allTemplates = [] } = useEvaluationTemplates({
+  const { data: allTemplates = [], isLoading: templatesLoading } = useEvaluationTemplates({
     academicYearId: academicYearId || undefined,
     isActive: true,
   });
+
+  const isLoading = studentsLoading || resultsLoading || compilationsLoading || templatesLoading;
+
+  if (isLoading) {
+    return <ExamResultCompilationSkeleton />;
+  }
 
   const students = useMemo(() => studentsData?.students ?? [], [studentsData]);
 

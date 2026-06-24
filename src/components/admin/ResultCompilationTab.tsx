@@ -10,6 +10,7 @@ import { useAdminTeacherCompilations } from '@/hooks/use-teacher-compilations';
 import { useAcademicYears } from '@/hooks/use-academic-config';
 import { useExams } from '@/hooks/use-exams';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/shared/ui/select';
+import ResultCompilationSkeleton from './ResultCompilationSkeleton';
 import { Button } from '@/components/shared/ui/button';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/shared/ui/table';
 import { Student } from '@/types/academic';
@@ -74,16 +75,22 @@ export default function ResultCompilationTab() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
 
-  const { data: academicYears = [] } = useAcademicYears();
-  const { data: exams = [] } = useExams(selectedAcademicYear ? { academicYearId: selectedAcademicYear } : undefined);
-  const { data: templatesData = [] } = useEvaluationTemplates(selectedAcademicYear ? { academicYearId: selectedAcademicYear } : {});
-  const { data: studentsData } = useStudents({ limit: 500 });
-  const { data: resultsData = [] } = useStudentEvaluationResults({ limit: 5000 });
-  const { data: teacherCompilations = [] } = useAdminTeacherCompilations({
+  const { data: academicYears = [], isLoading: academicYearsLoading } = useAcademicYears();
+  const { data: exams = [], isLoading: examsLoading } = useExams(selectedAcademicYear ? { academicYearId: selectedAcademicYear } : undefined);
+  const { data: templatesData = [], isLoading: templatesLoading } = useEvaluationTemplates(selectedAcademicYear ? { academicYearId: selectedAcademicYear } : {});
+  const { data: studentsData, isLoading: studentsLoading } = useStudents({ limit: 500 });
+  const { data: resultsData = [], isLoading: resultsLoading } = useStudentEvaluationResults({ limit: 5000 });
+  const { data: teacherCompilations = [], isLoading: compilationsLoading } = useAdminTeacherCompilations({
     status: 'SUBMITTED',
     academicYearId: selectedAcademicYear || undefined,
     gradeLevel: selectedClass !== 'all' ? selectedClass : undefined,
   });
+
+  const isLoading = academicYearsLoading || examsLoading || templatesLoading || studentsLoading || resultsLoading || compilationsLoading;
+
+  if (isLoading) {
+    return <ResultCompilationSkeleton />;
+  }
 
   React.useEffect(() => {
     if (academicYears.length > 0 && !selectedAcademicYear) {
