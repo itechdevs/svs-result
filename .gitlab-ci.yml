@@ -75,7 +75,7 @@ run-migrations:
     - ssh-keyscan $VPS_HOST >> ~/.ssh/known_hosts
     - chmod 644 ~/.ssh/known_hosts
   script:
-    - ssh $VPS_USERNAME@$VPS_HOST "cd /var/www/svsresult && docker compose exec -T web-service npx prisma migrate deploy"
+    - ssh $VPS_USERNAME@$VPS_HOST "cd /var/www/svsresult && docker compose exec -T web-service npx --no-install prisma migrate deploy"
   only:
     - main
     - master
