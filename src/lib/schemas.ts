@@ -19,7 +19,7 @@ export const gradeLevels = [
   "Grade 5",
 ] as const;
 
-export const gradeLevelSchema = z.enum(gradeLevels);
+export const gradeLevelSchema = z.string();
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
