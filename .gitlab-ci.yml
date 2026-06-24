@@ -53,6 +53,7 @@ deploy-to-vps:
       ENVEOF"
     - >
       ssh $VPS_USERNAME@$VPS_HOST "
+        docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY &&
         cd /var/www/svsresult &&
         IMAGE_NAME=$CI_REGISTRY_IMAGE:latest docker compose pull &&
         IMAGE_NAME=$CI_REGISTRY_IMAGE:latest docker compose up -d
