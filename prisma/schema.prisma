@@ -258,7 +258,7 @@ model SyncedSubject {
   id         String   @id @default(cuid())
   sourceId   String   @unique // Subject.id from school DB
   name       String
-  code       String   @unique
+  code       String
   gradeLevel String
   isActive   Boolean  @default(true)
   syncedAt   DateTime @default(now())
