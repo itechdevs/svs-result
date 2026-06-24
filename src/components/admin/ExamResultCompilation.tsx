@@ -88,7 +88,7 @@ export default function ExamResultCompilation({ examId, examName, gradeLevel, ac
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
 
-  const { data: studentsData } = useStudents({ limit: 500 });
+  const { data: studentsData } = useStudents({ class: gradeLevel, limit: 500 });
   const { data: resultsData = [] } = useStudentEvaluationResults({ limit: 5000 });
   const { data: teacherCompilations = [] } = useAdminTeacherCompilations({
     status: 'SUBMITTED',
