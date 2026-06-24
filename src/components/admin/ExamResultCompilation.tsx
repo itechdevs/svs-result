@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { FileSearch, Loader2, Save, Check, AlertCircle, FileDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useStudentEvaluationResults } from '@/hooks/use-evaluations';
+import { useStudentEvaluationResults, useEvaluationTemplates } from '@/hooks/use-evaluations';
 import { useStudents } from '@/hooks/use-students';
 import { useAdminTeacherCompilations } from '@/hooks/use-teacher-compilations';
 import { Button } from '@/components/shared/ui/button';
@@ -96,8 +96,35 @@ export default function ExamResultCompilation({ examId, examName, gradeLevel, ac
     gradeLevel: gradeLevel || undefined,
   });
 
+  const { data: allTemplates = [] } = useEvaluationTemplates({
+    academicYearId: academicYearId || undefined,
+    isActive: true,
+  });
+
   const students = useMemo(() => studentsData?.students ?? [], [studentsData]);
-  const templates = linkedTemplates;
+
+  const effectiveTemplates = useMemo(() => {
+    const map = new Map<string, typeof linkedTemplates[0]>();
+
+    // Linked templates (exam-specific) take priority
+    for (const t of linkedTemplates) {
+      map.set(t.id, t);
+    }
+
+    // Add grade-level templates from the academic year that aren't already linked
+    const gradeLevelOnes = allTemplates.filter(
+      t => t.syncedSubject?.gradeLevel === gradeLevel
+    );
+    for (const t of gradeLevelOnes) {
+      if (!map.has(t.id)) {
+        map.set(t.id, t as any);
+      }
+    }
+
+    return Array.from(map.values());
+  }, [linkedTemplates, allTemplates, gradeLevel]);
+
+  const templates = effectiveTemplates;
 
   const submittedSubjectIds = useMemo(() => {
     const ids = new Set<string>();
@@ -212,7 +239,7 @@ export default function ExamResultCompilation({ examId, examName, gradeLevel, ac
     setSelectedIds(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
 
   const handleCompile = () => {
-    if (templates.length === 0) { toast.error('No evaluation templates found for this exam.'); return; }
+    if (templates.length === 0) { toast.error('No evaluation templates found for this grade level and academic year.'); return; }
     if (students.length === 0) { toast.error('No students found for this grade level.'); return; }
     setIsCompiling(true); setShowResults(false);
     setTimeout(() => { setIsCompiling(false); setShowResults(true); }, 1500);
@@ -281,6 +308,21 @@ export default function ExamResultCompilation({ examId, examName, gradeLevel, ac
         <h1 className="text-xl sm:text-2xl font-bold text-foreground">Result Compilation</h1>
         <p className="text-xs sm:text-sm text-muted-foreground mt-1">Compile student results for {gradeLevel}</p>
       </div>
+
+      {linkedTemplates.length === 0 && effectiveTemplates.length > 0 && (
+        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+              Templates not linked to this exam
+            </p>
+            <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+              Showing all evaluation templates for {gradeLevel}. To link templates to this exam,
+              update each template's exam assignment from the evaluation templates management page.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="bg-card rounded-xl border border-border shadow-sm p-5">
         {!showResults && !isCompiling && (
