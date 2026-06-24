@@ -26,9 +26,11 @@ import { useStudents } from "@/hooks/use-students";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useMarksContext } from "@/contexts/marks-context";
 
+import MarkEntrySkeleton from "@/components/teacher/MarkEntrySkeleton";
+
 export default function MarkEntryOverviewTable() {
-  const { data: profile } = useProfile();
-  const { data: templatesData = [] } = useEvaluationTemplates();
+  const { data: profile, isLoading: isProfileLoading } = useProfile();
+  const { data: templatesData = [], isLoading: isTemplatesLoading } = useEvaluationTemplates();
 
   const {
     getStudentMark,
@@ -50,7 +52,7 @@ export default function MarkEntryOverviewTable() {
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
 
-  const { data: studentsData } = useStudents(
+  const { data: studentsData, isLoading: isStudentsLoading } = useStudents(
     selectedClass ? { class: selectedClass, limit: 9999 } : { limit: 1 },
   );
 
@@ -127,6 +129,14 @@ export default function MarkEntryOverviewTable() {
     (page - 1) * PAGE_SIZE,
     page * PAGE_SIZE,
   );
+
+  const isLoading =
+    (isProfileLoading || isTemplatesLoading || isStudentsLoading) &&
+    !!selectedClass;
+
+  if (isLoading) {
+    return <MarkEntrySkeleton />;
+  }
 
   return (
     <motion.div

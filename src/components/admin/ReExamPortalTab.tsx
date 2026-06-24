@@ -18,7 +18,7 @@ import { useProfile } from "@/hooks/use-profile";
 import { useSubjects } from "@/hooks/use-subjects";
 import { useReExamSchedules } from "@/hooks/use-re-exams";
 import { SyncedStudent } from "@/hooks/use-students";
-import SanskarLoader from "@/components/shared/SanskarLoader";
+import ReExamPortalSkeleton from "@/components/admin/ReExamPortalSkeleton";
 import {
   Select,
   SelectContent,
@@ -170,7 +170,7 @@ export default function ReExamPortalTab() {
   const isLoading = studentsLoading || resultsLoading || subjectsLoading;
 
   if (isLoading) {
-    return <SanskarLoader message="Loading re-exam portal..." />;
+    return <ReExamPortalSkeleton />;
   }
 
   return (

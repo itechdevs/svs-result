@@ -13,7 +13,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { EvaluationPlan } from "@/types/academic";
 import { BookOpen } from "lucide-react";
 
-import SanskarLoader from "@/components/shared/SanskarLoader";
+import TeacherEvaluationsSkeleton from "@/components/teacher/TeacherEvaluationsSkeleton";
 
 export default function TeacherEvaluationsPage() {
   const router = useRouter();
@@ -217,7 +217,7 @@ export default function TeacherEvaluationsPage() {
   };
 
   if (isLoading) {
-    return <SanskarLoader variant="skeleton" />;
+    return <TeacherEvaluationsSkeleton />;
   }
 
   return (
