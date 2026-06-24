@@ -121,7 +121,7 @@ export function TeacherSidebar() {
                         href={href}
                         onClick={() => isMobile && setOpenMobile(false)}
                         className={cn(
-                          "block py-1.5 px-3 text-[11px] rounded transition-colors",
+                          "block relative py-1.5 px-3 text-[11px] rounded transition-colors pr-6",
                           isSubActive
                             ? "bg-sidebar-accent/60 text-sidebar-foreground"
                             : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40"
@@ -129,6 +129,9 @@ export function TeacherSidebar() {
                       >
                         <div className="font-medium">{className}</div>
                         <div className="text-[10px] text-sidebar-foreground/40">{subject}</div>
+                        {isSubActive && (
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-sidebar-primary" />
+                        )}
                       </Link>
                     );
                   })}

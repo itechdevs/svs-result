@@ -90,8 +90,8 @@ export function Sidebar({ role = "teacher" }: SidebarProps) {
                 className={cn(
                   "group relative flex items-center gap-3 py-2.5 rounded-lg border transition-all duration-200 overflow-hidden",
                   isActive
-                    ? "bg-sidebar-accent border-sidebar-border text-sidebar-accent-foreground"
-                    : "border-transparent hover:bg-sidebar-accent/60 hover:border-sidebar-border/50 text-sidebar-foreground/70 hover:text-sidebar-foreground",
+                    ? "bg-primary border-primary/20 text-primary-foreground shadow-sm"
+                    : "border-transparent hover:bg-sidebar-accent hover:border-sidebar-border/50 text-sidebar-foreground/60 hover:text-sidebar-foreground",
                   isCollapsed ? "px-2 justify-center" : "px-3"
                 )}
                 title={item.label}
@@ -102,18 +102,18 @@ export function Sidebar({ role = "teacher" }: SidebarProps) {
                   className={cn(
                     "w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-all duration-200",
                     isActive
-                      ? "bg-sidebar-primary/20"
-                      : "bg-sidebar-foreground/5 group-hover:bg-sidebar-primary/10"
+                      ? "bg-primary-foreground/15"
+                      : "bg-sidebar-foreground/5 group-hover:bg-sidebar-foreground/10"
                   )}
                 >
                   <Icon
                     size={16}
-                    strokeWidth={1.8}
+                    strokeWidth={2}
                     className={cn(
                       "transition-colors duration-200",
                       isActive
-                        ? "text-sidebar-primary"
-                        : "text-sidebar-foreground/50 group-hover:text-sidebar-primary/80"
+                        ? "text-primary-foreground"
+                        : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground/80"
                     )}
                   />
                 </div>
@@ -132,7 +132,7 @@ export function Sidebar({ role = "teacher" }: SidebarProps) {
 
                 {/* Active indicator */}
                 {isActive && !isCollapsed && (
-                  <span className="absolute right-3 w-1.5 h-1.5 rounded-full bg-sidebar-primary" />
+                  <span className="absolute right-3 w-1.5 h-1.5 rounded-full bg-primary-foreground/70" />
                 )}
               </Link>
             </div>

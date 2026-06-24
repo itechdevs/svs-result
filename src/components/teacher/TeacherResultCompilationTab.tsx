@@ -102,7 +102,7 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
   const selectedClass = searchParams.get('class') ?? '';
   const selectedSubject = searchParams.get('subject') ?? '';
   const [selectedAcademicYear, setSelectedAcademicYear] = useState('');
-  const [selectedExam, setSelectedExam] = useState('all');
+  const [selectedExam, setSelectedExam] = useState('');
   // Selected plan titles (not template IDs)
   const [selectedPlanTitles, setSelectedPlanTitles] = useState<string[]>([]);
   // Expanded plan titles (for showing sub-outcomes)
@@ -124,13 +124,15 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
   useEffect(() => {
     if (prevYear.current !== selectedAcademicYear) {
       prevYear.current = selectedAcademicYear;
-      setSelectedExam('all');
+      setSelectedExam('');
       setSelectedPlanTitles([]);
     }
   }, [selectedAcademicYear]);
 
   const { data: exams = [] } = useExams(
-    selectedAcademicYear ? { academicYearId: selectedAcademicYear } : undefined,
+    selectedAcademicYear
+      ? { academicYearId: selectedAcademicYear, gradeLevel: selectedClass || undefined }
+      : undefined,
   );
   const { data: templatesData = [] } = useEvaluationTemplates(
     selectedAcademicYear ? { academicYearId: selectedAcademicYear } : {},
@@ -164,7 +166,7 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
         t.gradeConfig.academicYear.id !== selectedAcademicYear
       )
         return false;
-      if (selectedExam !== 'all' && t.examId && t.examId !== selectedExam) return false;
+      if (selectedExam && t.examId && t.examId !== selectedExam) return false;
       return true;
     });
   }, [templatesData, selectedSubject, selectedAcademicYear, selectedExam]);
@@ -425,10 +427,9 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
               onValueChange={(v) => { setSelectedExam(v); setSelectedPlanTitles([]); }}
             >
               <SelectTrigger className="w-full text-sm">
-                <SelectValue placeholder="All Exams" />
+                <SelectValue placeholder="Select exam..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Exams</SelectItem>
                 {exams.map((exam) => (
                   <SelectItem key={exam.id} value={exam.id}>{exam.name}</SelectItem>
                 ))}
@@ -484,7 +485,7 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
       )}
 
       {/* Evaluation Plan Cards */}
-      {selectedSubject && (
+      {selectedSubject && selectedAcademicYear && selectedExam && (
         <div>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-bold text-foreground">
@@ -510,8 +511,7 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
 
           {evalPlanGroups.length === 0 && (
             <div className="text-center py-10 text-sm text-muted-foreground bg-card rounded-xl border border-dashed border-border">
-              No evaluation plans found for this subject
-              {selectedExam !== 'all' ? ' and exam' : ''}.
+              No evaluation plans found for this subject and exam.
             </div>
           )}
 
