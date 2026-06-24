@@ -49,6 +49,21 @@ export default function TeacherEvaluationsPage() {
   const [newEvalSubject, setNewEvalSubject] = useState(selectedSubject);
   const deleteTemplate = useDeleteEvaluationTemplate();
 
+  const { data: resultsData = [] } = useStudentEvaluationResults({ limit: 5000 });
+
+  const templateStatusMap = useMemo(() => {
+    const map = new Map<string, "SUBMITTED" | "DRAFT">();
+    for (const r of resultsData) {
+      const prev = map.get(r.evaluationTemplateId);
+      if (r.status === "SUBMITTED" || r.status === "VERIFIED" || r.status === "LOCKED") {
+        map.set(r.evaluationTemplateId, "SUBMITTED");
+      } else if (!prev) {
+        map.set(r.evaluationTemplateId, "DRAFT");
+      }
+    }
+    return map;
+  }, [resultsData]);
+
   const assignedSubjectIds = useMemo(
     () => new Set(profile?.syncedTeacher?.subjects.map((s) => s.id) ?? []),
     [profile],
