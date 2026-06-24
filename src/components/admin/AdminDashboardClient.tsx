@@ -19,13 +19,14 @@ const totalPassed = 2194;
 const totalFailed = 288;
 
 import SanskarLoader from '@/components/shared/SanskarLoader';
+import AdminDashboardSkeleton from '@/components/admin/AdminDashboardSkeleton';
 import { useProfile } from '@/hooks/use-profile';
 
 export default function AdminDashboardClient() {
   const { isLoading } = useProfile();
 
   if (isLoading) {
-    return <SanskarLoader variant="skeleton" />;
+    return <AdminDashboardSkeleton />;
   }
 
   return (
