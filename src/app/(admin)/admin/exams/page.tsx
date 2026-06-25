@@ -63,7 +63,8 @@ export default function ExamsPage() {
   const [editingExam, setEditingExam] = useState<any>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [gradeLevel, setGradeLevel] = useState("");
+  const [selectedGrades, setSelectedGrades] = useState<string[]>([]);
+  const [gradeLevel, setGradeLevel] = useState(""); // Used for edit
   const [academicYearId, setAcademicYearId] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -78,32 +79,59 @@ export default function ExamsPage() {
     setName("");
     setDescription("");
     setGradeLevel("");
-    setAcademicYearId("");
+    setSelectedGrades([]);
+    
+    // Auto-select academic year if today falls within its date range
+    if (academicYears && academicYears.length > 0) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const activeYear = academicYears.find((y: any) => {
+        if (!y.startDate || !y.endDate) return false;
+        const start = new Date(y.startDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(y.endDate);
+        end.setHours(23, 59, 59, 999);
+        return today >= start && today <= end;
+      });
+      setAcademicYearId(activeYear ? activeYear.id : "");
+    } else {
+      setAcademicYearId("");
+    }
+    
     setStartDate("");
     setEndDate("");
   };
 
   const handleCreate = async () => {
-    const yearId = academicYearId || currentYear?.id;
+    const yearId = academicYearId;
     if (!yearId) {
       toast.error("No academic year selected. Please select one first.");
       return;
     }
+    if (selectedGrades.length === 0) {
+      toast.error("Please select at least one grade level.");
+      return;
+    }
+
     try {
-      const result = await createExam.mutateAsync({
-        name,
-        description: description || undefined,
-        academicYearId: yearId,
-        gradeLevel,
-        startDate: startDate || undefined,
-        endDate: endDate || undefined,
-      });
+      await Promise.all(
+        selectedGrades.map((grade) =>
+          createExam.mutateAsync({
+            name,
+            description: description || undefined,
+            academicYearId: yearId,
+            gradeLevel: grade,
+            startDate: startDate || undefined,
+            endDate: endDate || undefined,
+          })
+        )
+      );
 
       resetForm();
       setOpen(false);
-      toast.success("Exam created successfully");
+      toast.success(`Successfully created ${selectedGrades.length} exam(s)`);
     } catch (err: any) {
-      toast.error(err.message || "Failed to create exam");
+      toast.error(err.message || "Failed to create exams");
     }
   };
 
@@ -169,7 +197,10 @@ export default function ExamsPage() {
             Create and manage exam groupings across subjects
           </p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(val) => {
+          if (val) resetForm();
+          setOpen(val);
+        }}>
           <DialogTrigger asChild>
             <Button className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold gap-2">
               <Plus className="w-4 h-4" />
@@ -210,7 +241,6 @@ export default function ExamsPage() {
                 <Select
                   value={academicYearId}
                   onValueChange={setAcademicYearId}
-                  defaultValue={currentYear?.id}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select academic year" />
@@ -226,20 +256,27 @@ export default function ExamsPage() {
               </div>
               <div>
                 <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
-                  Grade Level
+                  Grade Levels
                 </label>
-                <Select value={gradeLevel} onValueChange={setGradeLevel}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select grade level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {gradeLevels?.map((level) => (
-                      <SelectItem key={level} value={level}>
-                        {level}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-wrap gap-2">
+                  {gradeLevels?.map((level) => (
+                    <Button
+                      key={level}
+                      type="button"
+                      variant={selectedGrades.includes(level) ? "default" : "outline"}
+                      onClick={() => {
+                        setSelectedGrades((prev) =>
+                          prev.includes(level)
+                            ? prev.filter((g) => g !== level)
+                            : [...prev, level]
+                        );
+                      }}
+                      className="text-xs h-8"
+                    >
+                      {level}
+                    </Button>
+                  ))}
+                </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -276,7 +313,7 @@ export default function ExamsPage() {
               <Button
                 onClick={handleCreate}
                 disabled={
-                  !name || !(academicYearId || currentYear) || !gradeLevel || createExam.isPending
+                  !name || !academicYearId || selectedGrades.length === 0 || createExam.isPending
                 }
                 className="bg-primary text-primary-foreground text-xs font-bold"
               >
