@@ -17,11 +17,11 @@ export default function CreateEvaluationPage() {
   const searchParams = useSearchParams();
   const selectedClass = searchParams.get('class') ?? '';
   const selectedSubject = searchParams.get('subject') ?? '';
+  const [selectedExamId, setSelectedExamId] = useState(searchParams.get('examId') ?? '');
 
   const [newEvalTitle, setNewEvalTitle] = useState('');
   const [newEvalSubject, setNewEvalSubject] = useState(selectedSubject || '');
   const [newSubjectTitle, setNewSubjectTitle] = useState('');
-  const [selectedExamId, setSelectedExamId] = useState<string>('');
   const [targetMarks, setTargetMarks] = useState(55);
   const [newOutcomes, setNewOutcomes] = useState<TaskGroup[]>([
     { taskType: '', max: 4, pass: 2, outcomes: [{ name: '', date: '', max: 4, pass: 2 }] },
