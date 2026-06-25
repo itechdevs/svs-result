@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { logLoginAttempt } from "@/services/audit-service";
 
 export const authConfig: NextAuthConfig = {
+  trustHost: true,
   providers: [
     Credentials({
       credentials: {
