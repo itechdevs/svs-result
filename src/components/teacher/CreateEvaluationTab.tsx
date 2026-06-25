@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { ArrowLeft, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
 
 interface OutcomeRow {
   name: string;
@@ -58,9 +59,9 @@ export default function CreateEvaluationTab({
       ...newOutcomes,
       {
         taskType: 'New Task Type',
-        max: 50,
-        pass: 20,
-        outcomes: [{ name: 'New Specific Area', date: '2024-05-25', max: 20, pass: 8 }]
+        max: 4,
+        pass: 2,
+        outcomes: [{ name: '', date: '', max: 4, pass: 2 }]
       }
     ]);
   };
@@ -86,7 +87,7 @@ export default function CreateEvaluationTab({
 
   const addNewOutcomeRow = (groupIndex: number) => {
     const copy = [...newOutcomes];
-    copy[groupIndex].outcomes.push({ name: 'New Specific Area', date: '2024-05-25', max: 20, pass: 8 });
+    copy[groupIndex].outcomes.push({ name: '', date: '', max: 4, pass: 2 });
     setNewOutcomes(copy);
   };
 
@@ -124,8 +125,47 @@ export default function CreateEvaluationTab({
         <div className="flex gap-2 w-full sm:w-auto justify-end">
           <Button
             onClick={() => {
+              if (!newEvalTitle?.trim()) {
+                toast.error('Please enter an Evaluation Title');
+                return;
+              }
+              if (!newSubjectTitle?.trim()) {
+                toast.error('Please enter a Unit Title');
+                return;
+              }
+              if (newOutcomes.length === 0) {
+                toast.error('Please add at least one task type');
+                return;
+              }
+              for (const group of newOutcomes) {
+                if (!group.taskType?.trim()) {
+                  toast.error('Task Type Name cannot be empty');
+                  return;
+                }
+                if (group.outcomes.length === 0) {
+                  toast.error(`Please add at least one criteria for ${group.taskType}`);
+                  return;
+                }
+                for (const item of group.outcomes) {
+                  if (!item.name?.trim()) {
+                    toast.error(`Sub Learning outcome cannot be empty in ${group.taskType}`);
+                    return;
+                  }
+                  if (!item.date) {
+                    toast.error(`Assessment Date cannot be empty for ${item.name || 'a criteria'}`);
+                    return;
+                  }
+                  if (item.max === undefined || item.max === null || item.max === '' as any || isNaN(item.max)) {
+                    toast.error(`Full Marks cannot be empty for ${item.name}`);
+                    return;
+                  }
+                  if (item.pass === undefined || item.pass === null || item.pass === '' as any || isNaN(item.pass)) {
+                    toast.error(`Pass Marks cannot be empty for ${item.name}`);
+                    return;
+                  }
+                }
+              }
               handleCreateEvaluation();
-              setCurrentTab('evaluations');
             }}
             className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold w-full sm:w-auto"
           >
@@ -241,71 +281,71 @@ export default function CreateEvaluationTab({
                     <div className="col-span-2 text-center">Actions</div>
                   </div>
 
-                {group.outcomes.map((item, idx) => (
-                  <div key={idx} className="grid grid-cols-12 gap-4 items-center bg-card p-2.5 rounded-lg border border-border shadow-sm">
-                    <div className="col-span-4">
-                      <Input
-                        type="text"
-                        value={item.name}
-                        onChange={e => {
-                          const copy = [...newOutcomes];
-                          copy[groupIndex].outcomes[idx].name = e.target.value;
-                          setNewOutcomes(copy);
-                        }}
-                        className="w-full text-xs text-foreground"
-                      />
+                  {group.outcomes.map((item, idx) => (
+                    <div key={idx} className="grid grid-cols-12 gap-4 items-center bg-card p-2.5 rounded-lg border border-border shadow-sm">
+                      <div className="col-span-4">
+                        <Input
+                          type="text"
+                          value={item.name}
+                          onChange={e => {
+                            const copy = [...newOutcomes];
+                            copy[groupIndex].outcomes[idx].name = e.target.value;
+                            setNewOutcomes(copy);
+                          }}
+                          className="w-full text-xs text-foreground"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Input
+                          type="date"
+                          value={item.date}
+                          onChange={e => {
+                            const copy = [...newOutcomes];
+                            copy[groupIndex].outcomes[idx].date = e.target.value;
+                            setNewOutcomes(copy);
+                          }}
+                          className="w-full text-xs text-center text-foreground"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Input
+                          type="number"
+                          value={item.max}
+                          onChange={e => {
+                            const copy = [...newOutcomes];
+                            copy[groupIndex].outcomes[idx].max = Number(e.target.value);
+                            setNewOutcomes(copy);
+                          }}
+                          className="w-full text-center text-xs font-mono text-foreground"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Input
+                          type="number"
+                          value={item.pass}
+                          onChange={e => {
+                            const copy = [...newOutcomes];
+                            copy[groupIndex].outcomes[idx].pass = Number(e.target.value);
+                            setNewOutcomes(copy);
+                          }}
+                          className="w-full text-center text-xs font-mono text-foreground"
+                        />
+                      </div>
+                      <div className="col-span-2 text-center flex items-center justify-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          onClick={() => deleteOutcomeRow(groupIndex, idx)}
+                          className="text-[10px] font-bold text-destructive hover:text-destructive"
+                        >
+                          Remove
+                        </Button>
+                      </div>
                     </div>
-                    <div className="col-span-2">
-                      <Input
-                        type="date"
-                        value={item.date}
-                        onChange={e => {
-                          const copy = [...newOutcomes];
-                          copy[groupIndex].outcomes[idx].date = e.target.value;
-                          setNewOutcomes(copy);
-                        }}
-                        className="w-full text-xs text-center text-foreground"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Input
-                        type="number"
-                        value={item.max}
-                        onChange={e => {
-                          const copy = [...newOutcomes];
-                          copy[groupIndex].outcomes[idx].max = Number(e.target.value);
-                          setNewOutcomes(copy);
-                        }}
-                        className="w-full text-center text-xs font-mono text-foreground"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Input
-                        type="number"
-                        value={item.pass}
-                        onChange={e => {
-                          const copy = [...newOutcomes];
-                          copy[groupIndex].outcomes[idx].pass = Number(e.target.value);
-                          setNewOutcomes(copy);
-                        }}
-                        className="w-full text-center text-xs font-mono text-foreground"
-                      />
-                    </div>
-                    <div className="col-span-2 text-center flex items-center justify-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        onClick={() => deleteOutcomeRow(groupIndex, idx)}
-                        className="text-[10px] font-bold text-destructive hover:text-destructive"
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
           ))}
         </div>
       </div>

@@ -3,10 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutGrid, Grid2X2, Sparkles, BookOpen, Calendar, X } from "lucide-react";
+import { LayoutGrid, Grid2X2, BookOpen, Calendar, X, LogOut } from "lucide-react";
 import { ROUTES } from "@/lib/constants";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { useProfile } from "@/hooks/use-profile";
+import { signOut } from "next-auth/react";
+import { toast } from "sonner";
+import { useState } from "react";
 
 const NAV_ITEMS = [
   { label: "Dashboard Overview", href: ROUTES.ADMIN_DASHBOARD, icon: LayoutGrid },
@@ -19,6 +23,8 @@ export function AdminSidebar() {
   const pathname = usePathname();
   const { state, isMobile, openMobile, setOpenMobile } = useSidebar();
   const isCollapsed = state === "collapsed" && !isMobile;
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const { data: profile } = useProfile();
 
   const SidebarContent = (
     <aside
@@ -85,23 +91,52 @@ export function AdminSidebar() {
         })}
       </nav>
 
-      <div className={cn(
-        "px-3 py-2 border-t border-sidebar-border flex items-center gap-2.5 shrink-0",
-        isCollapsed ? "justify-center" : ""
-      )}>
-        <div className="w-7 h-7 rounded-full overflow-hidden border border-sidebar-border shrink-0">
-          <img
-            src="/SVS LOGO NEW.png"
-            alt="Admin avatar"
-            className="object-cover w-full h-full"
-          />
-        </div>
-        {!isCollapsed && (
-          <div className="overflow-hidden min-w-0">
-            <p className="text-[12px] font-semibold text-sidebar-foreground truncate leading-tight">A. Portal Executive</p>
-            <p className="text-[10px] text-sidebar-foreground/50 truncate leading-tight">Administrator</p>
-          </div>
+      <div className="relative border-t border-sidebar-border">
+        {userMenuOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
+            <div className={cn(
+              "absolute bottom-[110%] z-50 rounded-md border border-border bg-popover p-1 shadow-md",
+              isCollapsed ? "left-2 w-12" : "left-3 right-3"
+            )}>
+              <button
+                onClick={async () => {
+                  toast.success("Signed out successfully");
+                  await signOut({ callbackUrl: ROUTES.LOGIN });
+                }}
+                className={cn(
+                  "flex w-full items-center gap-2 rounded-sm py-2 text-sm text-destructive hover:bg-accent transition-colors",
+                  isCollapsed ? "justify-center px-0" : "px-3"
+                )}
+                title="Sign out"
+              >
+                <LogOut className="h-4 w-4 shrink-0" />
+                {!isCollapsed && <span>Sign out</span>}
+              </button>
+            </div>
+          </>
         )}
+        <button
+          onClick={() => setUserMenuOpen(!userMenuOpen)}
+          className={cn(
+            "w-full flex items-center gap-2.5 px-3 py-3 hover:bg-sidebar-accent transition-colors text-left",
+            isCollapsed ? "justify-center" : ""
+          )}
+        >
+          <div className="w-8 h-8 rounded-full overflow-hidden border border-sidebar-border shrink-0 bg-primary text-primary-foreground flex items-center justify-center font-semibold text-xs">
+            {profile?.name ? profile.name.charAt(0).toUpperCase() : "A"}
+          </div>
+          {!isCollapsed && (
+            <div className="overflow-hidden min-w-0">
+              <p className="text-[12.5px] font-semibold text-sidebar-foreground truncate leading-tight">
+                {profile?.name || "Administrator"}
+              </p>
+              <p className="text-[10px] font-medium text-sidebar-foreground/50 uppercase tracking-[0.05em] truncate mt-0.5">
+                Administrator
+              </p>
+            </div>
+          )}
+        </button>
       </div>
     </aside>
   );
