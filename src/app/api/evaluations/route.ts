@@ -47,9 +47,9 @@ export const GET = withHandler(async (req: NextRequest, { user }) => {
     }
   }
 
-  const evaluationTemplateIds = (query.evaluationTemplateIds as string | undefined)
-    ?.split(",").map((id) => id.trim()).filter(Boolean)
-    ?? undefined;
+  const evaluationTemplateIds = Array.isArray(query.evaluationTemplateIds)
+    ? query.evaluationTemplateIds
+    : undefined;
 
   const results = await prisma.studentEvaluationResult.findMany({
     where: {
