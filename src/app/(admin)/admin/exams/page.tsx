@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
-import { Plus, Trash2, BookOpen, Calendar, Pencil } from "lucide-react";
+import { Plus, Trash2, BookOpen, Calendar, Pencil, X, Check } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/shared/ui/dropdown-menu";
+import { ChevronDown } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -80,7 +87,7 @@ export default function ExamsPage() {
     setDescription("");
     setGradeLevel("");
     setSelectedGrades([]);
-    
+
     // Auto-select academic year if today falls within its date range
     if (academicYears && academicYears.length > 0) {
       const today = new Date();
@@ -97,7 +104,7 @@ export default function ExamsPage() {
     } else {
       setAcademicYearId("");
     }
-    
+
     setStartDate("");
     setEndDate("");
   };
@@ -258,25 +265,82 @@ export default function ExamsPage() {
                 <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
                   Grade Levels
                 </label>
-                <div className="flex flex-wrap gap-2">
-                  {gradeLevels?.map((level) => (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
                     <Button
-                      key={level}
-                      type="button"
-                      variant={selectedGrades.includes(level) ? "default" : "outline"}
-                      onClick={() => {
-                        setSelectedGrades((prev) =>
-                          prev.includes(level)
-                            ? prev.filter((g) => g !== level)
-                            : [...prev, level]
-                        );
-                      }}
-                      className="text-xs h-8"
+                      variant="outline"
+                      className="w-full justify-between font-normal px-3"
                     >
-                      {level}
+                      <div className="flex gap-1 overflow-hidden truncate">
+                        {selectedGrades.length === 0 ? (
+                          <span className="text-muted-foreground">Select grade levels...</span>
+                        ) : selectedGrades.length <= 3 ? (
+                          <span className="text-foreground">{selectedGrades.join(", ")}</span>
+                        ) : (
+                          <span className="text-foreground">{selectedGrades.length} grades selected</span>
+                        )}
+                      </div>
+                      <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
                     </Button>
-                  ))}
-                </div>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="start"
+                    className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-[300px] overflow-y-auto"
+                  >
+                    <DropdownMenuItem
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        if (selectedGrades.length === gradeLevels?.length) {
+                          setSelectedGrades([]);
+                        } else {
+                          setSelectedGrades(gradeLevels || []);
+                        }
+                      }}
+                      className="font-semibold"
+                    >
+                      <div
+                        className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${selectedGrades.length === gradeLevels?.length
+                            ? "bg-primary text-primary-foreground"
+                            : "opacity-50"
+                          }`}
+                      >
+                        {selectedGrades.length === gradeLevels?.length && <Check className="h-3 w-3" />}
+                      </div>
+                      {selectedGrades.length === gradeLevels?.length ? "Unselect All" : "Select All"}
+                    </DropdownMenuItem>
+
+                    <div className="h-px bg-border my-1 mx-1" />
+
+                    {gradeLevels?.map((level) => {
+                      const isChecked = selectedGrades.includes(level);
+                      return (
+                        <DropdownMenuItem
+                          key={level}
+                          onSelect={(e) => {
+                            e.preventDefault();
+                            if (isChecked) {
+                              setSelectedGrades((prev) =>
+                                prev.filter((g) => g !== level)
+                              );
+                            } else {
+                              setSelectedGrades((prev) => [...prev, level]);
+                            }
+                          }}
+                        >
+                          <div
+                            className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${isChecked
+                                ? "bg-primary text-primary-foreground"
+                                : "opacity-50"
+                              }`}
+                          >
+                            {isChecked && <Check className="h-3 w-3" />}
+                          </div>
+                          {level}
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
