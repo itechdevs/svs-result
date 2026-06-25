@@ -47,14 +47,18 @@ export const GET = withHandler(async (req: NextRequest, { user }) => {
     }
   }
 
+  const evaluationTemplateIds = (query.evaluationTemplateIds as string | undefined)
+    ?.split(",").map((id) => id.trim()).filter(Boolean)
+    ?? undefined;
+
   const results = await prisma.studentEvaluationResult.findMany({
     where: {
       deletedAt: null,
       ...(query.evaluationTemplateId && {
         evaluationTemplateId: query.evaluationTemplateId,
       }),
-      ...(query.evaluationTemplateIds && {
-        evaluationTemplateId: { in: query.evaluationTemplateIds },
+      ...(evaluationTemplateIds && {
+        evaluationTemplateId: { in: evaluationTemplateIds },
       }),
       ...(query.syncedStudentId && { syncedStudentId: query.syncedStudentId }),
       ...(query.status && { status: query.status }),

@@ -292,26 +292,25 @@ export default function ExamResultCompilation({
       for (const subject of totalSubjectsInTemplates) {
         const subjectTemplates = templatesBySubject.get(subject.name) ?? [];
         if (subjectTemplates.length === 0) continue;
-        let weightedObtained = 0,
-          weightedFull = 0,
+        let totalObtained = 0,
+          totalFull = 0,
           failedEvals = 0,
           subjectHasMarks = false;
         for (const t of subjectTemplates) {
           const lookup = marksLookup[student.id]?.[t.id];
           const obtained = lookup?.marks ?? null;
           const fullMarks = Number(t.fullMarks);
-          const weight = Number(t.weightage) / 100;
-          weightedFull += fullMarks * weight;
+          totalFull += fullMarks;
           if (obtained !== null) {
             subjectHasMarks = true;
             hasAnyMarks = true;
-            weightedObtained += (obtained / fullMarks) * fullMarks * weight;
+            totalObtained += obtained;
             if (obtained < Number(t.passMarks)) failedEvals++;
           }
         }
         const percentage =
-          weightedFull > 0
-            ? Number(((weightedObtained / weightedFull) * 100).toFixed(1))
+          totalFull > 0
+            ? Number(((totalObtained / totalFull) * 100).toFixed(1))
             : 0;
         const grade = subjectHasMarks ? lookupGrade(percentage) : "N/A";
         const isPassed = subjectHasMarks && failedEvals === 0;
@@ -322,8 +321,8 @@ export default function ExamResultCompilation({
         if (!isPassed && subjectHasMarks) anyFailed = true;
         subjects[subject.name] = {
           subjectName: subject.name,
-          totalObtained: Number(weightedObtained.toFixed(2)),
-          totalFull: Number(weightedFull.toFixed(2)),
+          totalObtained: Number(totalObtained.toFixed(2)),
+          totalFull: Number(totalFull.toFixed(2)),
           percentage,
           grade,
           isPassed,
