@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence } from 'motion/react';
 import { useCreateTeacherEvaluationPlan } from '@/hooks/use-evaluations';
 import { useProfile } from '@/hooks/use-profile';
+import { useExams } from '@/hooks/use-exams';
 import CreateEvaluationTab from '@/components/teacher/CreateEvaluationTab';
 import { toast } from 'sonner';
 
@@ -20,6 +21,7 @@ export default function CreateEvaluationPage() {
   const [newEvalTitle, setNewEvalTitle] = useState('');
   const [newEvalSubject, setNewEvalSubject] = useState(selectedSubject || '');
   const [newSubjectTitle, setNewSubjectTitle] = useState('');
+  const [selectedExamId, setSelectedExamId] = useState<string>('');
   const [targetMarks, setTargetMarks] = useState(55);
   const [newOutcomes, setNewOutcomes] = useState<TaskGroup[]>([
     { taskType: '', max: 4, pass: 2, outcomes: [{ name: '', date: '', max: 4, pass: 2 }] },
@@ -28,6 +30,10 @@ export default function CreateEvaluationPage() {
 
   const { data: profile } = useProfile();
   const createPlan = useCreateTeacherEvaluationPlan();
+  const { data: exams = [] } = useExams({
+    gradeLevel: selectedClass,
+    isActive: true,
+  });
 
   const qs = new URLSearchParams();
   if (selectedClass) qs.set('class', selectedClass);
@@ -65,6 +71,7 @@ export default function CreateEvaluationPage() {
         await createPlan.mutateAsync({
           syncedSubjectId: subject.id,
           gradeLevel: selectedClass,
+          examId: selectedExamId || undefined,
           name: `[${newEvalTitle}|${newSubjectTitle}][${item.taskType}] ${item.name}`,
           fullMarks: item.max,
           passMarks: item.pass,
@@ -97,6 +104,9 @@ export default function CreateEvaluationPage() {
         setNewEvalSubject={setNewEvalSubject}
         newSubjectTitle={newSubjectTitle}
         setNewSubjectTitle={setNewSubjectTitle}
+        selectedExamId={selectedExamId}
+        setSelectedExamId={setSelectedExamId}
+        exams={exams}
         targetMarks={targetMarks}
         setTargetMarks={setTargetMarks}
         newOutcomes={newOutcomes}

@@ -141,23 +141,10 @@ export default function ExamResultCompilation({
   const [bulkGradeSheets, setBulkGradeSheets] = useState<Student[] | null>(null);
 
   const { data: studentsData, isLoading: studentsLoading } = useStudents({ class: gradeLevel, limit: 500 });
-  const { data: resultsData = [], isLoading: resultsLoading } = useStudentEvaluationResults({
-    limit: 5000,
-  });
-  const { data: teacherCompilations = [], isLoading: compilationsLoading } = useAdminTeacherCompilations({
-    status: "SUBMITTED",
-    academicYearId: academicYearId || undefined,
-    gradeLevel: gradeLevel || undefined,
-  });
-
   const { data: allTemplates = [], isLoading: templatesLoading } = useEvaluationTemplates({
     academicYearId: academicYearId || undefined,
     isActive: true,
   });
-
-  const isLoading = studentsLoading || resultsLoading || compilationsLoading || templatesLoading;
-
-  const students = useMemo(() => studentsData?.students ?? [], [studentsData]);
 
   const effectiveTemplates = useMemo(() => {
     const map = new Map<string, (typeof linkedTemplates)[0]>();
@@ -181,6 +168,23 @@ export default function ExamResultCompilation({
   }, [linkedTemplates, allTemplates, gradeLevel]);
 
   const templates = effectiveTemplates;
+
+  const effectiveTemplateIds = useMemo(() => templates.map((t) => t.id), [templates]);
+
+  const { data: resultsData = [], isLoading: resultsLoading } = useStudentEvaluationResults({
+    limit: 5000,
+    evaluationTemplateIds: effectiveTemplateIds.length > 0 ? effectiveTemplateIds : undefined,
+  }, { enabled: effectiveTemplateIds.length > 0 });
+
+  const { data: teacherCompilations = [], isLoading: compilationsLoading } = useAdminTeacherCompilations({
+    status: "SUBMITTED",
+    academicYearId: academicYearId || undefined,
+    gradeLevel: gradeLevel || undefined,
+  });
+
+  const isLoading = studentsLoading || resultsLoading || compilationsLoading || templatesLoading;
+
+  const students = useMemo(() => studentsData?.students ?? [], [studentsData]);
 
   const { data: finalResultsData } = useFinalResults({
     academicYearId: academicYearId || undefined,

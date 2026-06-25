@@ -5,6 +5,7 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import CreateEvaluationTab from '@/components/teacher/CreateEvaluationTab';
 import { AnimatePresence } from 'motion/react';
 import { useEvaluationTemplate, useEvaluationTemplates } from '@/hooks/use-evaluations';
+import { useExams } from '@/hooks/use-exams';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { toast } from 'sonner';
@@ -29,10 +30,15 @@ export default function EditEvaluationPage() {
 
   const { data: template, isLoading: isTemplateLoading } = useEvaluationTemplate(id);
   const { data: allTemplates = [], isLoading: isTemplatesLoading } = useEvaluationTemplates();
+  const { data: exams = [] } = useExams({
+    gradeLevel: selectedClass,
+    isActive: true,
+  });
 
   const [newEvalTitle, setNewEvalTitle] = useState('');
   const [newEvalSubject, setNewEvalSubject] = useState('');
   const [newSubjectTitle, setNewSubjectTitle] = useState('');
+  const [selectedExamId, setSelectedExamId] = useState<string>('');
   const [targetMarks, setTargetMarks] = useState(55);
   const [newOutcomes, setNewOutcomes] = useState<TaskGroup[]>([]);
 
@@ -71,6 +77,7 @@ export default function EditEvaluationPage() {
     setNewEvalTitle(evalTitle || template.syncedSubject?.name || template.name);
     setNewSubjectTitle(unitTitle);
     setNewEvalSubject(template.syncedSubject?.name ?? '');
+    setSelectedExamId(template.examId || '');
     setTargetMarks(resolvedGroup.reduce((s, t) => s + Number(t.fullMarks), 0));
 
     const taskGroupMap = new Map<string, TaskGroup>();
@@ -136,12 +143,14 @@ export default function EditEvaluationPage() {
             weightage,
             scheduledDate: outcome.date || undefined,
             displayOrder: i,
+            examId: selectedExamId || undefined,
           });
         } else {
           // CREATE new record — use the same gradeConfigId so it stays in the same group
           await apiClient.post('/teacher/evaluation-plans', {
             syncedSubjectId,
             gradeLevel,
+            examId: selectedExamId || undefined,
             name: newName,
             fullMarks: outcome.max,
             passMarks: outcome.pass,
@@ -175,6 +184,9 @@ export default function EditEvaluationPage() {
           setNewEvalSubject={setNewEvalSubject}
           newSubjectTitle={newSubjectTitle}
           setNewSubjectTitle={setNewSubjectTitle}
+          selectedExamId={selectedExamId}
+          setSelectedExamId={setSelectedExamId}
+          exams={exams}
           targetMarks={targetMarks}
           setTargetMarks={setTargetMarks}
           newOutcomes={newOutcomes}

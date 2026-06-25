@@ -82,6 +82,7 @@ export interface ListTemplatesFilters {
 
 export interface ListResultsFilters {
   evaluationTemplateId?: string;
+  evaluationTemplateIds?: string[];
   syncedStudentId?: string;
   status?: "DRAFT" | "SUBMITTED" | "VERIFIED" | "LOCKED";
   page?: number;
@@ -195,6 +196,7 @@ export function useStudentEvaluationResults(filters: ListResultsFilters = {}, op
     queryFn: async () => {
       const params = new URLSearchParams();
       if (filters.evaluationTemplateId) params.set("evaluationTemplateId", filters.evaluationTemplateId);
+      if (filters.evaluationTemplateIds && filters.evaluationTemplateIds.length > 0) params.set("evaluationTemplateIds", filters.evaluationTemplateIds.join(','));
       if (filters.syncedStudentId) params.set("syncedStudentId", filters.syncedStudentId);
       if (filters.status) params.set("status", filters.status);
       if (filters.page) params.set("page", String(filters.page));
@@ -208,6 +210,7 @@ export function useStudentEvaluationResults(filters: ListResultsFilters = {}, op
 export interface CreateTeacherEvaluationPlanInput {
   syncedSubjectId: string;
   gradeLevel: string;
+  examId?: string;
   name: string;
   fullMarks: number;
   passMarks: number;

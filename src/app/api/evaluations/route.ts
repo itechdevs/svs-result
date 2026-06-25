@@ -53,6 +53,9 @@ export const GET = withHandler(async (req: NextRequest, { user }) => {
       ...(query.evaluationTemplateId && {
         evaluationTemplateId: query.evaluationTemplateId,
       }),
+      ...(query.evaluationTemplateIds && {
+        evaluationTemplateId: { in: query.evaluationTemplateIds },
+      }),
       ...(query.syncedStudentId && { syncedStudentId: query.syncedStudentId }),
       ...(query.status && { status: query.status }),
       ...(allowedTemplateIds && {
