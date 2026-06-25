@@ -265,6 +265,21 @@ export const verifyEvaluationResultSchema = z.object({
 
 export const listEvaluationResultsSchema = paginationSchema.extend({
   evaluationTemplateId: z.string().cuid().optional(),
+  evaluationTemplateIds: z.string().transform((val, ctx) => {
+    if (!val) return undefined;
+    const ids = val.split(',');
+    for (const id of ids) {
+      const result = z.string().cuid().safeParse(id);
+      if (!result.success) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Invalid CUID format: ${id}`,
+        });
+        return z.NEVER;
+      }
+    }
+    return ids;
+  }).optional(),
   syncedStudentId: z.string().cuid().optional(),
   status: z.enum(["DRAFT", "SUBMITTED", "VERIFIED", "LOCKED"]).optional(),
 });

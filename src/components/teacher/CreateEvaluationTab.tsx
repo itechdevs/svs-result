@@ -29,6 +29,9 @@ interface CreateEvaluationTabProps {
   /** Teacher-defined topic/chapter title — independent of assigned subject */
   newSubjectTitle?: string;
   setNewSubjectTitle?: (val: string) => void;
+  selectedExamId?: string;
+  setSelectedExamId?: (val: string) => void;
+  exams?: Array<{ id: string; name: string; description?: string | null }>;
   targetMarks: number;
   setTargetMarks: (val: number) => void;
   newOutcomes: TaskGroup[];
@@ -45,6 +48,9 @@ export default function CreateEvaluationTab({
   setNewEvalSubject,
   newSubjectTitle = '',
   setNewSubjectTitle,
+  selectedExamId = '',
+  setSelectedExamId,
+  exams = [],
   targetMarks,
   setTargetMarks,
   newOutcomes,
@@ -206,6 +212,29 @@ export default function CreateEvaluationTab({
                 className="w-full text-xs"
               />
             </div>
+
+            {exams.length > 0 && (
+              <div>
+                <label className="text-[10px] font-extrabold text-muted-foreground uppercase block mb-1">
+                  Exam/Term (Optional)
+                </label>
+                <select
+                  value={selectedExamId}
+                  onChange={e => setSelectedExamId?.(e.target.value)}
+                  className="w-full text-xs border border-input bg-background px-3 py-2 rounded-md"
+                >
+                  <option value="">-- Select Exam/Term --</option>
+                  {exams.map((exam) => (
+                    <option key={exam.id} value={exam.id}>
+                      {exam.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Select which exam/term this evaluation belongs to (e.g., First Term, Second Term)
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
