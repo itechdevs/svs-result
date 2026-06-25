@@ -94,7 +94,7 @@ export function formatToBSFullString(date: Date | string | null | undefined): st
   if (isNaN(d.getTime())) return "";
   try {
     const bsDate = toBSDate(d);
-    return `${bsDate.bsDay} ${bsDate.monthName} ${bsDate.bsYear}`;
+    return `${bsDate.bsDay} ${getBSMonthName(bsDate.bsMonth).ne} ${bsDate.bsYear}`;
   } catch (e) {
     return "";
   }

@@ -6,6 +6,7 @@ import { ArrowLeft, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { BSCalendarSelector } from '@/components/shared/ui/bs-calendar-selector';
 
 interface OutcomeRow {
   name: string;
@@ -325,15 +326,13 @@ export default function CreateEvaluationTab({
                         />
                       </div>
                       <div className="col-span-2">
-                        <Input
-                          type="date"
+                        <BSCalendarSelector
                           value={item.date}
-                          onChange={e => {
+                          onChange={v => {
                             const copy = [...newOutcomes];
-                            copy[groupIndex].outcomes[idx].date = e.target.value;
+                            copy[groupIndex].outcomes[idx].date = v;
                             setNewOutcomes(copy);
                           }}
-                          className="w-full text-xs text-center text-foreground"
                         />
                       </div>
                       <div className="col-span-2">

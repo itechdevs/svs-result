@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -25,16 +26,14 @@ export function BSCalendarSelector({
   disabled = false,
 }: BSCalendarSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [popoverDirection, setPopoverDirection] = useState<"down" | "up">("down");
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({});
 
-  // Initialize visibility states
   const [currentYear, setCurrentYear] = useState<number>(() => {
     if (value) {
       const parsedDate = new Date(value);
-      if (!isNaN(parsedDate.getTime())) {
-        return toBSDate(parsedDate).bsYear;
-      }
+      if (!isNaN(parsedDate.getTime())) return toBSDate(parsedDate).bsYear;
     }
     return toBSDate(new Date()).bsYear;
   });
@@ -42,33 +41,20 @@ export function BSCalendarSelector({
   const [currentMonth, setCurrentMonth] = useState<number>(() => {
     if (value) {
       const parsedDate = new Date(value);
-      if (!isNaN(parsedDate.getTime())) {
-        return toBSDate(parsedDate).bsMonth;
-      }
+      if (!isNaN(parsedDate.getTime())) return toBSDate(parsedDate).bsMonth;
     }
     return toBSDate(new Date()).bsMonth;
   });
 
   const [yearInput, setYearInput] = useState<string>(() => currentYear.toString());
 
-  // Sync year input state when currentYear changes (e.g. from prev/next buttons)
-  useEffect(() => {
-    setYearInput(currentYear.toString());
-  }, [currentYear]);
+  useEffect(() => { setYearInput(currentYear.toString()); }, [currentYear]);
 
   const handleYearInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    // Allow digits only
-    const cleanVal = val.replace(/\D/g, "");
+    const cleanVal = e.target.value.replace(/\D/g, "");
     setYearInput(cleanVal);
     const parsed = parseInt(cleanVal, 10);
-    if (!isNaN(parsed) && parsed >= 2000 && parsed <= 2200) {
-      setCurrentYear(parsed);
-    }
-  };
-
-  const handleYearInputBlur = () => {
-    setYearInput(currentYear.toString());
+    if (!isNaN(parsed) && parsed >= 2000 && parsed <= 2200) setCurrentYear(parsed);
   };
 
   // Sync state if value prop changes externally
@@ -83,43 +69,55 @@ export function BSCalendarSelector({
     }
   }, [value]);
 
-  // Click outside to close
+  // Position popover relative to button using fixed coords
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const popoverHeight = 350;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const goUp = spaceBelow < popoverHeight && rect.top > spaceBelow;
+
+      setPopoverStyle({
+        position: "fixed",
+        left: rect.left,
+        width: Math.max(rect.width, 288), // min 288 = w-72
+        ...(goUp
+          ? { bottom: window.innerHeight - rect.top + 4 }
+          : { top: rect.bottom + 4 }),
+        zIndex: 9999,
+      });
     }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
   }, [isOpen]);
 
-  // Determine popover direction based on available screen space
+  // Click outside to close
   useEffect(() => {
-    if (isOpen && containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const spaceAbove = rect.top;
-      const popoverHeight = 350; // Approximate height of the calendar popover
+    if (!isOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (
+        buttonRef.current?.contains(e.target as Node) ||
+        popoverRef.current?.contains(e.target as Node)
+      ) return;
+      setIsOpen(false);
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [isOpen]);
 
-      if (spaceBelow < popoverHeight && spaceAbove > spaceBelow) {
-        setPopoverDirection("up");
-      } else {
-        setPopoverDirection("down");
-      }
-    }
+  // Close on scroll/resize to avoid stale position
+  useEffect(() => {
+    if (!isOpen) return;
+    const close = () => setIsOpen(false);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
   }, [isOpen]);
 
   const handlePrevMonth = () => {
     if (currentMonth === 1) {
-      if (currentYear > 2070) {
-        setCurrentMonth(12);
-        setCurrentYear(currentYear - 1);
-      }
+      if (currentYear > 2070) { setCurrentMonth(12); setCurrentYear(currentYear - 1); }
     } else {
       setCurrentMonth(currentMonth - 1);
     }
@@ -127,10 +125,7 @@ export function BSCalendarSelector({
 
   const handleNextMonth = () => {
     if (currentMonth === 12) {
-      if (currentYear < 2099) {
-        setCurrentMonth(1);
-        setCurrentYear(currentYear + 1);
-      }
+      if (currentYear < 2099) { setCurrentMonth(1); setCurrentYear(currentYear + 1); }
     } else {
       setCurrentMonth(currentMonth + 1);
     }
@@ -139,91 +134,139 @@ export function BSCalendarSelector({
   const handleSelectDay = (day: number) => {
     const adDate = toADDate(currentYear, currentMonth, day);
     const pad = (n: number) => n.toString().padStart(2, "0");
-    const dateStr = `${adDate.getFullYear()}-${pad(adDate.getMonth() + 1)}-${pad(adDate.getDate())}`;
-    onChange(dateStr);
+    onChange(`${adDate.getFullYear()}-${pad(adDate.getMonth() + 1)}-${pad(adDate.getDate())}`);
     setIsOpen(false);
   };
 
   const handleToday = () => {
     const today = new Date();
     const pad = (n: number) => n.toString().padStart(2, "0");
-    const dateStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
-    onChange(dateStr);
-
+    onChange(`${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`);
     const bsToday = toBSDate(today);
     setCurrentYear(bsToday.bsYear);
     setCurrentMonth(bsToday.bsMonth);
     setIsOpen(false);
   };
 
-  const handleClear = () => {
-    onChange("");
-    setIsOpen(false);
-  };
+  const handleClear = () => { onChange(""); setIsOpen(false); };
 
-  // Generate grid days for the month
+  // Build grid
   const numDays = getDaysInBSMonth(currentYear, currentMonth);
-  const firstDayAD = toADDate(currentYear, currentMonth, 1);
-  const startWeekday = firstDayAD.getDay(); // 0 is Sunday, 1 is Monday, etc.
+  const startWeekday = toADDate(currentYear, currentMonth, 1).getDay();
 
-  const gridDays: ({ day: number; isSelected: boolean; isToday: boolean } | null)[] = [];
-
-  // Padding for starting weekday
-  for (let i = 0; i < startWeekday; i++) {
-    gridDays.push(null);
-  }
-
-  // Parse active selection
   let selectedYear: number | null = null;
   let selectedMonth: number | null = null;
   let selectedDay: number | null = null;
-
   if (value) {
-    const parsedDate = new Date(value);
-    if (!isNaN(parsedDate.getTime())) {
-      const bsSelected = toBSDate(parsedDate);
-      selectedYear = bsSelected.bsYear;
-      selectedMonth = bsSelected.bsMonth;
-      selectedDay = bsSelected.bsDay;
+    const p = new Date(value);
+    if (!isNaN(p.getTime())) {
+      const bs = toBSDate(p);
+      selectedYear = bs.bsYear; selectedMonth = bs.bsMonth; selectedDay = bs.bsDay;
     }
   }
-
   const todayBS = toBSDate(new Date());
 
-  // Fill in active month days
-  for (let d = 1; d <= numDays; d++) {
-    const isSelected =
-      selectedYear === currentYear &&
-      selectedMonth === currentMonth &&
-      selectedDay === d;
+  const gridDays: ({ day: number; isSelected: boolean; isToday: boolean } | null)[] = [
+    ...Array(startWeekday).fill(null),
+    ...Array.from({ length: numDays }, (_, i) => {
+      const d = i + 1;
+      return {
+        day: d,
+        isSelected: selectedYear === currentYear && selectedMonth === currentMonth && selectedDay === d,
+        isToday: todayBS.bsYear === currentYear && todayBS.bsMonth === currentMonth && todayBS.bsDay === d,
+      };
+    }),
+  ];
 
-    const isToday =
-      todayBS.bsYear === currentYear &&
-      todayBS.bsMonth === currentMonth &&
-      todayBS.bsDay === d;
+  const popover = (
+    <div
+      ref={popoverRef}
+      style={popoverStyle}
+      className="w-72 rounded-lg border border-border bg-popover p-3 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3 gap-1">
+        <button type="button" onClick={handlePrevMonth}
+          className="h-7 w-7 flex items-center justify-center rounded-md border border-input bg-background hover:bg-accent cursor-pointer">
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <div className="flex items-center gap-1.5">
+          <select value={currentMonth} onChange={(e) => setCurrentMonth(parseInt(e.target.value))}
+            className="h-7 rounded-md border border-input bg-background px-1.5 py-0.5 text-xs font-semibold text-foreground cursor-pointer">
+            {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+              <option key={m} value={m}>{getBSMonthName(m).en}</option>
+            ))}
+          </select>
+          <input type="text" inputMode="numeric" pattern="[0-9]*"
+            value={yearInput}
+            onChange={handleYearInputChange}
+            onBlur={() => setYearInput(currentYear.toString())}
+            className="h-7 w-14 rounded-md border border-input bg-background px-1.5 py-0.5 text-xs font-semibold text-foreground text-center focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
+          />
+        </div>
+        <button type="button" onClick={handleNextMonth}
+          className="h-7 w-7 flex items-center justify-center rounded-md border border-input bg-background hover:bg-accent cursor-pointer">
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
 
-    gridDays.push({
-      day: d,
-      isSelected,
-      isToday,
-    });
-  }
+      {/* Weekday labels */}
+      <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-muted-foreground mb-1 uppercase tracking-wider">
+        {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
+          <div key={d} className="h-6 flex items-center justify-center">{d}</div>
+        ))}
+      </div>
 
-  // Year list for selector (2070 - 2099 BS)
-  const yearsList = Array.from({ length: 30 }, (_, i) => 2070 + i);
+      {/* Days */}
+      <div className="grid grid-cols-7 gap-1">
+        {gridDays.map((dayObj, i) =>
+          !dayObj ? <div key={`e-${i}`} className="h-8" /> : (
+            <button key={`d-${dayObj.day}`} type="button" onClick={() => handleSelectDay(dayObj.day)}
+              className={cn(
+                "h-8 w-8 text-xs flex items-center justify-center rounded-md transition-all font-medium cursor-pointer",
+                dayObj.isSelected
+                  ? "bg-primary text-primary-foreground font-bold scale-105 shadow-sm"
+                  : dayObj.isToday
+                  ? "bg-accent text-accent-foreground font-semibold ring-1 ring-primary/45"
+                  : "hover:bg-accent hover:text-accent-foreground text-foreground"
+              )}>
+              {dayObj.day}
+            </button>
+          )
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="mt-3 pt-2 border-t border-border flex items-center justify-between text-[10px] text-muted-foreground">
+        <span className="truncate max-w-[130px] font-medium">{value ? `${value} AD` : ""}</span>
+        <div className="flex gap-2">
+          {value && (
+            <button type="button" onClick={handleClear}
+              className="px-1.5 py-0.5 rounded-md hover:bg-accent text-[10px] font-bold cursor-pointer">
+              Clear
+            </button>
+          )}
+          <button type="button" onClick={handleToday}
+            className="px-2 py-0.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 text-[10px] font-bold cursor-pointer">
+            Today
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <div ref={containerRef} className="relative w-full">
-      {/* Date Trigger Button */}
+    <div className="relative w-full">
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
+        disabled={disabled}
         className={cn(
           "flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors hover:bg-accent/40 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 text-left cursor-pointer",
           !value && "text-muted-foreground",
           className
         )}
-        disabled={disabled}
       >
         <span className="truncate">
           {value ? formatToBSFullString(value) : "Select date (BS)..."}
@@ -231,126 +274,7 @@ export function BSCalendarSelector({
         <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
       </button>
 
-      {/* Popover Calendar */}
-      {isOpen && (
-        <div className={cn(
-          "absolute left-0 z-50 w-72 rounded-lg border border-border bg-popover p-3 text-popover-foreground shadow-md outline-hidden animate-in fade-in-0 zoom-in-95",
-          popoverDirection === "up" ? "bottom-full mb-1" : "top-full mt-1"
-        )}>
-          {/* Header Controls */}
-          <div className="flex items-center justify-between mb-3 gap-1">
-            <button
-              type="button"
-              onClick={handlePrevMonth}
-              className="h-7 w-7 flex items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground disabled:opacity-50 cursor-pointer"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-
-            <div className="flex items-center gap-1.5">
-              {/* Month Select */}
-              <select
-                value={currentMonth}
-                onChange={(e) => setCurrentMonth(parseInt(e.target.value))}
-                className="h-7 rounded-md border border-input bg-background px-1.5 py-0.5 text-xs font-semibold text-foreground focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
-              >
-                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                  <option key={m} value={m} className="bg-popover text-foreground text-xs">
-                    {getBSMonthName(m).en}
-                  </option>
-                ))}
-              </select>
-
-              {/* Year Input (Typeable) */}
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={yearInput}
-                onChange={handleYearInputChange}
-                onBlur={handleYearInputBlur}
-                placeholder="Year"
-                className="h-7 w-14 rounded-md border border-input bg-background px-1.5 py-0.5 text-xs font-semibold text-foreground text-center focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
-              />
-            </div>
-
-            <button
-              type="button"
-              onClick={handleNextMonth}
-              className="h-7 w-7 flex items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground disabled:opacity-50 cursor-pointer"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-
-          {/* Weekday Labels */}
-          <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-muted-foreground mb-1 uppercase tracking-wider">
-            {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
-              <div key={day} className="h-6 flex items-center justify-center">
-                {day}
-              </div>
-            ))}
-          </div>
-
-          {/* Days Grid */}
-          <div className="grid grid-cols-7 gap-1">
-            {gridDays.map((dayObj, index) => {
-              if (!dayObj) {
-                return <div key={`empty-${index}`} className="h-8" />;
-              }
-
-              const { day, isSelected, isToday } = dayObj;
-
-              return (
-                <button
-                  key={`day-${day}`}
-                  type="button"
-                  onClick={() => handleSelectDay(day)}
-                  className={cn(
-                    "h-8 w-8 text-xs flex items-center justify-center rounded-md transition-all font-medium cursor-pointer",
-                    isSelected
-                      ? "bg-primary text-primary-foreground hover:bg-primary/95 font-bold scale-105 shadow-sm"
-                      : isToday
-                      ? "bg-accent text-accent-foreground font-semibold ring-1 ring-primary/45"
-                      : "hover:bg-accent hover:text-accent-foreground text-foreground"
-                  )}
-                >
-                  {day}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Popover Footer */}
-          <div className="mt-3 pt-2 border-t border-border flex items-center justify-between text-[10px] text-muted-foreground">
-            <div className="truncate max-w-[130px]">
-              {value ? (
-                <span className="font-medium text-muted-foreground">{value} AD</span>
-              ) : (
-                <span className="text-muted-foreground/60">No selection</span>
-              )}
-            </div>
-            <div className="flex gap-2">
-              {value && (
-                <button
-                  type="button"
-                  onClick={handleClear}
-                  className="px-1.5 py-0.5 rounded-md hover:bg-accent hover:text-accent-foreground text-[10px] font-bold transition-colors cursor-pointer"
-                >
-                  Clear
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={handleToday}
-                className="px-2 py-0.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 text-[10px] font-bold transition-colors cursor-pointer"
-              >
-                Today
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {isOpen && typeof document !== "undefined" && createPortal(popover, document.body)}
     </div>
   );
 }
