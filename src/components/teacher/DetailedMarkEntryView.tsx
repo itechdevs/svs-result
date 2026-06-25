@@ -96,9 +96,10 @@ interface Props {
     patch: Partial<OutcomeMark>
   ) => void;
   handleSaveAll: () => Promise<void>;
+  readOnly?: boolean;
 }
 
-export default function DetailedMarkEntryView({ student, evaluation, getStudentMark, updateOutcomeMark, handleSaveAll }: Props) {
+export default function DetailedMarkEntryView({ student, evaluation, getStudentMark, updateOutcomeMark, handleSaveAll, readOnly = false }: Props) {
   const router = useRouter();
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -223,10 +224,10 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
             {status}
           </span>
           <span className="font-bold text-sm text-foreground">{obtained} / {fullTotal}</span>
-          {autoSaveStatus === 'saving' && (
+          {autoSaveStatus === 'saving' && !readOnly && (
             <span className="text-xs text-muted-foreground animate-pulse">Saving...</span>
           )}
-          {autoSaveStatus === 'saved' && (
+          {autoSaveStatus === 'saved' && !readOnly && (
             <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
               <CheckCircle className="w-3 h-3" />
               Saved
@@ -382,9 +383,12 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
                         step="any"
                         value={m?.regularMark ?? ''}
                         placeholder="—"
-                        onChange={(e) => handleRegular(lo.name, lo.templateId!, 'regularMark', e.target.value, max)}
+                        readOnly={readOnly}
+                        tabIndex={readOnly ? -1 : undefined}
+                        onChange={readOnly ? undefined : (e) => handleRegular(lo.name, lo.templateId!, 'regularMark', e.target.value, max)}
                         className={cn(
                           'w-16 text-center text-sm font-bold mx-auto border-2',
+                          readOnly && 'cursor-default opacity-80',
                           regFail
                             ? 'bg-red-50 dark:bg-red-950/20 border-red-300 dark:border-red-800 text-red-900 dark:text-red-300'
                             : m?.regularMark !== null && m?.regularMark !== undefined
@@ -397,12 +401,20 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
                     {/* Support: Date */}
                     <TableCell className="text-center border-r border-border">
                       {regFail && !hasReExam ? (
-                        <Input
-                          type="date"
-                          value={m?.supportDate ?? ''}
-                          onChange={(e) => handleSupport(lo.name, lo.templateId!, 'supportDate', e.target.value, max)}
-                          className="w-28 text-xs text-center mx-auto"
-                        />
+                        readOnly ? (
+                          m?.supportDate ? (
+                            <span className="text-xs text-muted-foreground">{m.supportDate}</span>
+                          ) : (
+                            <span className="text-muted-foreground/30">—</span>
+                          )
+                        ) : (
+                          <Input
+                            type="date"
+                            value={m?.supportDate ?? ''}
+                            onChange={(e) => handleSupport(lo.name, lo.templateId!, 'supportDate', e.target.value, max)}
+                            className="w-28 text-xs text-center mx-auto"
+                          />
+                        )
                       ) : (
                         <span className="text-muted-foreground/30">—</span>
                       )}
@@ -411,16 +423,25 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
                     {/* Support: Marks */}
                     <TableCell className="text-center border-r border-border">
                       {regFail && !hasReExam ? (
-                        <Input
-                          type="number"
-                          min={0}
-                          max={max}
-                          step="any"
-                          value={m?.supportMark ?? ''}
-                          placeholder="—"
-                          onChange={(e) => handleSupport(lo.name, lo.templateId!, 'supportMark', e.target.value, max)}
-                          className="w-16 text-center text-sm font-bold mx-auto bg-amber-50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-300"
-                        />
+                        readOnly ? (
+                          <span className={cn(
+                            'inline-flex items-center justify-center w-14 px-2 py-1 rounded text-sm font-bold font-mono border',
+                            'bg-amber-100 dark:bg-amber-950/40 border-amber-400 dark:border-amber-700 text-amber-900 dark:text-amber-300'
+                          )}>
+                            {m?.supportMark ?? '—'}
+                          </span>
+                        ) : (
+                          <Input
+                            type="number"
+                            min={0}
+                            max={max}
+                            step="any"
+                            value={m?.supportMark ?? ''}
+                            placeholder="—"
+                            onChange={(e) => handleSupport(lo.name, lo.templateId!, 'supportMark', e.target.value, max)}
+                            className="w-16 text-center text-sm font-bold mx-auto bg-amber-50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-300"
+                          />
+                        )
                       ) : (
                         <span className="text-muted-foreground/30">—</span>
                       )}
@@ -466,13 +487,17 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
 
                     {/* Remarks */}
                     <TableCell>
-                      <Input
-                        type="text"
-                        value={m?.remarks ?? ''}
-                        placeholder="Add remarks..."
-                        onChange={(e) => handleRemarks(lo.name, lo.templateId!, e.target.value)}
-                        className="w-full text-xs min-w-[140px]"
-                      />
+                      {readOnly ? (
+                        <span className="text-xs text-muted-foreground">{m?.remarks || '—'}</span>
+                      ) : (
+                        <Input
+                          type="text"
+                          value={m?.remarks ?? ''}
+                          placeholder="Add remarks..."
+                          onChange={(e) => handleRemarks(lo.name, lo.templateId!, e.target.value)}
+                          className="w-full text-xs min-w-[140px]"
+                        />
+                      )}
                     </TableCell>
                   </TableRow>
                 );
