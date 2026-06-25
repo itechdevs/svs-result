@@ -47,6 +47,26 @@ export function useTeacherAssignments(filters: ListAssignmentsFilters = {}) {
   });
 }
 
+export interface SyncedAllocationTeacher {
+  id: string;
+  name: string;
+  syncedAt: string;
+  hasAccount: boolean;
+  subjects: { id: string; name: string; gradeLevel: string }[];
+}
+
+export function useSyncedAllocations() {
+  return useQuery<SyncedAllocationTeacher[]>({
+    queryKey: ['synced-allocations'],
+    queryFn: async () => {
+      const res = await fetch('/api/allocations/synced');
+      if (!res.ok) throw new Error('Failed to fetch allocations');
+      const data = await res.json();
+      return data.allocations ?? [];
+    },
+  });
+}
+
 export function useCreateTeacherAssignment() {
   const queryClient = useQueryClient();
   return useMutation<TeacherAssignment, Error, CreateAssignmentInput>({

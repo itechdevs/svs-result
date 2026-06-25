@@ -56,17 +56,31 @@ export default function MarkEntryOverviewTable() {
     selectedClass ? { class: selectedClass, limit: 9999 } : { limit: 1 },
   );
 
+  // For teachers: resolve via their assigned subjects.
+  // For admins: they have no syncedTeacher, so fall back to matching templates directly.
+  const isAdmin = profile?.role === 'ADMIN';
+
   const subjectObj = useMemo(() => {
     if (!selectedClass || !selectedSubject) return undefined;
+    if (isAdmin) return undefined; // admins use direct template matching
     return profile?.syncedTeacher?.subjects.find(
       (s) => s.name === selectedSubject && s.gradeLevel === selectedClass,
     );
-  }, [selectedClass, selectedSubject, profile]);
+  }, [selectedClass, selectedSubject, profile, isAdmin]);
 
   const allSubjectTemplates = useMemo(() => {
+    if (!selectedClass || !selectedSubject) return [];
+    // Admin: match templates by subject name + grade level directly
+    if (isAdmin) {
+      return templatesData.filter(
+        (t) =>
+          t.syncedSubject?.name === selectedSubject &&
+          (t.syncedSubject?.gradeLevel === selectedClass || t.gradeConfig?.gradeLevel === selectedClass),
+      );
+    }
     if (!subjectObj) return [];
     return templatesData.filter((t) => t.syncedSubjectId === subjectObj.id);
-  }, [subjectObj, templatesData]);
+  }, [subjectObj, templatesData, isAdmin, selectedClass, selectedSubject]);
 
   const evaluations = useMemo(() => {
     if (!selectedEvalPlan) return [];
@@ -194,13 +208,15 @@ export default function MarkEntryOverviewTable() {
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <Link
-                href={`/teacher/mark-entry/all?class=${selectedClass}&evalId=${evaluations[0].id}`}
+                href={isAdmin
+                  ? `/admin/mark-entry/all?class=${selectedClass}&evalId=${evaluations[0].id}`
+                  : `/teacher/mark-entry/all?class=${selectedClass}&evalId=${evaluations[0].id}`}
                 className="px-4 py-2 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
               >
                 <Eye className="w-3.5 h-3.5" />
                 View Details
               </Link>
-              <button
+              {!isAdmin && <button
                 onClick={async () => {
                   await handleSaveAll(false);
                   const query = searchParams.toString();
@@ -236,8 +252,8 @@ export default function MarkEntryOverviewTable() {
                   <Save className="w-3.5 h-3.5" />
                 )}
                 {evalGroupStatus === 'SUBMITTED' ? 'Drafted' : 'Draft'}
-              </button>
-              <button
+              </button>}
+              {!isAdmin && <button
                 onClick={async () => {
                   await handleSaveAll(true);
                   const query = searchParams.toString();
@@ -273,7 +289,7 @@ export default function MarkEntryOverviewTable() {
                   <Send className="w-3.5 h-3.5" />
                 )}
                 {evalGroupStatus === 'SUBMITTED' ? 'Published' : 'Publish'}
-              </button>
+              </button>}
             </div>
           </div>
 
@@ -401,8 +417,8 @@ export default function MarkEntryOverviewTable() {
                                 step="any"
                                 value={val ?? ""}
                                 placeholder="—"
-                                readOnly={evalGroupStatus === 'SUBMITTED'}
-                                tabIndex={evalGroupStatus === 'SUBMITTED' ? -1 : 0}
+                                readOnly={isAdmin || evalGroupStatus === 'SUBMITTED'}
+                                tabIndex={isAdmin || evalGroupStatus === 'SUBMITTED' ? -1 : 0}
                                 onChange={(e) =>
                                   handleMarkChange(
                                     student.id,
@@ -469,7 +485,9 @@ export default function MarkEntryOverviewTable() {
                         {/* ── Detail link ── */}
                         <td className="px-4 py-3 text-center">
                           <Link
-                            href={`/teacher/mark-entry/${student.id}?evalId=${evaluations[0].id}`}
+                            href={isAdmin
+                              ? `/admin/mark-entry/${student.id}?evalId=${evaluations[0].id}`
+                              : `/teacher/mark-entry/${student.id}?evalId=${evaluations[0].id}`}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded border border-slate-200 dark:border-border transition-colors"
                           >
                             <Eye className="w-3 h-3" />
