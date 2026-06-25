@@ -157,10 +157,6 @@ export default function ExamResultCompilation({
 
   const isLoading = studentsLoading || resultsLoading || compilationsLoading || templatesLoading;
 
-  if (isLoading) {
-    return <ExamResultCompilationSkeleton />;
-  }
-
   const students = useMemo(() => studentsData?.students ?? [], [studentsData]);
 
   const effectiveTemplates = useMemo(() => {
@@ -438,6 +434,10 @@ export default function ExamResultCompilation({
     );
     setBulkGradeSheets(studentObjs);
   };
+
+  if (isLoading) {
+    return <ExamResultCompilationSkeleton />;
+  }
 
   return (
     <motion.div
