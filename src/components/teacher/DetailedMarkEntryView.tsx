@@ -29,12 +29,10 @@ export function calcObtainedMarks(
     if (!lo.templateId) return sum;
     const mark = getStudentMark(studentId, lo.templateId);
     const m = mark?.outcomeMarks[lo.name];
-    // Effective mark priority: re-exam > support > regular
+    // Effective mark priority: re-exam > regular
     const finalMark =
       m?.reExamMark !== null && m?.reExamMark !== undefined
         ? m.reExamMark
-        : m?.supportMark !== null && m?.supportMark !== undefined
-        ? m.supportMark
         : m?.regularMark;
     return sum + (finalMark ?? 0);
   }, 0);
@@ -67,12 +65,10 @@ export function calcPassFail(
     if (!lo.templateId) return false;
     const mark = getStudentMark(studentId, lo.templateId);
     const m = mark?.outcomeMarks[lo.name];
-    // Effective mark priority: re-exam > support > regular
+    // Effective mark priority: re-exam > regular
     const finalMark =
       m?.reExamMark !== null && m?.reExamMark !== undefined
         ? m.reExamMark
-        : m?.supportMark !== null && m?.supportMark !== undefined
-        ? m.supportMark
         : m?.regularMark;
     if (finalMark === null || finalMark === undefined) return false;
     return finalMark < (lo.passMarks ?? 0);
@@ -149,22 +145,14 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
     triggerAutoSave();
   };
 
-  const handleSupport = (outcomeName: string, templateId: string, field: 'supportMark' | 'supportDate', value: string, max: number) => {
-    if (field === 'supportMark') {
-      const num = value === '' ? null : Math.min(Math.max(0, Number(value)), max);
-      updateOutcomeMark(student.id, templateId, outcomeName, { supportMark: num });
-    } else {
-      updateOutcomeMark(student.id, templateId, outcomeName, { supportDate: value });
-    }
-    triggerAutoSave();
-  };
+
 
   const handleRemarks = (outcomeName: string, templateId: string, value: string) => {
     updateOutcomeMark(student.id, templateId, outcomeName, { remarks: value });
     triggerAutoSave();
   };
 
-  // For display: use effective mark (re-exam > support > regular)
+  // For display: use effective mark (re-exam > regular)
   const obtained = outcomes.reduce((sum, lo) => {
     if (!lo.templateId) return sum;
     const mark = getStudentMark(student.id, lo.templateId);
@@ -172,8 +160,6 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
     const finalMark =
       m?.reExamMark !== null && m?.reExamMark !== undefined
         ? m.reExamMark
-        : m?.supportMark !== null && m?.supportMark !== undefined
-        ? m.supportMark
         : m?.regularMark ?? 0;
     return sum + finalMark;
   }, 0);
@@ -249,9 +235,6 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
               <TableHead className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider text-center border-r border-border bg-emerald-500/5" colSpan={2}>
                 Regular Class Assessment
               </TableHead>
-              <TableHead className="text-[10px] font-bold text-purple-700 dark:text-purple-400 uppercase tracking-wider text-center border-r border-border bg-purple-500/5" colSpan={2}>
-                Assessment After Support
-              </TableHead>
               <TableHead className="text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider text-center border-r border-border bg-orange-500/5" colSpan={2}>
                 Re-Exam Assessment
               </TableHead>
@@ -261,8 +244,6 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
               <TableHead className="border-r border-border" />
               <TableHead className="border-r border-border" />
               <TableHead className="border-r border-border" />
-              <TableHead className="text-center border-r border-border">Date</TableHead>
-              <TableHead className="text-center border-r border-border">Marks</TableHead>
               <TableHead className="text-center border-r border-border">Date</TableHead>
               <TableHead className="text-center border-r border-border">Marks</TableHead>
               <TableHead className="text-center border-r border-border bg-orange-50/30 dark:bg-orange-950/10">Date</TableHead>
@@ -277,12 +258,10 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
                 const m = markObj?.outcomeMarks[lo.name];
                 const max = lo.fullMarks ?? 100;
                 const pass = lo.passMarks ?? 0;
-                // Effective mark: re-exam > support > regular
+                // Effective mark: re-exam > regular
                 const effectiveMark =
                   m?.reExamMark !== null && m?.reExamMark !== undefined
                     ? m.reExamMark
-                    : m?.supportMark !== null && m?.supportMark !== undefined
-                    ? m.supportMark
                     : m?.regularMark ?? null;
                 const regFail =
                   m?.regularMark !== null &&
@@ -396,55 +375,6 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
                               : 'border-muted-foreground/20'
                         )}
                       />
-                    </TableCell>
-
-                    {/* Support: Date */}
-                    <TableCell className="text-center border-r border-border">
-                      {regFail && !hasReExam ? (
-                        readOnly ? (
-                          m?.supportDate ? (
-                            <span className="text-xs text-muted-foreground">{m.supportDate}</span>
-                          ) : (
-                            <span className="text-muted-foreground/30">—</span>
-                          )
-                        ) : (
-                          <Input
-                            type="date"
-                            value={m?.supportDate ?? ''}
-                            onChange={(e) => handleSupport(lo.name, lo.templateId!, 'supportDate', e.target.value, max)}
-                            className="w-28 text-xs text-center mx-auto"
-                          />
-                        )
-                      ) : (
-                        <span className="text-muted-foreground/30">—</span>
-                      )}
-                    </TableCell>
-
-                    {/* Support: Marks */}
-                    <TableCell className="text-center border-r border-border">
-                      {regFail && !hasReExam ? (
-                        readOnly ? (
-                          <span className={cn(
-                            'inline-flex items-center justify-center w-14 px-2 py-1 rounded text-sm font-bold font-mono border',
-                            'bg-amber-100 dark:bg-amber-950/40 border-amber-400 dark:border-amber-700 text-amber-900 dark:text-amber-300'
-                          )}>
-                            {m?.supportMark ?? '—'}
-                          </span>
-                        ) : (
-                          <Input
-                            type="number"
-                            min={0}
-                            max={max}
-                            step="any"
-                            value={m?.supportMark ?? ''}
-                            placeholder="—"
-                            onChange={(e) => handleSupport(lo.name, lo.templateId!, 'supportMark', e.target.value, max)}
-                            className="w-16 text-center text-sm font-bold mx-auto bg-amber-50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-300"
-                          />
-                        )
-                      ) : (
-                        <span className="text-muted-foreground/30">—</span>
-                      )}
                     </TableCell>
 
                     {/* Re-Exam: Date (read-only) */}

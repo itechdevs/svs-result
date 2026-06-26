@@ -25,7 +25,7 @@ interface MarkEntryTabProps {
   setGradingStudentId: (id: string) => void;
   saveSuccessMessage: boolean;
   setSaveSuccessMessage: (val: boolean) => void;
-  updateIndividualRating: (outcomeName: string, value: number, isSupport: boolean) => void;
+  updateIndividualRating: (outcomeName: string, value: number) => void;
 }
 
 export default function MarkEntryTab({
@@ -160,9 +160,6 @@ export default function MarkEntryTab({
               <TableHead className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider text-center border-r border-border bg-emerald-500/5" colSpan={2}>
                 Regular Class Assessment
               </TableHead>
-              <TableHead className="text-[10px] font-bold text-purple-700 dark:text-purple-400 uppercase tracking-wider text-center border-r border-border bg-purple-500/5" colSpan={2}>
-                Assessment After Support
-              </TableHead>
               <TableHead className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                 Remarks
               </TableHead>
@@ -171,8 +168,6 @@ export default function MarkEntryTab({
               <TableHead className="border-r border-border"></TableHead>
               <TableHead className="border-r border-border"></TableHead>
               <TableHead className="border-r border-border"></TableHead>
-              <TableHead className="text-center border-r border-border">Date</TableHead>
-              <TableHead className="text-center border-r border-border">Rating</TableHead>
               <TableHead className="text-center border-r border-border">Date</TableHead>
               <TableHead className="text-center border-r border-border">Rating</TableHead>
               <TableHead></TableHead>
@@ -204,27 +199,8 @@ export default function MarkEntryTab({
                     min={1}
                     max={4}
                     value={lo.regularRating || ''}
-                    onChange={e => updateIndividualRating(lo.name, Number(e.target.value), false)}
+                    onChange={e => updateIndividualRating(lo.name, Number(e.target.value))}
                     className="w-16 text-center text-sm font-bold mx-auto bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-300"
-                  />
-                </TableCell>
-                <TableCell className="text-center border-r border-border">
-                  <Input
-                    type="date"
-                    value={lo.supportDate || ''}
-                    className="w-28 text-xs text-center mx-auto"
-                    readOnly
-                  />
-                </TableCell>
-                <TableCell className="text-center border-r border-border">
-                  <Input
-                    type="number"
-                    min={1}
-                    max={4}
-                    value={lo.afterSupportRating || ''}
-                    placeholder="--"
-                    onChange={e => updateIndividualRating(lo.name, Number(e.target.value), true)}
-                    className="w-16 text-center text-sm font-bold mx-auto bg-purple-50 dark:bg-purple-950/20 border-purple-300 dark:border-purple-800 text-purple-900 dark:text-purple-300"
                   />
                 </TableCell>
                 <TableCell>

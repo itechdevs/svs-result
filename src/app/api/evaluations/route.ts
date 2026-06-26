@@ -95,6 +95,15 @@ export const GET = withHandler(async (req: NextRequest, { user }) => {
           remarks: true,
           createdAt: true,
           updatedAt: true,
+          reExamEnrollment: {
+            select: {
+              reExamSchedule: {
+                select: {
+                  scheduledDate: true,
+                },
+              },
+            },
+          },
         },
       },
     },
