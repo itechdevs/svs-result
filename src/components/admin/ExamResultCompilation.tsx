@@ -55,6 +55,7 @@ interface SubjectResult {
 }
 
 interface CompiledResult {
+  rank?: number;
   rollNo: string;
   studentId: string;
   studentName: string;
@@ -139,6 +140,8 @@ export default function ExamResultCompilation({
   const [showSavedOnLoad, setShowSavedOnLoad] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkGradeSheets, setBulkGradeSheets] = useState<Student[] | null>(null);
+  const [sortColumn, setSortColumn] = useState<"rank" | "rollNo" | "studentName">("rank");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   const { data: studentsData, isLoading: studentsLoading } = useStudents({ class: gradeLevel, limit: 500 });
   const { data: allTemplates = [], isLoading: templatesLoading } = useEvaluationTemplates({
@@ -343,6 +346,30 @@ export default function ExamResultCompilation({
       };
     });
   }, [students, totalSubjectsInTemplates, templatesBySubject, marksLookup]);
+
+  const toggleSort = (column: "rank" | "rollNo" | "studentName") => {
+    if (sortColumn === column) {
+      setSortDirection((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
+  const sortedResults = useMemo(() => {
+    const sorted = [...compiledResults].sort((a, b) => {
+      let cmp: number;
+      if (sortColumn === "rank") {
+        cmp = a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true });
+      } else if (sortColumn === "rollNo") {
+        cmp = a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true });
+      } else {
+        cmp = a.studentName.localeCompare(b.studentName);
+      }
+      return sortDirection === "asc" ? cmp : -cmp;
+    });
+    return sorted.map((r, i) => ({ ...r, rank: i + 1 } as CompiledResult));
+  }, [compiledResults, sortColumn, sortDirection]);
 
   const allSelected =
     compiledResults.length > 0 && selectedIds.size === compiledResults.length;
@@ -673,11 +700,32 @@ export default function ExamResultCompilation({
                         className="cursor-pointer accent-[#002045]"
                       />
                     </TableHead>
-                    <TableHead className="border border-border px-3 py-2 text-left font-bold text-foreground sticky left-0 bg-muted/40">
-                      Roll No
+                    <TableHead
+                      className="border border-border px-3 py-2 text-center font-bold text-foreground w-12 cursor-pointer select-none hover:bg-muted/60 transition-colors"
+                      onClick={() => toggleSort("rank")}
+                    >
+                      Rank
+                      {sortColumn === "rank" && (
+                        <span className="ml-1 text-xs">{sortDirection === "asc" ? "▲" : "▼"}</span>
+                      )}
                     </TableHead>
-                    <TableHead className="border border-border px-3 py-2 text-left font-bold text-foreground sticky left-[60px] bg-muted/40">
+                    <TableHead
+                      className="border border-border px-3 py-2 text-left font-bold text-foreground sticky left-0 bg-muted/40 cursor-pointer select-none hover:bg-muted/60 transition-colors"
+                      onClick={() => toggleSort("rollNo")}
+                    >
+                      Roll No
+                      {sortColumn === "rollNo" && (
+                        <span className="ml-1 text-xs">{sortDirection === "asc" ? "▲" : "▼"}</span>
+                      )}
+                    </TableHead>
+                    <TableHead
+                      className="border border-border px-3 py-2 text-left font-bold text-foreground sticky left-[72px] bg-muted/40 cursor-pointer select-none hover:bg-muted/60 transition-colors"
+                      onClick={() => toggleSort("studentName")}
+                    >
                       Student Name
+                      {sortColumn === "studentName" && (
+                        <span className="ml-1 text-xs">{sortDirection === "asc" ? "▲" : "▼"}</span>
+                      )}
                     </TableHead>
                     {submittedSubjects.map((s) => (
                       <TableHead
@@ -702,7 +750,7 @@ export default function ExamResultCompilation({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {compiledResults.map((result) => (
+                  {sortedResults.map((result) => (
                     <TableRow
                       key={result.studentId}
                       className={cn(
@@ -712,19 +760,22 @@ export default function ExamResultCompilation({
                       )}
                     >
                       <TableCell className="border border-border px-3 py-2 text-center">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.has(result.studentId)}
-                          onChange={() => toggleSelect(result.studentId)}
-                          className="cursor-pointer accent-[#002045]"
-                        />
-                      </TableCell>
-                      <TableCell className="border border-border px-3 py-2 text-foreground sticky left-0 bg-background">
-                        {result.rollNo}
-                      </TableCell>
-                      <TableCell className="border border-border px-3 py-2 text-foreground sticky left-[60px] bg-background">
-                        {result.studentName}
-                      </TableCell>
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(result.studentId)}
+                            onChange={() => toggleSelect(result.studentId)}
+                            className="cursor-pointer accent-[#002045]"
+                          />
+                        </TableCell>
+                        <TableCell className="border border-border px-3 py-2 text-center font-bold text-foreground text-xs">
+                          {result.rank}
+                        </TableCell>
+                        <TableCell className="border border-border px-3 py-2 text-foreground sticky left-0 bg-background">
+                          {result.rollNo}
+                        </TableCell>
+                        <TableCell className="border border-border px-3 py-2 text-foreground sticky left-[66px] bg-background">
+                          {result.studentName}
+                        </TableCell>
                       {submittedSubjects.map((s) => {
                         const sub = result.subjects[s.name];
                         return (
