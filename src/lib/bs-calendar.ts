@@ -75,9 +75,19 @@ export function getDaysInBSMonth(bsYear: number, bsMonth: number): number {
   return bs.daysInMonth(bsYear, bsMonth) as number;
 }
 
+// Parse "YYYY-MM-DD" strings as local time to avoid UTC off-by-one in positive-offset timezones
+function parseDateArg(date: Date | string): Date {
+  if (typeof date === "string") {
+    const parts = date.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (parts) return new Date(+parts[1], +parts[2] - 1, +parts[3]);
+    return new Date(date);
+  }
+  return date;
+}
+
 export function formatToBSDateString(date: Date | string | null | undefined): string {
   if (!date) return "";
-  const d = typeof date === "string" ? new Date(date) : date;
+  const d = parseDateArg(date);
   if (isNaN(d.getTime())) return "";
   try {
     const bsDate = toBSDate(d);
@@ -90,7 +100,7 @@ export function formatToBSDateString(date: Date | string | null | undefined): st
 
 export function formatToBSFullString(date: Date | string | null | undefined): string {
   if (!date) return "";
-  const d = typeof date === "string" ? new Date(date) : date;
+  const d = parseDateArg(date);
   if (isNaN(d.getTime())) return "";
   try {
     const bsDate = toBSDate(d);

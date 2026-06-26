@@ -152,7 +152,9 @@ export function MarksProvider({ children }: { children: React.ReactNode }) {
               r.reExamResult?.marksObtained !== undefined
                 ? Number(r.reExamResult.marksObtained)
                 : null,
-            reExamDate: r.reExamResult?.createdAt
+            reExamDate: (r.reExamResult as any)?.reExamEnrollment?.reExamSchedule?.scheduledDate
+              ? new Date((r.reExamResult as any).reExamEnrollment.reExamSchedule.scheduledDate).toISOString().split('T')[0]
+              : r.reExamResult?.createdAt
               ? new Date(r.reExamResult.createdAt).toISOString().split('T')[0]
               : '',
             remarks: r.reExamResult?.remarks ?? r.remarks ?? '',
@@ -239,11 +241,7 @@ export function MarksProvider({ children }: { children: React.ReactNode }) {
           submit,
           results: relevantMarks.map((m) => {
             const mark = m.outcomeMarks[t.name];
-            // Support marks replace regular marks when present (Assessment After Support)
-            const obtained =
-              mark?.supportMark !== null && mark?.supportMark !== undefined
-                ? mark.supportMark
-                : mark?.regularMark;
+            const obtained = mark?.regularMark;
             return {
               syncedStudentId: m.studentId,
               marksObtained:

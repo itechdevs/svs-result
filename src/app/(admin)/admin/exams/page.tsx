@@ -7,7 +7,7 @@ import { Plus, Trash2, BookOpen, Calendar, Pencil, X, Check } from "lucide-react
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { BSCalendarSelector } from "@/components/ui/bs-calendar-selector";
+import { BSCalendarSelector } from "@/components/shared/ui/bs-calendar-selector";
 import { formatToBSFullString } from "@/lib/bs-calendar";
 import {
   Dialog,

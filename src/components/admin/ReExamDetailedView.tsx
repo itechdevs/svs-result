@@ -71,7 +71,9 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
         supportMark: null,
         supportDate: "",
         reExamMark: r.reExamResult?.marksObtained ?? null,
-        reExamDate: r.reExamResult?.createdAt
+        reExamDate: (r.reExamResult as any)?.reExamEnrollment?.reExamSchedule?.scheduledDate
+          ? new Date((r.reExamResult as any).reExamEnrollment.reExamSchedule.scheduledDate).toISOString().split("T")[0]
+          : r.reExamResult?.createdAt
           ? new Date(r.reExamResult.createdAt).toISOString().split("T")[0]
           : "",
         remarks: r.reExamResult?.remarks ?? r.remarks ?? "",

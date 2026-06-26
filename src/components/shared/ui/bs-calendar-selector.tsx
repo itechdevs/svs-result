@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useContext } from "react";
 import { createPortal } from "react-dom";
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,7 @@ import {
   getDaysInBSMonth,
   formatToBSFullString,
 } from "@/lib/bs-calendar";
+import { DialogCalendarPortalContext } from "@/components/shared/ui/dialog";
 
 interface BSCalendarSelectorProps {
   value: string; // AD Gregorian date string in "YYYY-MM-DD" format
@@ -30,18 +31,32 @@ export function BSCalendarSelector({
   const popoverRef = useRef<HTMLDivElement>(null);
   const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({});
 
+  // When inside a Dialog, use the dialog-provided container (inside the focus trap)
+  // so the year input and month selector can receive focus and keyboard input.
+  // Also receive the dialog content element to adjust fixed-position coordinates
+  // (the dialog has a CSS transform making it the containing block for fixed children).
+  const { container: dialogPortalContainer, dialogContentEl } = useContext(DialogCalendarPortalContext);
+
+  // Parse "YYYY-MM-DD" as local time to avoid UTC off-by-one in positive-offset timezones
+  const parseLocalDate = (v: string): Date | null => {
+    const [y, m, d] = v.split("-").map(Number);
+    if (!y || !m || !d) return null;
+    const date = new Date(y, m - 1, d);
+    return isNaN(date.getTime()) ? null : date;
+  };
+
   const [currentYear, setCurrentYear] = useState<number>(() => {
     if (value) {
-      const parsedDate = new Date(value);
-      if (!isNaN(parsedDate.getTime())) return toBSDate(parsedDate).bsYear;
+      const parsedDate = parseLocalDate(value);
+      if (parsedDate) return toBSDate(parsedDate).bsYear;
     }
     return toBSDate(new Date()).bsYear;
   });
 
   const [currentMonth, setCurrentMonth] = useState<number>(() => {
     if (value) {
-      const parsedDate = new Date(value);
-      if (!isNaN(parsedDate.getTime())) return toBSDate(parsedDate).bsMonth;
+      const parsedDate = parseLocalDate(value);
+      if (parsedDate) return toBSDate(parsedDate).bsMonth;
     }
     return toBSDate(new Date()).bsMonth;
   });
@@ -60,8 +75,8 @@ export function BSCalendarSelector({
   // Sync state if value prop changes externally
   useEffect(() => {
     if (value) {
-      const parsedDate = new Date(value);
-      if (!isNaN(parsedDate.getTime())) {
+      const parsedDate = parseLocalDate(value);
+      if (parsedDate) {
         const bsDate = toBSDate(parsedDate);
         setCurrentYear(bsDate.bsYear);
         setCurrentMonth(bsDate.bsMonth);
@@ -69,7 +84,10 @@ export function BSCalendarSelector({
     }
   }, [value]);
 
-  // Position popover relative to button using fixed coords
+  // Position popover relative to button using fixed coords.
+  // When inside a Dialog, the dialog has `translate-x[-50%] translate-y[-50%]` which
+  // makes it the CSS containing block for position:fixed descendants. We must subtract
+  // the dialog's viewport offset so the popover lands at the right viewport position.
   useEffect(() => {
     if (isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
@@ -77,17 +95,24 @@ export function BSCalendarSelector({
       const spaceBelow = window.innerHeight - rect.bottom;
       const goUp = spaceBelow < popoverHeight && rect.top > spaceBelow;
 
+      // Offset to apply when inside a dialog (dialog's top-left in viewport coords)
+      const dialogRect = dialogPortalContainer ? dialogContentEl?.getBoundingClientRect() ?? null : null;
+      const offsetLeft = dialogRect?.left ?? 0;
+      const offsetTop = dialogRect?.top ?? 0;
+      // For "go up" positioning the effective bottom of the containing block
+      const effectiveBottom = dialogRect ? dialogRect.bottom : window.innerHeight;
+
       setPopoverStyle({
         position: "fixed",
-        left: rect.left,
+        left: rect.left - offsetLeft,
         width: Math.max(rect.width, 288), // min 288 = w-72
         ...(goUp
-          ? { bottom: window.innerHeight - rect.top + 4 }
-          : { top: rect.bottom + 4 }),
+          ? { bottom: effectiveBottom - rect.top + 4 }
+          : { top: rect.bottom + 4 - offsetTop }),
         zIndex: 9999,
       });
     }
-  }, [isOpen]);
+  }, [isOpen, dialogPortalContainer, dialogContentEl]);
 
   // Click outside to close
   useEffect(() => {
@@ -103,10 +128,13 @@ export function BSCalendarSelector({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [isOpen]);
 
-  // Close on scroll/resize to avoid stale position
+  // Close on scroll/resize to avoid stale position, but not when scrolling inside the calendar
   useEffect(() => {
     if (!isOpen) return;
-    const close = () => setIsOpen(false);
+    const close = (e: Event) => {
+      if (popoverRef.current?.contains(e.target as Node)) return;
+      setIsOpen(false);
+    };
     window.addEventListener("scroll", close, true);
     window.addEventListener("resize", close);
     return () => {
@@ -158,8 +186,8 @@ export function BSCalendarSelector({
   let selectedMonth: number | null = null;
   let selectedDay: number | null = null;
   if (value) {
-    const p = new Date(value);
-    if (!isNaN(p.getTime())) {
+    const p = parseLocalDate(value);
+    if (p) {
       const bs = toBSDate(p);
       selectedYear = bs.bsYear; selectedMonth = bs.bsMonth; selectedDay = bs.bsDay;
     }
@@ -181,7 +209,8 @@ export function BSCalendarSelector({
   const popover = (
     <div
       ref={popoverRef}
-      style={popoverStyle}
+      data-bs-calendar
+      style={{ ...popoverStyle, pointerEvents: "auto" }}
       className="w-72 rounded-lg border border-border bg-popover p-3 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
     >
       {/* Header */}
@@ -274,7 +303,8 @@ export function BSCalendarSelector({
         <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
       </button>
 
-      {isOpen && typeof document !== "undefined" && createPortal(popover, document.body)}
+      {isOpen && typeof document !== "undefined" &&
+        createPortal(popover, dialogPortalContainer ?? document.body)}
     </div>
   );
 }
