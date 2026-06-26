@@ -93,7 +93,7 @@ export default function ReExamPortalTab() {
         if (r.marksObtained === null || r.marksObtained === undefined)
           return false;
         const passMarks = r.evaluationTemplate?.passMarks ?? 0;
-        return r.marksObtained < passMarks;
+        return r.marksObtained < passMarks && r.reExamResult == null;
       })
       .map((r) => {
         const rawName = r.evaluationTemplate?.name ?? "";

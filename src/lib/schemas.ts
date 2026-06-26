@@ -313,7 +313,9 @@ export const reExamAssessmentSchema = z.object({
   evaluationTemplateId: z.string().cuid(),
   syncedStudentId: z.string().cuid(),
   marksObtained: z.coerce.number().min(0),
-  scheduledDate: z.coerce.date(),
+  scheduledDate: z.coerce.date().refine((d) => !isNaN(d.getTime()), {
+    message: "Invalid scheduled date",
+  }),
   remarks: z.string().max(500).optional().transform(val => val || undefined),
 });
 
