@@ -75,11 +75,17 @@ export default function CreateEvaluationTab({
 
   const duplicateTaskGroup = (groupIndex: number) => {
     const groupToClone = newOutcomes[groupIndex];
-    // Deep clone outcomes so they don't share reference
-    const clonedOutcomes = groupToClone.outcomes.map(out => ({ ...out }));
+    // Clone outcomes WITHOUT templateId so they get created as new records on save
+    const clonedOutcomes = groupToClone.outcomes.map(out => ({
+      name: out.name,
+      date: out.date,
+      max: out.max,
+      pass: out.pass,
+    }));
     const clonedGroup = {
-      ...groupToClone,
       taskType: `${groupToClone.taskType} (Copy)`,
+      max: groupToClone.max,
+      pass: groupToClone.pass,
       outcomes: clonedOutcomes,
     };
 
@@ -93,15 +99,19 @@ export default function CreateEvaluationTab({
   };
 
   const addNewOutcomeRow = (groupIndex: number) => {
-    const copy = [...newOutcomes];
-    copy[groupIndex].outcomes.push({ name: '', date: '', max: 4, pass: 2 });
-    setNewOutcomes(copy);
+    setNewOutcomes(prev => prev.map((g, i) =>
+      i === groupIndex
+        ? { ...g, outcomes: [...g.outcomes, { name: '', date: '', max: 4, pass: 2 }] }
+        : g
+    ));
   };
 
   const deleteOutcomeRow = (groupIndex: number, outcomeIndex: number) => {
-    const copy = [...newOutcomes];
-    copy[groupIndex].outcomes = copy[groupIndex].outcomes.filter((_, i) => i !== outcomeIndex);
-    setNewOutcomes(copy);
+    setNewOutcomes(prev => prev.map((g, i) =>
+      i === groupIndex
+        ? { ...g, outcomes: g.outcomes.filter((_, j) => j !== outcomeIndex) }
+        : g
+    ));
   };
 
   return (
@@ -264,9 +274,10 @@ export default function CreateEvaluationTab({
                       type="text"
                       value={group.taskType}
                       onChange={e => {
-                        const copy = [...newOutcomes];
-                        copy[groupIndex].taskType = e.target.value;
-                        setNewOutcomes(copy);
+                        const val = e.target.value;
+                        setNewOutcomes(prev => prev.map((g, i) =>
+                          i === groupIndex ? { ...g, taskType: val } : g
+                        ));
                       }}
                       className="w-full sm:w-48 text-xs font-bold text-foreground"
                     />
@@ -318,9 +329,12 @@ export default function CreateEvaluationTab({
                           type="text"
                           value={item.name}
                           onChange={e => {
-                            const copy = [...newOutcomes];
-                            copy[groupIndex].outcomes[idx].name = e.target.value;
-                            setNewOutcomes(copy);
+                            const val = e.target.value;
+                            setNewOutcomes(prev => prev.map((g, i) =>
+                              i === groupIndex
+                                ? { ...g, outcomes: g.outcomes.map((o, j) => j === idx ? { ...o, name: val } : o) }
+                                : g
+                            ));
                           }}
                           className="w-full text-xs text-foreground"
                         />
@@ -329,9 +343,11 @@ export default function CreateEvaluationTab({
                         <BSCalendarSelector
                           value={item.date}
                           onChange={v => {
-                            const copy = [...newOutcomes];
-                            copy[groupIndex].outcomes[idx].date = v;
-                            setNewOutcomes(copy);
+                            setNewOutcomes(prev => prev.map((g, i) =>
+                              i === groupIndex
+                                ? { ...g, outcomes: g.outcomes.map((o, j) => j === idx ? { ...o, date: v } : o) }
+                                : g
+                            ));
                           }}
                         />
                       </div>
@@ -340,9 +356,12 @@ export default function CreateEvaluationTab({
                           type="number"
                           value={item.max}
                           onChange={e => {
-                            const copy = [...newOutcomes];
-                            copy[groupIndex].outcomes[idx].max = Number(e.target.value);
-                            setNewOutcomes(copy);
+                            const val = Number(e.target.value);
+                            setNewOutcomes(prev => prev.map((g, i) =>
+                              i === groupIndex
+                                ? { ...g, outcomes: g.outcomes.map((o, j) => j === idx ? { ...o, max: val } : o) }
+                                : g
+                            ));
                           }}
                           className="w-full text-center text-xs font-mono text-foreground"
                         />
@@ -352,9 +371,12 @@ export default function CreateEvaluationTab({
                           type="number"
                           value={item.pass}
                           onChange={e => {
-                            const copy = [...newOutcomes];
-                            copy[groupIndex].outcomes[idx].pass = Number(e.target.value);
-                            setNewOutcomes(copy);
+                            const val = Number(e.target.value);
+                            setNewOutcomes(prev => prev.map((g, i) =>
+                              i === groupIndex
+                                ? { ...g, outcomes: g.outcomes.map((o, j) => j === idx ? { ...o, pass: val } : o) }
+                                : g
+                            ));
                           }}
                           className="w-full text-center text-xs font-mono text-foreground"
                         />

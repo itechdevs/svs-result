@@ -7,6 +7,7 @@ import { withHandler } from "@/lib/handlers";
 const createPlanSchema = z.object({
   syncedSubjectId: z.string().min(1),
   gradeLevel: z.string().min(1),
+  gradeConfigId: z.string().optional(),
   examId: z.string().cuid().optional(),
   name: z.string().min(1).max(100),
   fullMarks: z.number().min(0),
@@ -32,27 +33,36 @@ export const POST = withHandler(async (req: NextRequest, { user }) => {
     return forbidden("You are not assigned to this subject");
   }
 
-  // Find-or-create a default academic year
-  let academicYear = await prisma.academicYear.findFirst({ where: { isCurrent: true } });
-  if (!academicYear) {
-    academicYear = await prisma.academicYear.upsert({
-      where: { name: "Default" },
+  // Use provided gradeConfigId or find-or-create one
+  let gradeConfig: { id: string; gradeLevel: string };
+
+  if (body.gradeConfigId) {
+    const existing = await prisma.gradeConfig.findUnique({ where: { id: body.gradeConfigId } });
+    if (!existing) return badRequest("Grade configuration not found");
+    gradeConfig = existing;
+  } else {
+    // Find-or-create a default academic year
+    let academicYear = await prisma.academicYear.findFirst({ where: { isCurrent: true } });
+    if (!academicYear) {
+      academicYear = await prisma.academicYear.upsert({
+        where: { name: "Default" },
+        update: {},
+        create: {
+          name: "Default",
+          startDate: new Date("2024-01-01"),
+          endDate: new Date("2024-12-31"),
+          isCurrent: true,
+        },
+      });
+    }
+
+    // Find-or-create grade config for this year + grade level
+    gradeConfig = await prisma.gradeConfig.upsert({
+      where: { academicYearId_gradeLevel: { academicYearId: academicYear.id, gradeLevel: body.gradeLevel } },
       update: {},
-      create: {
-        name: "Default",
-        startDate: new Date("2024-01-01"),
-        endDate: new Date("2024-12-31"),
-        isCurrent: true,
-      },
+      create: { academicYearId: academicYear.id, gradeLevel: body.gradeLevel, gradeType: "DESCRIPTIVE" },
     });
   }
-
-  // Find-or-create grade config for this year + grade level
-  const gradeConfig = await prisma.gradeConfig.upsert({
-    where: { academicYearId_gradeLevel: { academicYearId: academicYear.id, gradeLevel: body.gradeLevel } },
-    update: {},
-    create: { academicYearId: academicYear.id, gradeLevel: body.gradeLevel, gradeType: "DESCRIPTIVE" },
-  });
 
   const template = await prisma.evaluationTemplate.upsert({
     where: {
