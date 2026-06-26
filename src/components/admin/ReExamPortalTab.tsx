@@ -105,12 +105,28 @@ export default function ReExamPortalTab() {
             ? legacyFmt[1]
             : rawName;
         const subTask = newFmt ? newFmt[3] : legacyFmt ? legacyFmt[2] : rawName;
+        // The eval title (e.g. "Mid-Term") groups templates into one evaluation card
+        const evalTitle = newFmt ? newFmt[1] : undefined;
         const subjectName =
           (
             r.evaluationTemplate as unknown as {
               syncedSubject?: { name: string };
             }
           )?.syncedSubject?.name ?? "—";
+
+        const template = r.evaluationTemplate as unknown as {
+          examId?: string | null;
+          exam?: { id: string; name: string } | null;
+        };
+        const examId = template?.examId ?? undefined;
+        const examName = template?.exam?.name ?? undefined;
+
+        // The evaluation card ID groups templates under the same exam
+        // or same eval title naming convention (e.g. "[Mid-Term]").
+        // Fallback: each standalone template is its own card.
+        const cardId = examId ?? evalTitle ?? r.evaluationTemplateId;
+        // Human-readable title for the evaluation card
+        const evaluationTitle = examName ?? evalTitle ?? rawName;
 
         return {
           studentId: r.syncedStudentId,
@@ -127,9 +143,11 @@ export default function ReExamPortalTab() {
             studentsMap[r.syncedStudentId]?.class ??
             "—",
           subject: subjectName,
+          evaluationTitle,
           taskType,
           subTask,
           evaluationId: r.evaluationTemplateId,
+          cardId,
           resultId: r.id,
           marksObtained: r.marksObtained,
           passMarks: r.evaluationTemplate?.passMarks ?? 0,
@@ -149,9 +167,55 @@ export default function ReExamPortalTab() {
     return items;
   }, [failedItems, selectedClass, selectedSubject]);
 
+  // Group by Student + Evaluation Card so a student appears once per
+  // exam (or per standalone template if no exam groups them).
+  const groupedRows = useMemo(() => {
+    const map = new Map<string, {
+      studentId: string;
+      studentName: string;
+      rollNumber: string;
+      grade: string;
+      subject: string;
+      evaluationTitle: string;
+      unitTitles: string[];
+      cardId: string;
+      evaluationIds: string[];
+      failedItems: typeof failedItems;
+    }>();
+
+    for (const item of filteredItems) {
+      const key = `${item.studentId}|${item.cardId}`;
+      if (map.has(key)) {
+        const entry = map.get(key)!;
+        entry.failedItems.push(item);
+        if (!entry.evaluationIds.includes(item.evaluationId)) {
+          entry.evaluationIds.push(item.evaluationId);
+        }
+        if (!entry.unitTitles.includes(item.subTask)) {
+          entry.unitTitles.push(item.subTask);
+        }
+      } else {
+        map.set(key, {
+          studentId: item.studentId,
+          studentName: item.studentName,
+          rollNumber: item.rollNumber,
+          grade: item.grade,
+          subject: item.subject,
+          evaluationTitle: item.evaluationTitle,
+          unitTitles: [item.subTask],
+          cardId: item.cardId,
+          evaluationIds: [item.evaluationId],
+          failedItems: [item],
+        });
+      }
+    }
+
+    return Array.from(map.values());
+  }, [filteredItems]);
+
   // Pagination
-  const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
-  const pagedItems = filteredItems.slice(
+  const totalPages = Math.max(1, Math.ceil(groupedRows.length / PAGE_SIZE));
+  const pagedRows = groupedRows.slice(
     (page - 1) * PAGE_SIZE,
     page * PAGE_SIZE,
   );
@@ -243,7 +307,7 @@ export default function ReExamPortalTab() {
               Total Failed
             </p>
             <h4 className="text-2xl font-extrabold text-destructive mt-1">
-              {filteredItems.length} Students
+              {groupedRows.length} Students
             </h4>
           </div>
         </div>
@@ -257,7 +321,7 @@ export default function ReExamPortalTab() {
               Pending Grading
             </p>
             <h4 className="text-2xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">
-              {filteredItems.length} Pending
+              {groupedRows.length} Pending
             </h4>
           </div>
         </div>
@@ -286,8 +350,8 @@ export default function ReExamPortalTab() {
               Failed Students Registry
             </h3>
             <p className="text-[11px] text-muted-foreground mt-0.5">
-              {filteredItems.length} student
-              {filteredItems.length !== 1 ? "s" : ""} · Click View to enter
+              {groupedRows.length} student
+              {groupedRows.length !== 1 ? "s" : ""} · Click View to enter
               re-exam marks
             </p>
           </div>
@@ -312,18 +376,14 @@ export default function ReExamPortalTab() {
               <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                 Class
               </TableHead>
-
               <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                Task / Outcome
+                Subject
               </TableHead>
-              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground text-center">
-                Marks
+              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Evaluation Title
               </TableHead>
-              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 text-center">
-                Re-Exam
-              </TableHead>
-              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground text-center">
-                Status
+              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Unit Title
               </TableHead>
               <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground text-center">
                 Action
@@ -331,33 +391,26 @@ export default function ReExamPortalTab() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {pagedItems.length === 0 ? (
+            {pagedRows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={9}
+                  colSpan={7}
                   className="py-12 text-center text-sm text-muted-foreground"
                 >
                   No failed students found matching the current filters.
                 </TableCell>
               </TableRow>
             ) : (
-              pagedItems.map((item, idx) => {
+              pagedRows.map((row, idx) => {
+                const firstEvalId = row.evaluationIds[0];
                 const viewHref =
                   profile?.role === "ADMIN"
-                    ? `/admin/re-exam-portal/${item.studentId}/${item.evaluationId}`
-                    : `/teacher/re-exam-portal/${item.studentId}/${item.evaluationId}`;
-
-                const percentage =
-                  item.fullMarks > 0
-                    ? Math.round(
-                      (Number(item.marksObtained) / Number(item.fullMarks)) *
-                      100,
-                    )
-                    : 0;
+                    ? `/admin/re-exam-portal/${row.studentId}/${firstEvalId}`
+                    : `/teacher/re-exam-portal/${row.studentId}/${firstEvalId}`;
 
                 return (
                   <TableRow
-                    key={`${item.studentId}-${item.evaluationId}`}
+                    key={`${row.studentId}-${row.cardId}`}
                     className="hover:bg-muted/30 transition-colors"
                   >
                     {/* SN */}
@@ -368,61 +421,38 @@ export default function ReExamPortalTab() {
                     {/* Student */}
                     <TableCell>
                       <div className="font-semibold text-sm text-foreground">
-                        {item.studentName}
+                        {row.studentName}
                       </div>
                       <div className="text-[10px] font-mono text-muted-foreground mt-0.5">
-                        {item.rollNumber}
+                        {row.rollNumber}
                       </div>
                     </TableCell>
 
                     {/* Class */}
                     <TableCell>
                       <span className="text-xs bg-muted text-muted-foreground font-semibold px-2 py-1 rounded-md">
-                        {item.grade}
+                        {row.grade}
                       </span>
                     </TableCell>
 
-                    {/* Task / Outcome */}
-                    <TableCell className="max-w-[200px]">
-                      <div
-                        className="text-xs font-semibold text-foreground truncate"
-                        title={item.taskType}
-                      >
-                        {item.taskType}
-                      </div>
-                      <div
-                        className="text-[10px] text-muted-foreground truncate mt-0.5"
-                        title={item.subTask}
-                      >
-                        {item.subTask}
-                      </div>
+                    {/* Subject */}
+                    <TableCell>
+                      <span className="text-xs text-foreground font-medium">
+                        {row.subject}
+                      </span>
                     </TableCell>
 
-                    {/* Marks */}
-                    <TableCell className="text-center">
-                      <div className="text-sm font-bold text-destructive">
-                        {item.marksObtained} / {item.passMarks}
-                      </div>
-                      <div className="text-[10px] text-muted-foreground mt-0.5">
-                        {percentage}%
-                      </div>
+                    {/* Evaluation Title */}
+                    <TableCell>
+                      <span className="text-xs font-semibold text-foreground">
+                        {row.evaluationTitle}
+                      </span>
                     </TableCell>
 
-                    {/* Re-Exam Marks */}
-                    <TableCell className="text-center">
-                      {item.reExamMarks !== null ? (
-                        <div className={`text-sm font-bold ${item.reExamMarks >= item.passMarks ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}>
-                          {item.reExamMarks} / {item.passMarks}
-                        </div>
-                      ) : (
-                        <span className="text-[11px] text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-
-                    {/* Status */}
-                    <TableCell className="text-center">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-destructive/10 text-destructive border border-destructive/20">
-                        ✗ Failed
+                    {/* Unit Title */}
+                    <TableCell className="max-w-[180px]">
+                      <span className="text-xs text-muted-foreground">
+                        {row.unitTitles.join(", ")}
                       </span>
                     </TableCell>
 
@@ -452,8 +482,8 @@ export default function ReExamPortalTab() {
           <div className="px-4 sm:px-5 py-3 border-t border-border flex flex-wrap items-center justify-between gap-2 bg-muted/20">
             <p className="text-[11px] text-muted-foreground">
               Showing {(page - 1) * PAGE_SIZE + 1}–
-              {Math.min(page * PAGE_SIZE, filteredItems.length)} of{" "}
-              {filteredItems.length} results
+              {Math.min(page * PAGE_SIZE, groupedRows.length)} of{" "}
+              {groupedRows.length} results
             </p>
             <div className="flex items-center gap-1">
               <button
