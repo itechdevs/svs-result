@@ -47,17 +47,18 @@ export default function EditEvaluationPage() {
   // Track original DB state for diffing on save
   const originalTemplateIds = useRef<Set<string>>(new Set());
   const groupMeta = useRef<{ gradeConfigId: string; syncedSubjectId: string; gradeLevel: string } | null>(null);
+  const initialized = useRef(false);
 
   useEffect(() => {
     if (!template) return;
+    if (initialized.current) return;
+    if (allTemplates.length === 0) return;
 
     const newFormatMatch = template.name.match(/^\[([^\]]+)\]\[/);
     const rawEvalPart = newFormatMatch ? newFormatMatch[1] : '';
     const [evalTitle, unitTitle = ''] = rawEvalPart.split('|');
 
-    // Find siblings — fall back to just the loaded template if allTemplates not yet loaded
-    const pool = allTemplates.length > 0 ? allTemplates : [template];
-    const group = pool.filter(t => {
+    const group = allTemplates.filter(t => {
       if (t.gradeConfigId !== template.gradeConfigId) return false;
       if (t.syncedSubjectId !== template.syncedSubjectId) return false;
       if (evalTitle) return t.name.startsWith(`[${evalTitle}|`) || t.name.startsWith(`[${evalTitle}][`);
@@ -103,6 +104,7 @@ export default function EditEvaluationPage() {
     }
 
     setNewOutcomes(Array.from(taskGroupMap.values()));
+    initialized.current = true;
   }, [template, allTemplates]);
 
   const setCurrentTab = (tab: string) => {
@@ -118,7 +120,27 @@ export default function EditEvaluationPage() {
     const flatOutcomes = newOutcomes.flatMap(tg =>
       tg.outcomes.map(o => ({ ...o, taskType: tg.taskType }))
     );
-    const weightage = parseFloat((flatOutcomes.length > 0 ? 100 / flatOutcomes.length : 100).toFixed(2));
+
+    // Preserve existing weightage per template; only compute weightage for new ones
+    const weightageMap = new Map<string, number>();
+    const existingCount = flatOutcomes.filter(o => o.templateId).length;
+    const newCount = flatOutcomes.filter(o => !o.templateId).length;
+    const newWeightage = newCount > 0 ? parseFloat(((100 - existingCount) / newCount).toFixed(2)) : 0;
+
+    let newIdx = 0;
+    for (const outcome of flatOutcomes) {
+      if (outcome.templateId) {
+        weightageMap.set(outcome.templateId, 0); // will be looked up from DB
+      } else {
+        weightageMap.set(`new_${newIdx++}`, newWeightage);
+      }
+    }
+
+    // Build a map of original weightages from the loaded templates
+    const origWeightages = new Map<string, number>();
+    for (const t of allTemplates) {
+      origWeightages.set(t.id, Number(t.weightage));
+    }
 
     // IDs still present in the updated UI
     const survivingIds = new Set(flatOutcomes.map(o => o.templateId).filter(Boolean) as string[]);
@@ -131,11 +153,13 @@ export default function EditEvaluationPage() {
         await apiClient.delete(`/teacher/evaluation-plans/${tid}`);
       }
       // 2. UPDATE existing + CREATE new criteria
+      let newIdx = 0;
       for (const [i, outcome] of flatOutcomes.entries()) {
         const newName = `[${newEvalTitle}|${newSubjectTitle}][${outcome.taskType}] ${outcome.name}`;
 
         if (outcome.templateId) {
-          // UPDATE existing record
+          // UPDATE existing record — preserve original weightage
+          const weightage = origWeightages.get(outcome.templateId) ?? 0;
           await apiClient.patch(`/teacher/evaluation-plans/${outcome.templateId}`, {
             name: newName,
             fullMarks: outcome.max,
@@ -148,16 +172,18 @@ export default function EditEvaluationPage() {
         } else {
           // CREATE new record — use the same gradeConfigId so it stays in the same group
           await apiClient.post('/teacher/evaluation-plans', {
+            gradeConfigId,
             syncedSubjectId,
             gradeLevel,
             examId: selectedExamId || undefined,
             name: newName,
             fullMarks: outcome.max,
             passMarks: outcome.pass,
-            weightage,
+            weightage: newWeightage,
             scheduledDate: outcome.date || undefined,
             displayOrder: i,
           });
+          newIdx++;
         }
       }
       await queryClient.invalidateQueries({ queryKey: ['evaluation-templates'] });

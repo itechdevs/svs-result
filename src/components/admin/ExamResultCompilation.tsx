@@ -35,7 +35,6 @@ import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import ExamResultCompilationSkeleton from "./ExamResultCompilationSkeleton";
 
-
 const TranscriptModal = dynamic(
   () => import("@/components/shared/TranscriptModal"),
   { ssr: false },
@@ -139,15 +138,23 @@ export default function ExamResultCompilation({
   const [isSaved, setIsSaved] = useState(false);
   const [showSavedOnLoad, setShowSavedOnLoad] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkGradeSheets, setBulkGradeSheets] = useState<Student[] | null>(null);
-  const [sortColumn, setSortColumn] = useState<"rank" | "rollNo" | "studentName">("rank");
+  const [bulkGradeSheets, setBulkGradeSheets] = useState<Student[] | null>(
+    null,
+  );
+  const [sortColumn, setSortColumn] = useState<
+    "rank" | "rollNo" | "studentName"
+  >("rank");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
-  const { data: studentsData, isLoading: studentsLoading } = useStudents({ class: gradeLevel, limit: 500 });
-  const { data: allTemplates = [], isLoading: templatesLoading } = useEvaluationTemplates({
-    academicYearId: academicYearId || undefined,
-    isActive: true,
+  const { data: studentsData, isLoading: studentsLoading } = useStudents({
+    class: gradeLevel,
+    limit: 500,
   });
+  const { data: allTemplates = [], isLoading: templatesLoading } =
+    useEvaluationTemplates({
+      academicYearId: academicYearId || undefined,
+      isActive: true,
+    });
 
   const effectiveTemplates = useMemo(() => {
     const map = new Map<string, (typeof linkedTemplates)[0]>();
@@ -172,20 +179,33 @@ export default function ExamResultCompilation({
 
   const templates = effectiveTemplates;
 
-  const effectiveTemplateIds = useMemo(() => templates.map((t) => t.id), [templates]);
+  const effectiveTemplateIds = useMemo(
+    () => templates.map((t) => t.id),
+    [templates],
+  );
 
-  const { data: resultsData = [], isLoading: resultsLoading } = useStudentEvaluationResults({
-    limit: 5000,
-    evaluationTemplateIds: effectiveTemplateIds.length > 0 ? effectiveTemplateIds : undefined,
-  }, { enabled: effectiveTemplateIds.length > 0 });
+  const { data: resultsData = [], isLoading: resultsLoading } =
+    useStudentEvaluationResults(
+      {
+        limit: 5000,
+        evaluationTemplateIds:
+          effectiveTemplateIds.length > 0 ? effectiveTemplateIds : undefined,
+      },
+      { enabled: effectiveTemplateIds.length > 0 },
+    );
 
-  const { data: teacherCompilations = [], isLoading: compilationsLoading } = useAdminTeacherCompilations({
-    status: "SUBMITTED",
-    academicYearId: academicYearId || undefined,
-    gradeLevel: gradeLevel || undefined,
-  });
+  const { data: teacherCompilations = [], isLoading: compilationsLoading } =
+    useAdminTeacherCompilations({
+      status: "SUBMITTED",
+      academicYearId: academicYearId || undefined,
+      gradeLevel: gradeLevel || undefined,
+    });
 
-  const isLoading = studentsLoading || resultsLoading || compilationsLoading || templatesLoading;
+  const isLoading =
+    studentsLoading ||
+    resultsLoading ||
+    compilationsLoading ||
+    templatesLoading;
 
   const students = useMemo(() => studentsData?.students ?? [], [studentsData]);
 
@@ -370,7 +390,7 @@ export default function ExamResultCompilation({
       }
       return sortDirection === "asc" ? cmp : -cmp;
     });
-    return sorted.map((r, i) => ({ ...r, rank: i + 1 } as CompiledResult));
+    return sorted.map((r, i) => ({ ...r, rank: i + 1 }) as CompiledResult);
   }, [compiledResults, sortColumn, sortDirection]);
 
   const allSelected =
@@ -672,7 +692,7 @@ export default function ExamResultCompilation({
                 <Button
                   onClick={handleViewAllGradeSheets}
                   variant="outline"
-                  className="flex items-center gap-2 border-[#002045] text-[#002045] hover:bg-slate-50 h-9 py-2 text-xs font-semibold cursor-pointer"
+                  className="flex items-center gap-2 h-9 py-2 text-xs font-semibold cursor-pointer"
                 >
                   <FileText className="w-4 h-4" />
                   View All Grade Sheets
@@ -699,7 +719,7 @@ export default function ExamResultCompilation({
                           if (el) el.indeterminate = someSelected;
                         }}
                         onChange={toggleAll}
-                        className="cursor-pointer accent-[#002045]"
+                        className="cursor-pointer accent-primary"
                       />
                     </TableHead>
                     <TableHead
@@ -708,7 +728,9 @@ export default function ExamResultCompilation({
                     >
                       Rank
                       {sortColumn === "rank" && (
-                        <span className="ml-1 text-xs">{sortDirection === "asc" ? "▲" : "▼"}</span>
+                        <span className="ml-1 text-xs">
+                          {sortDirection === "asc" ? "▲" : "▼"}
+                        </span>
                       )}
                     </TableHead>
                     <TableHead
@@ -717,7 +739,9 @@ export default function ExamResultCompilation({
                     >
                       Roll No
                       {sortColumn === "rollNo" && (
-                        <span className="ml-1 text-xs">{sortDirection === "asc" ? "▲" : "▼"}</span>
+                        <span className="ml-1 text-xs">
+                          {sortDirection === "asc" ? "▲" : "▼"}
+                        </span>
                       )}
                     </TableHead>
                     <TableHead
@@ -726,7 +750,9 @@ export default function ExamResultCompilation({
                     >
                       Student Name
                       {sortColumn === "studentName" && (
-                        <span className="ml-1 text-xs">{sortDirection === "asc" ? "▲" : "▼"}</span>
+                        <span className="ml-1 text-xs">
+                          {sortDirection === "asc" ? "▲" : "▼"}
+                        </span>
                       )}
                     </TableHead>
                     {submittedSubjects.map((s) => (
@@ -762,22 +788,22 @@ export default function ExamResultCompilation({
                       )}
                     >
                       <TableCell className="border border-border px-3 py-2 text-center">
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.has(result.studentId)}
-                            onChange={() => toggleSelect(result.studentId)}
-                            className="cursor-pointer accent-[#002045]"
-                          />
-                        </TableCell>
-                        <TableCell className="border border-border px-3 py-2 text-center font-bold text-foreground text-xs">
-                          {result.rank}
-                        </TableCell>
-                        <TableCell className="border border-border px-3 py-2 text-foreground sticky left-0 bg-background">
-                          {result.rollNo}
-                        </TableCell>
-                        <TableCell className="border border-border px-3 py-2 text-foreground sticky left-[66px] bg-background">
-                          {result.studentName}
-                        </TableCell>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(result.studentId)}
+                          onChange={() => toggleSelect(result.studentId)}
+                          className="cursor-pointer accent-primary"
+                        />
+                      </TableCell>
+                      <TableCell className="border border-border px-3 py-2 text-center font-bold text-foreground text-xs">
+                        {result.rank}
+                      </TableCell>
+                      <TableCell className="border border-border px-3 py-2 text-foreground sticky left-0 bg-background">
+                        {result.rollNo}
+                      </TableCell>
+                      <TableCell className="border border-border px-3 py-2 text-foreground sticky left-[66px] bg-background">
+                        {result.studentName}
+                      </TableCell>
                       {submittedSubjects.map((s) => {
                         const sub = result.subjects[s.name];
                         return (
@@ -827,7 +853,7 @@ export default function ExamResultCompilation({
                               toStudentObj(result, gradeLevel, students),
                             )
                           }
-                          className="px-2.5 py-1 bg-[#002045] hover:bg-opacity-95 text-white rounded text-[11px] font-bold cursor-pointer transition-colors"
+                          className="px-2.5 py-1 bg-primary hover:bg-primary/90 text-primary-foreground rounded text-[11px] font-bold cursor-pointer transition-colors"
                         >
                           View Grade Sheet
                         </button>

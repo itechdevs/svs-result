@@ -193,14 +193,14 @@ export default function MarkEntryOverviewTable() {
 
       {/* ── Main table ──────────────────────────────────────────── */}
       {evaluations.length > 0 && (
-        <div className="bg-white dark:bg-card rounded-xl border border-slate-200 dark:border-border shadow-sm overflow-hidden">
+        <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
           {/* Table header bar */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-slate-200 dark:border-border">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-border">
             <div className="min-w-0">
-              <p className="font-bold text-sm text-[#002045] dark:text-white truncate">
+              <p className="font-bold text-sm text-foreground truncate">
                 {selectedSubject}
               </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+              <p className="text-[11px] text-muted-foreground mt-0.5">
                 {selectedClass} · {selectedEvalPlan} · {classStudents.length}{" "}
                 student{classStudents.length !== 1 ? "s" : ""}
                 {totalPages > 1 && ` · Page ${page} of ${totalPages}`}
@@ -301,27 +301,27 @@ export default function MarkEntryOverviewTable() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-sm">
                 <thead>
-                  <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-border">
-                    <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+                  <tr className="bg-muted/30 border-b border-border">
+                    <th className="px-4 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
                       Roll No
                     </th>
-                    <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                       Student Name
                     </th>
                     {outcomeColumns.map((col) => (
                       <th
                         key={col.evalId}
-                        className="px-2 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center whitespace-nowrap"
+                        className="px-2 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center whitespace-nowrap"
                       >
                         <div
-                          className="max-w-[120px] truncate font-bold text-[#002045] dark:text-blue-300"
+                          className="max-w-[120px] truncate font-bold text-foreground"
                           title={col.outcomeName}
                         >
                           {col.taskType}
                         </div>
                       </th>
                     ))}
-                    <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center whitespace-nowrap">
+                    <th className="px-4 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center whitespace-nowrap">
                       Obtained Marks
                     </th>
                     <th className="px-4 py-3 text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider text-center whitespace-nowrap">
