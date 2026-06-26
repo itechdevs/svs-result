@@ -83,6 +83,10 @@ export const GET = withHandler(async (req: NextRequest, { user }) => {
           fullMarks: true,
           passMarks: true,
           weightage: true,
+          examId: true,
+          exam: {
+            select: { id: true, name: true },
+          },
           syncedSubject: {
             select: { id: true, name: true, code: true, gradeLevel: true },
           },

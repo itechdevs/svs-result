@@ -105,12 +105,28 @@ export default function ReExamPortalTab() {
             ? legacyFmt[1]
             : rawName;
         const subTask = newFmt ? newFmt[3] : legacyFmt ? legacyFmt[2] : rawName;
+        // The eval title (e.g. "Mid-Term") groups templates into one evaluation card
+        const evalTitle = newFmt ? newFmt[1] : undefined;
         const subjectName =
           (
             r.evaluationTemplate as unknown as {
               syncedSubject?: { name: string };
             }
           )?.syncedSubject?.name ?? "—";
+
+        const template = r.evaluationTemplate as unknown as {
+          examId?: string | null;
+          exam?: { id: string; name: string } | null;
+        };
+        const examId = template?.examId ?? undefined;
+        const examName = template?.exam?.name ?? undefined;
+
+        // The evaluation card ID groups templates under the same exam
+        // or same eval title naming convention (e.g. "[Mid-Term]").
+        // Fallback: each standalone template is its own card.
+        const cardId = examId ?? evalTitle ?? r.evaluationTemplateId;
+        // Human-readable title for the evaluation card
+        const evaluationTitle = examName ?? evalTitle ?? rawName;
 
         return {
           studentId: r.syncedStudentId,
@@ -127,9 +143,11 @@ export default function ReExamPortalTab() {
             studentsMap[r.syncedStudentId]?.class ??
             "—",
           subject: subjectName,
+          evaluationTitle,
           taskType,
           subTask,
           evaluationId: r.evaluationTemplateId,
+          cardId,
           resultId: r.id,
           marksObtained: r.marksObtained,
           passMarks: r.evaluationTemplate?.passMarks ?? 0,
@@ -149,7 +167,8 @@ export default function ReExamPortalTab() {
     return items;
   }, [failedItems, selectedClass, selectedSubject]);
 
-  // Group by Student + Evaluation so each student appears once per evaluation
+  // Group by Student + Evaluation Card so a student appears once per
+  // exam (or per standalone template if no exam groups them).
   const groupedRows = useMemo(() => {
     const map = new Map<string, {
       studentId: string;
@@ -157,14 +176,24 @@ export default function ReExamPortalTab() {
       rollNumber: string;
       grade: string;
       subject: string;
-      evaluationId: string;
+      evaluationTitle: string;
+      unitTitles: string[];
+      cardId: string;
+      evaluationIds: string[];
       failedItems: typeof failedItems;
     }>();
 
     for (const item of filteredItems) {
-      const key = `${item.studentId}|${item.evaluationId}`;
+      const key = `${item.studentId}|${item.cardId}`;
       if (map.has(key)) {
-        map.get(key)!.failedItems.push(item);
+        const entry = map.get(key)!;
+        entry.failedItems.push(item);
+        if (!entry.evaluationIds.includes(item.evaluationId)) {
+          entry.evaluationIds.push(item.evaluationId);
+        }
+        if (!entry.unitTitles.includes(item.subTask)) {
+          entry.unitTitles.push(item.subTask);
+        }
       } else {
         map.set(key, {
           studentId: item.studentId,
@@ -172,7 +201,10 @@ export default function ReExamPortalTab() {
           rollNumber: item.rollNumber,
           grade: item.grade,
           subject: item.subject,
-          evaluationId: item.evaluationId,
+          evaluationTitle: item.evaluationTitle,
+          unitTitles: [item.subTask],
+          cardId: item.cardId,
+          evaluationIds: [item.evaluationId],
           failedItems: [item],
         });
       }
@@ -347,6 +379,12 @@ export default function ReExamPortalTab() {
               <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                 Subject
               </TableHead>
+              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Evaluation Title
+              </TableHead>
+              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Unit Title
+              </TableHead>
               <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground text-center">
                 Action
               </TableHead>
@@ -356,7 +394,7 @@ export default function ReExamPortalTab() {
             {pagedRows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={7}
                   className="py-12 text-center text-sm text-muted-foreground"
                 >
                   No failed students found matching the current filters.
@@ -364,14 +402,15 @@ export default function ReExamPortalTab() {
               </TableRow>
             ) : (
               pagedRows.map((row, idx) => {
+                const firstEvalId = row.evaluationIds[0];
                 const viewHref =
                   profile?.role === "ADMIN"
-                    ? `/admin/re-exam-portal/${row.studentId}/${row.evaluationId}`
-                    : `/teacher/re-exam-portal/${row.studentId}/${row.evaluationId}`;
+                    ? `/admin/re-exam-portal/${row.studentId}/${firstEvalId}`
+                    : `/teacher/re-exam-portal/${row.studentId}/${firstEvalId}`;
 
                 return (
                   <TableRow
-                    key={`${row.studentId}-${row.evaluationId}`}
+                    key={`${row.studentId}-${row.cardId}`}
                     className="hover:bg-muted/30 transition-colors"
                   >
                     {/* SN */}
@@ -400,6 +439,20 @@ export default function ReExamPortalTab() {
                     <TableCell>
                       <span className="text-xs text-foreground font-medium">
                         {row.subject}
+                      </span>
+                    </TableCell>
+
+                    {/* Evaluation Title */}
+                    <TableCell>
+                      <span className="text-xs font-semibold text-foreground">
+                        {row.evaluationTitle}
+                      </span>
+                    </TableCell>
+
+                    {/* Unit Title */}
+                    <TableCell className="max-w-[180px]">
+                      <span className="text-xs text-muted-foreground">
+                        {row.unitTitles.join(", ")}
                       </span>
                     </TableCell>
 
