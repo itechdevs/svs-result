@@ -31,9 +31,11 @@ export function BSCalendarSelector({
   const popoverRef = useRef<HTMLDivElement>(null);
   const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({});
 
-  // When inside a Dialog, portal the calendar into the dialog's own Radix portal
-  // container so Radix DismissableLayer doesn't block pointer events.
-  const dialogPortalContainer = useContext(DialogCalendarPortalContext);
+  // When inside a Dialog, use the dialog-provided container (inside the focus trap)
+  // so the year input and month selector can receive focus and keyboard input.
+  // Also receive the dialog content element to adjust fixed-position coordinates
+  // (the dialog has a CSS transform making it the containing block for fixed children).
+  const { container: dialogPortalContainer, dialogContentEl } = useContext(DialogCalendarPortalContext);
 
   // Parse "YYYY-MM-DD" as local time to avoid UTC off-by-one in positive-offset timezones
   const parseLocalDate = (v: string): Date | null => {
@@ -82,7 +84,10 @@ export function BSCalendarSelector({
     }
   }, [value]);
 
-  // Position popover relative to button using fixed coords
+  // Position popover relative to button using fixed coords.
+  // When inside a Dialog, the dialog has `translate-x[-50%] translate-y[-50%]` which
+  // makes it the CSS containing block for position:fixed descendants. We must subtract
+  // the dialog's viewport offset so the popover lands at the right viewport position.
   useEffect(() => {
     if (isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
@@ -90,17 +95,24 @@ export function BSCalendarSelector({
       const spaceBelow = window.innerHeight - rect.bottom;
       const goUp = spaceBelow < popoverHeight && rect.top > spaceBelow;
 
+      // Offset to apply when inside a dialog (dialog's top-left in viewport coords)
+      const dialogRect = dialogPortalContainer ? dialogContentEl?.getBoundingClientRect() ?? null : null;
+      const offsetLeft = dialogRect?.left ?? 0;
+      const offsetTop = dialogRect?.top ?? 0;
+      // For "go up" positioning the effective bottom of the containing block
+      const effectiveBottom = dialogRect ? dialogRect.bottom : window.innerHeight;
+
       setPopoverStyle({
         position: "fixed",
-        left: rect.left,
+        left: rect.left - offsetLeft,
         width: Math.max(rect.width, 288), // min 288 = w-72
         ...(goUp
-          ? { bottom: window.innerHeight - rect.top + 4 }
-          : { top: rect.bottom + 4 }),
+          ? { bottom: effectiveBottom - rect.top + 4 }
+          : { top: rect.bottom + 4 - offsetTop }),
         zIndex: 9999,
       });
     }
-  }, [isOpen]);
+  }, [isOpen, dialogPortalContainer, dialogContentEl]);
 
   // Click outside to close
   useEffect(() => {
