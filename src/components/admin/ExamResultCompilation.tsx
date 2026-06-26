@@ -643,7 +643,7 @@ export default function ExamResultCompilation({
                 <Button
                   onClick={handleViewAllGradeSheets}
                   variant="outline"
-                  className="flex items-center gap-2 border-[#002045] text-[#002045] hover:bg-slate-50 h-9 py-2 text-xs font-semibold cursor-pointer"
+                  className="flex items-center gap-2 h-9 py-2 text-xs font-semibold cursor-pointer"
                 >
                   <FileText className="w-4 h-4" />
                   View All Grade Sheets
@@ -670,7 +670,7 @@ export default function ExamResultCompilation({
                           if (el) el.indeterminate = someSelected;
                         }}
                         onChange={toggleAll}
-                        className="cursor-pointer accent-[#002045]"
+                        className="cursor-pointer accent-primary"
                       />
                     </TableHead>
                     <TableHead className="border border-border px-3 py-2 text-left font-bold text-foreground sticky left-0 bg-muted/40">
@@ -716,7 +716,7 @@ export default function ExamResultCompilation({
                           type="checkbox"
                           checked={selectedIds.has(result.studentId)}
                           onChange={() => toggleSelect(result.studentId)}
-                          className="cursor-pointer accent-[#002045]"
+                          className="cursor-pointer accent-primary"
                         />
                       </TableCell>
                       <TableCell className="border border-border px-3 py-2 text-foreground sticky left-0 bg-background">
@@ -774,7 +774,7 @@ export default function ExamResultCompilation({
                               toStudentObj(result, gradeLevel, students),
                             )
                           }
-                          className="px-2.5 py-1 bg-[#002045] hover:bg-opacity-95 text-white rounded text-[11px] font-bold cursor-pointer transition-colors"
+                          className="px-2.5 py-1 bg-primary hover:bg-primary/90 text-primary-foreground rounded text-[11px] font-bold cursor-pointer transition-colors"
                         >
                           View Grade Sheet
                         </button>
