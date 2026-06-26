@@ -792,7 +792,7 @@ export default function ExamResultCompilation({
                           type="checkbox"
                           checked={selectedIds.has(result.studentId)}
                           onChange={() => toggleSelect(result.studentId)}
-                          className="cursor-pointer accent-[#002045]"
+                          className="cursor-pointer accent-primary"
                         />
                       </TableCell>
                       <TableCell className="border border-border px-3 py-2 text-center font-bold text-foreground text-xs">
