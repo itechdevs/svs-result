@@ -3,7 +3,7 @@ import { ThemeToggle } from "@/components/common/theme-toggle";
 import { UserMenu } from "@/components/common/user-menu";
 import { APP_NAME, ROUTES } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
-import { Bell } from "lucide-react";
+// import { Bell } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
 interface NavbarProps {
@@ -30,10 +30,10 @@ export function Navbar({ user }: NavbarProps) {
         <div className="flex-1" />
 
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+          {/* <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
             <Bell className="h-5 w-5" />
             <span className="sr-only">Notifications</span>
-          </Button>
+          </Button> */}
           <ThemeToggle />
 
           <div className="flex items-center gap-3 ml-2 pl-2 border-l border-border">
