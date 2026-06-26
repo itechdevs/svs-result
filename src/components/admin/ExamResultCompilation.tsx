@@ -184,7 +184,7 @@ export default function ExamResultCompilation({
     [templates],
   );
 
-  const { data: resultsData = [], isLoading: resultsLoading } =
+  const { data: resultsData = [], isLoading: resultsLoading, refetch: refetchResults } =
     useStudentEvaluationResults(
       {
         limit: 5000,
@@ -194,7 +194,7 @@ export default function ExamResultCompilation({
       { enabled: effectiveTemplateIds.length > 0 },
     );
 
-  const { data: teacherCompilations = [], isLoading: compilationsLoading } =
+  const { data: teacherCompilations = [], isLoading: compilationsLoading, refetch: refetchCompilations } =
     useAdminTeacherCompilations({
       status: "SUBMITTED",
       academicYearId: academicYearId || undefined,
@@ -409,7 +409,7 @@ export default function ExamResultCompilation({
       return s;
     });
 
-  const handleCompile = () => {
+  const handleCompile = async () => {
     if (templates.length === 0) {
       toast.error(
         "No evaluation templates found for this grade level and academic year.",
@@ -423,10 +423,9 @@ export default function ExamResultCompilation({
     setIsCompiling(true);
     setShowResults(false);
     setShowSavedOnLoad(false);
-    setTimeout(() => {
-      setIsCompiling(false);
-      setShowResults(true);
-    }, 1500);
+    await Promise.all([refetchResults(), refetchCompilations()]);
+    setIsCompiling(false);
+    setShowResults(true);
   };
 
   const handleSaveCompilation = async () => {
@@ -532,9 +531,13 @@ export default function ExamResultCompilation({
               </span>
             )}
             <Button
-              onClick={() => {
+              onClick={async () => {
+                setIsCompiling(true);
                 setShowResults(false);
                 setShowSavedOnLoad(false);
+                await Promise.all([refetchResults(), refetchCompilations()]);
+                setIsCompiling(false);
+                setShowResults(true);
               }}
               variant="outline"
               className="flex items-center gap-2"
