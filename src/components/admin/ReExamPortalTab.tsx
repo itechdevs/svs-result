@@ -149,9 +149,41 @@ export default function ReExamPortalTab() {
     return items;
   }, [failedItems, selectedClass, selectedSubject]);
 
+  // Group by Student + Evaluation so each student appears once per evaluation
+  const groupedRows = useMemo(() => {
+    const map = new Map<string, {
+      studentId: string;
+      studentName: string;
+      rollNumber: string;
+      grade: string;
+      subject: string;
+      evaluationId: string;
+      failedItems: typeof failedItems;
+    }>();
+
+    for (const item of filteredItems) {
+      const key = `${item.studentId}|${item.evaluationId}`;
+      if (map.has(key)) {
+        map.get(key)!.failedItems.push(item);
+      } else {
+        map.set(key, {
+          studentId: item.studentId,
+          studentName: item.studentName,
+          rollNumber: item.rollNumber,
+          grade: item.grade,
+          subject: item.subject,
+          evaluationId: item.evaluationId,
+          failedItems: [item],
+        });
+      }
+    }
+
+    return Array.from(map.values());
+  }, [filteredItems]);
+
   // Pagination
-  const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
-  const pagedItems = filteredItems.slice(
+  const totalPages = Math.max(1, Math.ceil(groupedRows.length / PAGE_SIZE));
+  const pagedRows = groupedRows.slice(
     (page - 1) * PAGE_SIZE,
     page * PAGE_SIZE,
   );
@@ -243,7 +275,7 @@ export default function ReExamPortalTab() {
               Total Failed
             </p>
             <h4 className="text-2xl font-extrabold text-destructive mt-1">
-              {filteredItems.length} Students
+              {groupedRows.length} Students
             </h4>
           </div>
         </div>
@@ -257,7 +289,7 @@ export default function ReExamPortalTab() {
               Pending Grading
             </p>
             <h4 className="text-2xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">
-              {filteredItems.length} Pending
+              {groupedRows.length} Pending
             </h4>
           </div>
         </div>
@@ -286,8 +318,8 @@ export default function ReExamPortalTab() {
               Failed Students Registry
             </h3>
             <p className="text-[11px] text-muted-foreground mt-0.5">
-              {filteredItems.length} student
-              {filteredItems.length !== 1 ? "s" : ""} · Click View to enter
+              {groupedRows.length} student
+              {groupedRows.length !== 1 ? "s" : ""} · Click View to enter
               re-exam marks
             </p>
           </div>
@@ -300,151 +332,96 @@ export default function ReExamPortalTab() {
 
         {/* Table */}
         <div className="overflow-x-auto w-full">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/30">
-                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground w-[40px]">
-                  SN
-                </TableHead>
-                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Student
-                </TableHead>
-                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Class
-                </TableHead>
-
-                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Task / Outcome
-                </TableHead>
-                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground text-center">
-                  Marks
-                </TableHead>
-                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 text-center">
-                  Re-Exam
-                </TableHead>
-                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground text-center">
-                  Status
-                </TableHead>
-                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground text-center">
-                  Action
-                </TableHead>
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/30">
+              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground w-[40px]">
+                SN
+              </TableHead>
+              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Student
+              </TableHead>
+              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Class
+              </TableHead>
+              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Subject
+              </TableHead>
+              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground text-center">
+                Action
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {pagedRows.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={5}
+                  className="py-12 text-center text-sm text-muted-foreground"
+                >
+                  No failed students found matching the current filters.
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {pagedItems.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={9}
-                    className="py-12 text-center text-sm text-muted-foreground"
+            ) : (
+              pagedRows.map((row, idx) => {
+                const viewHref =
+                  profile?.role === "ADMIN"
+                    ? `/admin/re-exam-portal/${row.studentId}/${row.evaluationId}`
+                    : `/teacher/re-exam-portal/${row.studentId}/${row.evaluationId}`;
+
+                return (
+                  <TableRow
+                    key={`${row.studentId}-${row.evaluationId}`}
+                    className="hover:bg-muted/30 transition-colors"
                   >
-                    No failed students found matching the current filters.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                pagedItems.map((item, idx) => {
-                  const viewHref =
-                    profile?.role === "ADMIN"
-                      ? `/admin/re-exam-portal/${item.studentId}/${item.evaluationId}`
-                      : `/teacher/re-exam-portal/${item.studentId}/${item.evaluationId}`;
+                    {/* SN */}
+                    <TableCell className="text-[11px] font-semibold text-muted-foreground">
+                      {(page - 1) * PAGE_SIZE + idx + 1}
+                    </TableCell>
 
-                  const percentage =
-                    item.fullMarks > 0
-                      ? Math.round(
-                        (Number(item.marksObtained) / Number(item.fullMarks)) *
-                        100,
-                      )
-                      : 0;
+                    {/* Student */}
+                    <TableCell>
+                      <div className="font-semibold text-sm text-foreground">
+                        {row.studentName}
+                      </div>
+                      <div className="text-[10px] font-mono text-muted-foreground mt-0.5">
+                        {row.rollNumber}
+                      </div>
+                    </TableCell>
 
-                  return (
-                    <TableRow
-                      key={`${item.studentId}-${item.evaluationId}`}
-                      className="hover:bg-muted/30 transition-colors"
-                    >
-                      {/* SN */}
-                      <TableCell className="text-[11px] font-semibold text-muted-foreground">
-                        {(page - 1) * PAGE_SIZE + idx + 1}
-                      </TableCell>
+                    {/* Class */}
+                    <TableCell>
+                      <span className="text-xs bg-muted text-muted-foreground font-semibold px-2 py-1 rounded-md">
+                        {row.grade}
+                      </span>
+                    </TableCell>
 
-                      {/* Student */}
-                      <TableCell>
-                        <div className="font-semibold text-sm text-foreground">
-                          {item.studentName}
-                        </div>
-                        <div className="text-[10px] font-mono text-muted-foreground mt-0.5">
-                          {item.rollNumber}
-                        </div>
-                      </TableCell>
+                    {/* Subject */}
+                    <TableCell>
+                      <span className="text-xs text-foreground font-medium">
+                        {row.subject}
+                      </span>
+                    </TableCell>
 
-                      {/* Class */}
-                      <TableCell>
-                        <span className="text-xs bg-muted text-muted-foreground font-semibold px-2 py-1 rounded-md">
-                          {item.grade}
-                        </span>
-                      </TableCell>
-
-                      {/* Task / Outcome */}
-                      <TableCell className="max-w-[200px]">
-                        <div
-                          className="text-xs font-semibold text-foreground truncate"
-                          title={item.taskType}
-                        >
-                          {item.taskType}
-                        </div>
-                        <div
-                          className="text-[10px] text-muted-foreground truncate mt-0.5"
-                          title={item.subTask}
-                        >
-                          {item.subTask}
-                        </div>
-                      </TableCell>
-
-                      {/* Marks */}
-                      <TableCell className="text-center">
-                        <div className="text-sm font-bold text-destructive">
-                          {item.marksObtained} / {item.passMarks}
-                        </div>
-                        <div className="text-[10px] text-muted-foreground mt-0.5">
-                          {percentage}%
-                        </div>
-                      </TableCell>
-
-                      {/* Re-Exam Marks */}
-                      <TableCell className="text-center">
-                        {item.reExamMarks !== null ? (
-                          <div className={`text-sm font-bold ${item.reExamMarks >= item.passMarks ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}>
-                            {item.reExamMarks} / {item.passMarks}
-                          </div>
-                        ) : (
-                          <span className="text-[11px] text-muted-foreground">—</span>
+                    {/* Action */}
+                    <TableCell className="text-center">
+                      <Link
+                        href={viewHref}
+                        className={cn(
+                          buttonVariants({ size: "sm", variant: "default" }),
+                          "h-8 text-xs gap-1.5",
                         )}
-                      </TableCell>
-
-                      {/* Status */}
-                      <TableCell className="text-center">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-destructive/10 text-destructive border border-destructive/20">
-                          ✗ Failed
-                        </span>
-                      </TableCell>
-
-                      {/* Action */}
-                      <TableCell className="text-center">
-                        <Link
-                          href={viewHref}
-                          className={cn(
-                            buttonVariants({ size: "sm", variant: "default" }),
-                            "h-8 text-xs gap-1.5",
-                          )}
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          View
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        View
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
         </div>
 
         {/* Pagination Footer */}
@@ -452,8 +429,8 @@ export default function ReExamPortalTab() {
           <div className="px-4 sm:px-5 py-3 border-t border-border flex flex-wrap items-center justify-between gap-2 bg-muted/20">
             <p className="text-[11px] text-muted-foreground">
               Showing {(page - 1) * PAGE_SIZE + 1}–
-              {Math.min(page * PAGE_SIZE, filteredItems.length)} of{" "}
-              {filteredItems.length} results
+              {Math.min(page * PAGE_SIZE, groupedRows.length)} of{" "}
+              {groupedRows.length} results
             </p>
             <div className="flex items-center gap-1">
               <button
