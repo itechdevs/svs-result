@@ -168,7 +168,7 @@ export default function AllocationsTab() {
                   const syncDate = new Date(teacher.syncedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
                   return (
-                    <div key={teacher.id} className="bg-gradient-to-br from-card to-muted/10 text-card-foreground border border-border rounded-xl p-5 shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-300 flex flex-col justify-between gap-4">
+                    <Link key={teacher.id} href={`/admin/allocations/${teacher.id}`} className="bg-gradient-to-br from-card to-muted/10 text-card-foreground border border-border rounded-xl p-5 shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-300 flex flex-col justify-between gap-4">
                       <div className="space-y-4">
                         {/* Teacher identity */}
                         <div className="flex items-center gap-3">
@@ -215,7 +215,7 @@ export default function AllocationsTab() {
                           {new Set(teacher.subjects.map(s => s.gradeLevel)).size} class{new Set(teacher.subjects.map(s => s.gradeLevel)).size !== 1 ? 'es' : ''}
                         </span>
                       </div>
-                    </div>
+                    </Link>
                   );
                 })}
               </div>
