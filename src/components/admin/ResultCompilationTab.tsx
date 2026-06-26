@@ -498,7 +498,7 @@ export default function ResultCompilationTab() {
                         const sub = result.subjects[s.name];
                         return (
                           <TableCell key={s.id} className="border border-border px-3 py-2 text-center text-foreground">
-                            {sub ? <span className={cn('font-mono text-xs', !sub.isPassed && sub.subjectName && 'text-destructive')}>{sub.percentage}%</span> : '-'}
+                            {sub ? <span className={cn('font-mono text-xs', !sub.isPassed && sub.subjectName && 'text-destructive')}>{sub.percentage.toFixed(1)}%</span> : '-'}
                           </TableCell>
                         );
                       })}

@@ -288,7 +288,8 @@ export default function ExamResultCompilation({
       return [];
     return students.map((student) => {
       const subjects: Record<string, SubjectResult> = {};
-      let totalPercentage = 0,
+      let totalObtainedAll = 0,
+        totalFullAll = 0,
         subjectCount = 0,
         hasAnyMarks = false,
         anyFailed = false;
@@ -318,7 +319,8 @@ export default function ExamResultCompilation({
         const grade = subjectHasMarks ? lookupGrade(percentage) : "N/A";
         const isPassed = subjectHasMarks && failedEvals === 0;
         if (subjectHasMarks) {
-          totalPercentage += percentage;
+          totalObtainedAll += totalObtained;
+          totalFullAll += totalFull;
           subjectCount++;
         }
         if (!isPassed && subjectHasMarks) anyFailed = true;
@@ -332,8 +334,8 @@ export default function ExamResultCompilation({
         };
       }
       const overallPercentage =
-        subjectCount > 0
-          ? Number((totalPercentage / subjectCount).toFixed(1))
+        totalFullAll > 0
+          ? Number(((totalObtainedAll / totalFullAll) * 100).toFixed(1))
           : 0;
       return {
         rollNo: student.rollNumber,
@@ -792,7 +794,7 @@ export default function ExamResultCompilation({
                                     "text-destructive",
                                 )}
                               >
-                                {sub.percentage}%
+                                {sub.percentage.toFixed(1)}%
                               </span>
                             ) : (
                               "-"
@@ -801,7 +803,7 @@ export default function ExamResultCompilation({
                         );
                       })}
                       <TableCell className="border border-border px-3 py-2 text-center font-semibold text-foreground">
-                        {result.overallPercentage}%
+                        {result.overallPercentage.toFixed(1)}%
                       </TableCell>
                       <TableCell className="border border-border px-3 py-2 text-center font-semibold text-foreground">
                         {result.overallGrade}
