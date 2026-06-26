@@ -7,7 +7,6 @@ import { useEvaluationTemplates } from '@/hooks/use-evaluations';
 import ReExamDetailedView from '@/components/admin/ReExamDetailedView';
 import { AnimatePresence } from 'motion/react';
 import { Student, EvaluationPlan } from '@/types/academic';
-
 import SanskarLoader from '@/components/shared/SanskarLoader';
 
 export default function TeacherReExamDetailPage() {
@@ -33,26 +32,59 @@ export default function TeacherReExamDetailPage() {
   }, [studentsData, studentId]);
 
   const evaluation: EvaluationPlan | undefined = useMemo(() => {
-    const t = templatesData.find(t => t.id === evalId);
-    if (!t) return undefined;
+    const baseTemplate = templatesData.find(t => t.id === evalId);
+    if (!baseTemplate) return undefined;
+
+    const newFormatMatch = baseTemplate.name.match(/^\[([^\]]+)\]\[/);
+    const rawEvalPart = newFormatMatch ? newFormatMatch[1] : '';
+    const [evalTitle, unitTitle = ''] = rawEvalPart.split('|');
+
+    const group = templatesData.filter(t => {
+      if (t.gradeConfigId !== baseTemplate.gradeConfigId) return false;
+      if (t.syncedSubjectId !== baseTemplate.syncedSubjectId) return false;
+      if (evalTitle) return t.name.startsWith(`[${evalTitle}|`) || t.name.startsWith(`[${evalTitle}][`);
+      return !t.name.match(/^\[[^\]]+\]\[/);
+    });
+
+    const resolvedGroup = group.length > 0 ? group : [baseTemplate];
+    const totalFullMarks = resolvedGroup.reduce((s, t) => s + Number(t.fullMarks), 0);
+    const totalPassMarks = resolvedGroup.reduce((s, t) => s + Number(t.passMarks), 0);
+
     return {
-      id: t.id, title: t.name, subject: t.syncedSubject?.name ?? 'Unknown',
-      status: t.isActive ? 'Active' : 'Inactive', testTypes: 'Standard', outcomes: '1 Outcomes',
-      fullMarks: Number(t.fullMarks), passMarks: Number(t.passMarks),
-      date: t.scheduledDate ? new Date(t.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'TBD',
-      unit: t.name,
-      learningOutcomes: [{
-        name: t.name, text: `Evaluate outcome competence for ${t.name}.`,
-        regularRating: 0, afterSupportRating: null,
-        regularDate: t.scheduledDate ? new Date(t.scheduledDate).toISOString().split('T')[0] : '',
-        supportDate: '', fullMarks: Number(t.fullMarks), passMarks: Number(t.passMarks), taskType: 'Standard',
-      }],
+      id: baseTemplate.id,
+      title: evalTitle || baseTemplate.syncedSubject?.name || baseTemplate.name,
+      subject: baseTemplate.syncedSubject?.name ?? 'Unknown',
+      status: baseTemplate.isActive ? 'Active' : 'Inactive',
+      testTypes: `${resolvedGroup.length} Task Types`,
+      outcomes: `${resolvedGroup.length} Outcomes`,
+      fullMarks: totalFullMarks,
+      passMarks: totalPassMarks,
+      date: baseTemplate.scheduledDate
+        ? new Date(baseTemplate.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
+        : 'TBD',
+      unit: unitTitle,
+      learningOutcomes: resolvedGroup.map(t => {
+        const newFmt = t.name.match(/^\[[^\]]+\]\[([^\]]+)\]\s*(.+)$/);
+        const legacyFmt = t.name.match(/^\[([^\]]+)\]\s*(.+)$/);
+        const taskType = newFmt ? newFmt[1] : (legacyFmt ? legacyFmt[1] : 'Standard');
+        const outcomeName = newFmt ? newFmt[2] : (legacyFmt ? legacyFmt[2] : t.name);
+        return {
+          name: t.name,
+          text: outcomeName,
+          regularRating: 0,
+          afterSupportRating: null,
+          regularDate: t.scheduledDate ? new Date(t.scheduledDate).toISOString().split('T')[0] : '',
+          supportDate: '',
+          fullMarks: Number(t.fullMarks),
+          passMarks: Number(t.passMarks),
+          taskType,
+          templateId: t.id,
+        };
+      }),
     };
   }, [templatesData, evalId]);
 
-  if (isLoading) {
-    return <SanskarLoader variant="skeleton" />;
-  }
+  if (isLoading) return <SanskarLoader variant="skeleton" />;
 
   if (!student || !evaluation) {
     return (
