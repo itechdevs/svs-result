@@ -220,7 +220,7 @@ body {
 
 .scrollbar-minimal::-webkit-scrollbar {
   width: 6px;
-  height: 4px;
+  height: 6px;
 }
 
 .scrollbar-minimal::-webkit-scrollbar-track {

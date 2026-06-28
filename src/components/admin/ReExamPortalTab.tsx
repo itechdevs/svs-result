@@ -297,7 +297,7 @@ export default function ReExamPortalTab() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 ">
         <div className="bg-destructive/5 border border-destructive/15 p-5 rounded-xl shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
           <div className="w-12 h-12 rounded-lg bg-destructive/10 text-destructive flex items-center justify-center border border-destructive/20 shadow-sm">
             <AlertCircle className="w-6 h-6" />
@@ -326,7 +326,7 @@ export default function ReExamPortalTab() {
           </div>
         </div>
 
-        <div className="bg-emerald-500/5 border border-emerald-500/15 p-5 rounded-xl shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
+        {/* <div className="bg-emerald-500/5 border border-emerald-500/15 p-5 rounded-xl shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
           <div className="w-12 h-12 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 shadow-sm">
             <CalendarCheck className="w-6 h-6" />
           </div>
@@ -338,7 +338,7 @@ export default function ReExamPortalTab() {
               {scheduledReExams.length} Scheduled
             </h4>
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Failed Students Table */}
@@ -364,117 +364,117 @@ export default function ReExamPortalTab() {
 
         {/* Table */}
         <div className="overflow-x-auto w-full">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/30">
-              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground w-[40px]">
-                SN
-              </TableHead>
-              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                Student
-              </TableHead>
-              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                Class
-              </TableHead>
-              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                Subject
-              </TableHead>
-              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                Evaluation Title
-              </TableHead>
-              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                Unit Title
-              </TableHead>
-              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground text-center">
-                Action
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {pagedRows.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={7}
-                  className="py-12 text-center text-sm text-muted-foreground"
-                >
-                  No failed students found matching the current filters.
-                </TableCell>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/30">
+                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground w-[40px]">
+                  SN
+                </TableHead>
+                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Student
+                </TableHead>
+                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Class
+                </TableHead>
+                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Subject
+                </TableHead>
+                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Evaluation Title
+                </TableHead>
+                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Unit Title
+                </TableHead>
+                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground text-center">
+                  Action
+                </TableHead>
               </TableRow>
-            ) : (
-              pagedRows.map((row, idx) => {
-                const firstEvalId = row.evaluationIds[0];
-                const viewHref =
-                  profile?.role === "ADMIN"
-                    ? `/admin/re-exam-portal/${row.studentId}/${firstEvalId}`
-                    : `/teacher/re-exam-portal/${row.studentId}/${firstEvalId}`;
-
-                return (
-                  <TableRow
-                    key={`${row.studentId}-${row.cardId}`}
-                    className="hover:bg-muted/30 transition-colors"
+            </TableHeader>
+            <TableBody>
+              {pagedRows.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={7}
+                    className="py-12 text-center text-sm text-muted-foreground"
                   >
-                    {/* SN */}
-                    <TableCell className="text-[11px] font-semibold text-muted-foreground">
-                      {(page - 1) * PAGE_SIZE + idx + 1}
-                    </TableCell>
+                    No failed students found matching the current filters.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                pagedRows.map((row, idx) => {
+                  const firstEvalId = row.evaluationIds[0];
+                  const viewHref =
+                    profile?.role === "ADMIN"
+                      ? `/admin/re-exam-portal/${row.studentId}/${firstEvalId}`
+                      : `/teacher/re-exam-portal/${row.studentId}/${firstEvalId}`;
 
-                    {/* Student */}
-                    <TableCell>
-                      <div className="font-semibold text-sm text-foreground">
-                        {row.studentName}
-                      </div>
-                      <div className="text-[10px] font-mono text-muted-foreground mt-0.5">
-                        {row.rollNumber}
-                      </div>
-                    </TableCell>
+                  return (
+                    <TableRow
+                      key={`${row.studentId}-${row.cardId}`}
+                      className="hover:bg-muted/30 transition-colors"
+                    >
+                      {/* SN */}
+                      <TableCell className="text-[11px] font-semibold text-muted-foreground">
+                        {(page - 1) * PAGE_SIZE + idx + 1}
+                      </TableCell>
 
-                    {/* Class */}
-                    <TableCell>
-                      <span className="text-xs bg-muted text-muted-foreground font-semibold px-2 py-1 rounded-md">
-                        {row.grade}
-                      </span>
-                    </TableCell>
+                      {/* Student */}
+                      <TableCell>
+                        <div className="font-semibold text-sm text-foreground">
+                          {row.studentName}
+                        </div>
+                        <div className="text-[10px] font-mono text-muted-foreground mt-0.5">
+                          {row.rollNumber}
+                        </div>
+                      </TableCell>
 
-                    {/* Subject */}
-                    <TableCell>
-                      <span className="text-xs text-foreground font-medium">
-                        {row.subject}
-                      </span>
-                    </TableCell>
+                      {/* Class */}
+                      <TableCell>
+                        <span className="text-xs bg-muted text-muted-foreground font-semibold px-2 py-1 rounded-md">
+                          {row.grade}
+                        </span>
+                      </TableCell>
 
-                    {/* Evaluation Title */}
-                    <TableCell>
-                      <span className="text-xs font-semibold text-foreground">
-                        {row.evaluationTitle}
-                      </span>
-                    </TableCell>
+                      {/* Subject */}
+                      <TableCell>
+                        <span className="text-xs text-foreground font-medium">
+                          {row.subject}
+                        </span>
+                      </TableCell>
 
-                    {/* Unit Title */}
-                    <TableCell className="max-w-[180px]">
-                      <span className="text-xs text-muted-foreground">
-                        {row.unitTitles.join(", ")}
-                      </span>
-                    </TableCell>
+                      {/* Evaluation Title */}
+                      <TableCell>
+                        <span className="text-xs font-semibold text-foreground">
+                          {row.evaluationTitle}
+                        </span>
+                      </TableCell>
 
-                    {/* Action */}
-                    <TableCell className="text-center">
-                      <Link
-                        href={viewHref}
-                        className={cn(
-                          buttonVariants({ size: "sm", variant: "default" }),
-                          "h-8 text-xs gap-1.5",
-                        )}
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        View
-                      </Link>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
+                      {/* Unit Title */}
+                      <TableCell className="max-w-[180px]">
+                        <span className="text-xs text-muted-foreground">
+                          {row.unitTitles.join(", ")}
+                        </span>
+                      </TableCell>
+
+                      {/* Action */}
+                      <TableCell className="text-center">
+                        <Link
+                          href={viewHref}
+                          className={cn(
+                            buttonVariants({ size: "sm", variant: "default" }),
+                            "h-8 text-xs gap-1.5",
+                          )}
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          View
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
         </div>
 
         {/* Pagination Footer */}
