@@ -57,8 +57,8 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
         reExamDate: (r?.reExamResult as any)?.reExamEnrollment?.reExamSchedule?.scheduledDate
           ? new Date((r?.reExamResult as any)?.reExamEnrollment?.reExamSchedule?.scheduledDate).toISOString().split("T")[0]
           : r?.reExamResult?.createdAt
-          ? new Date(r?.reExamResult.createdAt).toISOString().split("T")[0]
-          : "",
+            ? new Date(r?.reExamResult.createdAt).toISOString().split("T")[0]
+            : "",
         remarks: r?.reExamResult?.remarks ?? r?.remarks ?? "",
       };
     }
@@ -162,7 +162,7 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
   const outcomes = evaluation.learningOutcomes;
   const obtained = outcomes.reduce((sum, lo) => {
     const m = localMarks?.outcomeMarks[lo.name];
-    return sum + (m?.reExamMark ?? m?.regularMark ?? 0);
+    return sum + Number(m?.reExamMark ?? m?.regularMark ?? 0);
   }, 0);
   const fullTotal = calcFullMarks(outcomes);
 
@@ -208,13 +208,6 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className={cn(
-            "px-3 py-1 rounded-full text-xs font-bold uppercase border",
-            status === "Pass" ? "bg-emerald-100 dark:bg-emerald-950/45 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/40"
-              : status === "Fail" ? "bg-destructive/10 text-destructive border-destructive/20"
-              : "bg-muted text-muted-foreground border-border",
-          )}>{status}</span>
-          <span className="font-bold text-sm text-foreground">{obtained} / {fullTotal}</span>
           <motion.button
             onClick={handleSave}
             disabled={saveStatus === "saving"}
@@ -225,18 +218,18 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
               saveStatus === "saved"
                 ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800"
                 : saveStatus === "error"
-                ? "bg-destructive/10 text-destructive border-destructive/30"
-                : saveStatus === "saving"
-                ? "opacity-60 cursor-not-allowed bg-muted text-muted-foreground border-border"
-                : isDirty
-                ? "bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
-                : "bg-muted text-muted-foreground border-border hover:bg-muted/80",
+                  ? "bg-destructive/10 text-destructive border-destructive/30"
+                  : saveStatus === "saving"
+                    ? "opacity-60 cursor-not-allowed bg-muted text-muted-foreground border-border"
+                    : isDirty
+                      ? "bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+                      : "bg-muted text-muted-foreground border-border hover:bg-muted/80",
             )}
           >
             {saveStatus === "saved" ? (
               <><CheckCircle className="w-3.5 h-3.5" /> Saved</>
             ) : saveStatus === "saving" ? (
-              <><svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg> Saving...</>
+              <><svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg> Saving...</>
             ) : (
               <><Save className="w-3.5 h-3.5" /> Save</>
             )}
@@ -362,7 +355,7 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
             "px-3 py-1 rounded-full text-sm font-bold uppercase border",
             status === "Pass" ? "bg-emerald-100 dark:bg-emerald-950/45 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/40"
               : status === "Fail" ? "bg-destructive/10 text-destructive border-destructive/20"
-              : "bg-muted text-muted-foreground border-border",
+                : "bg-muted text-muted-foreground border-border",
           )}>{status}</span>
         </div>
         <div className="border-l border-border pl-8">
