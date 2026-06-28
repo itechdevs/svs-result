@@ -7,27 +7,30 @@ import SyncManagementClient from "@/components/admin/SyncManagementClient";
 import AdminDashboardSkeleton from "@/components/admin/AdminDashboardSkeleton";
 import { useAdminDashboard } from "@/hooks/use-admin-dashboard";
 
+const fallbackData = {
+  academicYear: { id: "", name: "No Academic Year" },
+  students: { total: 0 },
+  teachers: { total: 0 },
+  results: { byStatus: {}, passCount: 0, failCount: 0, totalCount: 0, passPercentage: 0, failPercentage: 0, published: 0, marksheetsGenerated: 0 },
+  evaluations: { pendingSubmission: 0, pendingVerification: 0 },
+  reExams: { total: 0, byStatus: {} as Record<string, number> },
+  classPerformance: [] as { grade: string; averageGpa: number; studentCount: number }[],
+};
+
 export default function AdminDashboardClient() {
-  const { data, isLoading, isError } = useAdminDashboard();
+  const { data, isLoading } = useAdminDashboard();
 
   if (isLoading) {
     return <AdminDashboardSkeleton />;
   }
 
-  if (isError || !data || !data.results) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px] text-muted-foreground text-sm">
-        No dashboard data available.
-      </div>
-    );
-  }
-
-  const classPerformance = data.classPerformance;
+  const safe = data?.results ? data : fallbackData;
+  const classPerformance = safe.classPerformance;
   const maxGpa = 4.0;
   const completionRate =
-    data.results.marksheetsGenerated > 0
+    safe.results.marksheetsGenerated > 0
       ? Math.round(
-          (data.results.published / data.results.marksheetsGenerated) * 100,
+          (safe.results.published / safe.results.marksheetsGenerated) * 100,
         )
       : 0;
 
@@ -56,7 +59,7 @@ export default function AdminDashboardClient() {
             Admin Dashboard
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-            {data.academicYear.name} — Overview of academic performance and
+            {safe.academicYear.name} — Overview of academic performance and
             results
           </p>
         </div>
@@ -76,7 +79,7 @@ export default function AdminDashboardClient() {
           </div>
           <div className="flex items-end gap-2">
             <div className="text-3xl font-bold tracking-tight">
-              {data.students.total.toLocaleString()}
+              {safe.students.total.toLocaleString()}
             </div>
           </div>
           <div className="mt-3 h-1 bg-primary rounded-full w-16 group-hover:w-full transition-all duration-500"></div>
@@ -94,7 +97,7 @@ export default function AdminDashboardClient() {
           </div>
           <div className="flex items-end gap-2">
             <div className="text-3xl font-bold tracking-tight">
-              {data.teachers.total.toLocaleString()}
+              {safe.teachers.total.toLocaleString()}
             </div>
           </div>
           <div className="mt-3 h-1 bg-emerald-600 rounded-full w-16 group-hover:w-full transition-all duration-500"></div>
@@ -111,11 +114,11 @@ export default function AdminDashboardClient() {
             </div>
           </div>
           <div className="text-3xl font-bold tracking-tight">
-            {data.reExams.total}
+            {safe.reExams.total}
           </div>
           <div className="mt-2 text-[10px] text-muted-foreground font-medium">
             <span className="text-destructive font-bold">
-              {data.reExams.byStatus.SCHEDULED ?? 0} Scheduled
+              {safe.reExams.byStatus.SCHEDULED ?? 0} Scheduled
             </span>
           </div>
         </div>
@@ -131,7 +134,7 @@ export default function AdminDashboardClient() {
             </div>
           </div>
           <div className="text-3xl font-bold tracking-tight ">
-            {data.results.published} / {data.results.marksheetsGenerated}
+            {safe.results.published} / {safe.results.marksheetsGenerated}
           </div>
           <div className="mt-2 text-xs ">{completionRate}% Completion Rate</div>
         </div>
@@ -149,7 +152,7 @@ export default function AdminDashboardClient() {
             </p>
           </div>
           <span className="text-xs font-semibold text-primary dark:text-primary-foreground bg-primary/10 dark:bg-primary/25 px-3 py-1.5 rounded-lg border border-primary/20 dark:border-primary/40 self-start sm:self-auto whitespace-nowrap">
-            {data.academicYear.name}
+            {safe.academicYear.name}
           </span>
         </div>
 
