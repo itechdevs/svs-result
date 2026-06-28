@@ -298,7 +298,7 @@ export default function MarkEntryOverviewTable() {
               No students found in {selectedClass}.
             </p>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto scrollbar-minimal pb-1">
               <table className="w-full text-left border-collapse text-sm">
                 <thead>
                   <tr className="bg-muted/30 border-b border-border">
@@ -329,6 +329,9 @@ export default function MarkEntryOverviewTable() {
                     </th>
                     <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">
                       Result
+                    </th>
+                    <th className="px-4 py-3 text-[10px] font-bold text-amber-500 uppercase tracking-wider text-center whitespace-nowrap">
+                      Re-Exam
                     </th>
                     <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">
                       Detail
@@ -481,6 +484,62 @@ export default function MarkEntryOverviewTable() {
                             {status}
                           </span>
                         </td>
+
+                        {/* ── Re-Exam ── */}
+                        {(() => {
+                          // Use local anyFail (live marks) OR server isPassed=false (submitted)
+                          const evalIdSet = new Set(evalIds);
+                          const studentResults = resultsData.filter(
+                            r => evalIdSet.has(r.evaluationTemplateId) && r.syncedStudentId === student.id
+                          );
+
+                          // Failed evals: locally computed failed cols per evalId + server-confirmed fails
+                          const failedEvalIds = new Set<string>([
+                            ...failedCols.map(c => c.evalId),
+                            ...studentResults.filter(r => r.isPassed === false).map(r => r.evaluationTemplateId),
+                          ]);
+
+                          const totalFailed = failedEvalIds.size;
+                          const reExamGiven = studentResults.filter(
+                            r => failedEvalIds.has(r.evaluationTemplateId) && r.reExamResult
+                          ).length;
+
+                          if (totalFailed === 0) {
+                            return (
+                              <td className="px-4 py-3 text-center whitespace-nowrap">
+                                <span className="text-slate-400 text-xs">—</span>
+                              </td>
+                            );
+                          }
+
+                          if (reExamGiven === 0) {
+                            return (
+                              <td className="px-4 py-3 text-center whitespace-nowrap">
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300">
+                                  Needed
+                                </span>
+                              </td>
+                            );
+                          }
+
+                          if (reExamGiven < totalFailed) {
+                            return (
+                              <td className="px-4 py-3 text-center whitespace-nowrap">
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300">
+                                  {reExamGiven}/{totalFailed} Given
+                                </span>
+                              </td>
+                            );
+                          }
+
+                          return (
+                            <td className="px-4 py-3 text-center whitespace-nowrap">
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300">
+                                Given
+                              </span>
+                            </td>
+                          );
+                        })()}
 
                         {/* ── Detail link ── */}
                         <td className="px-4 py-3 text-center">
