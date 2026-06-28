@@ -7,9 +7,9 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { syncedTeacherId, email, password, assignments } = body;
 
-    // Check if teacher exists
+    // Check if teacher exists — syncedTeacherId from the form is the external sourceId
     const syncedTeacher = await prisma.syncedTeacher.findUnique({
-      where: { id: syncedTeacherId },
+      where: { sourceId: syncedTeacherId },
     });
 
     if (!syncedTeacher) {
@@ -25,14 +25,14 @@ export async function POST(req: NextRequest) {
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Create user
+    // Create user — use SyncedTeacher.id (Prisma PK) for the link
     const user = await prisma.user.create({
       data: {
         email,
         passwordHash,
         name: syncedTeacher.name,
         role: "TEACHER",
-        syncedTeacherId,
+        syncedTeacherId: syncedTeacher.id,
       },
     });
 
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
           if (a.subjectId) {
             await prisma.syncedSubject.update({
               where: { id: a.subjectId },
-              data: { teachers: { connect: { id: syncedTeacherId } } },
+              data: { teachers: { connect: { id: syncedTeacher.id } } },
             });
           }
         })

@@ -32,6 +32,13 @@ export function TeacherSidebar() {
 
   const assignedPairs = useMemo(() => {
     const subjects = profile?.syncedTeacher?.subjects ?? [];
+    if (process.env.NODE_ENV === 'development' && subjects.length === 0 && profile?.role === 'TEACHER') {
+      console.warn(
+        '[TeacherSidebar] No subjects found for teacher.',
+        'syncedTeacher:', profile?.syncedTeacher ? 'present' : 'null',
+        'subjects count:', subjects.length,
+      );
+    }
     return subjects.map(s => ({ className: s.gradeLevel, subject: s.name }));
   }, [profile]);
 

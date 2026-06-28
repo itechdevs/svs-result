@@ -26,19 +26,17 @@ export default function TeacherSetupClient() {
 
   const fetchData = async () => {
     try {
-      const [teachersRes, subjectsRes] = await Promise.all([
-        fetch('/api/sync/teachers').then(r => r.json()),
+      const [allocationsRes, subjectsRes] = await Promise.all([
+        fetch('/api/allocations/synced').then(r => r.json()),
         fetch('/api/subjects').then(r => r.json()),
       ]);
-      
-      // Get synced teachers without user accounts
-      const syncedTeachers = await fetch('/api/admin/users').then(r => r.json());
-      const teacherUserIds = syncedTeachers.filter((u: any) => u.role === 'TEACHER').map((u: any) => u.syncedTeacherId);
-      
-      const availableTeachers = teachersRes.filter((t: any) => !teacherUserIds.includes(t.id));
-      
+
+      // allocationsRes is { allocations: [...] } with hasAccount flag
+      const availableTeachers = (allocationsRes?.allocations ?? []).filter((t: any) => !t.hasAccount);
+
       setTeachers(availableTeachers);
-      setSubjects(subjectsRes);
+      // subjectsRes is { success: true, data: [...] } (wrapped by ok())
+      setSubjects(subjectsRes?.data ?? subjectsRes ?? []);
       
       // Mock academic year - should fetch from API
       setYears([{ id: 'current', name: '2024/25' }]);

@@ -332,17 +332,18 @@ export class UnifiedSyncService {
             where: { sourceId: { in: subjectIds } },
           });
 
-          // Update teacher subjects
-          await prisma.syncedTeacher.update({
-            where: { id: syncedTeacher.id },
-            data: {
-              subjects: {
-                set: syncedSubjects.map(s => ({ id: s.id }))
+          // Update teacher subjects — only if we found matching subjects
+          if (syncedSubjects.length > 0) {
+            await prisma.syncedTeacher.update({
+              where: { id: syncedTeacher.id },
+              data: {
+                subjects: {
+                  set: syncedSubjects.map(s => ({ id: s.id }))
+                }
               }
-            }
-          });
-
-          result.synced++;
+            });
+            result.synced++;
+          }
         } catch (error) {
           result.failed++;
           result.errors.push(
