@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CheckCircle, Calendar } from "lucide-react";
+import { ArrowLeft, CheckCircle, Calendar, Save } from "lucide-react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useStudentEvaluationResults } from "@/hooks/use-evaluations";
@@ -11,6 +11,7 @@ import { calcFullMarks } from "@/components/teacher/DetailedMarkEntryView";
 import { Student, EvaluationPlan, StudentOutcomeMark, OutcomeMark } from "@/types/academic";
 import { Input } from "@/components/shared/ui/input";
 import SanskarLoader from "@/components/shared/SanskarLoader";
+import { toast } from "sonner";
 import {
   Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
 } from "@/components/shared/ui/table";
@@ -24,7 +25,6 @@ interface Props {
 export default function ReExamDetailedView({ student, evaluation, backHref = "admin/re-exam-portal" }: Props) {
   const router = useRouter();
 
-  // Fetch results for ALL template IDs in the group
   const templateIds = evaluation.learningOutcomes
     .map(lo => lo.templateId)
     .filter((id): id is string => !!id);
@@ -37,18 +37,14 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
 
   const reExamAssessment = useReExamAssessment();
   const [localMarks, setLocalMarks] = useState<StudentOutcomeMark | undefined>(undefined);
-  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const localMarksRef = useRef<StudentOutcomeMark | undefined>(undefined);
-  localMarksRef.current = localMarks;
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [isDirty, setIsDirty] = useState(false);
+  const [shakeSave, setShakeSave] = useState(false);
+  const hasInitialized = useRef(false);
 
-  // Build a map: templateId -> result record
   useEffect(() => {
-    if (resultsData.length === 0) return;
-
-    // Index results by templateId for O(1) lookup
+    if (resultsData.length === 0 || hasInitialized.current) return;
     const byTemplateId = new Map(resultsData.map(r => [r.evaluationTemplateId, r]));
-
     const outcomeMarks: Record<string, OutcomeMark> = {};
     for (const lo of evaluation.learningOutcomes) {
       const r = lo.templateId ? byTemplateId.get(lo.templateId) : undefined;
@@ -61,16 +57,17 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
         reExamDate: (r?.reExamResult as any)?.reExamEnrollment?.reExamSchedule?.scheduledDate
           ? new Date((r?.reExamResult as any)?.reExamEnrollment?.reExamSchedule?.scheduledDate).toISOString().split("T")[0]
           : r?.reExamResult?.createdAt
-          ? new Date(r?.reExamResult.createdAt).toISOString().split("T")[0]
-          : "",
+            ? new Date(r?.reExamResult.createdAt).toISOString().split("T")[0]
+            : "",
         remarks: r?.reExamResult?.remarks ?? r?.remarks ?? "",
       };
     }
-
     setLocalMarks({ studentId: student.id, evaluationId: evaluation.id, outcomeMarks });
+    hasInitialized.current = true;
   }, [resultsData, student.id, evaluation.id, evaluation.learningOutcomes]);
 
   const updateMark = useCallback((outcomeName: string, patch: Partial<OutcomeMark>) => {
+    setIsDirty(true);
     setLocalMarks(prev => {
       const existing = prev?.outcomeMarks[outcomeName] ?? {
         regularMark: null, regularDate: "", supportMark: null,
@@ -84,16 +81,16 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
     });
   }, [student.id, evaluation.id]);
 
-  // Save each outcome with a re-exam mark to its own templateId
-  const saveAll = useCallback(async (marks: StudentOutcomeMark, onSettled?: () => void) => {
+  const saveAll = useCallback((marks: StudentOutcomeMark) => {
     const outcomes = evaluation.learningOutcomes;
     const toSave = outcomes.filter(lo => {
       const m = marks.outcomeMarks[lo.name];
       return lo.templateId && m?.reExamMark !== null && m?.reExamMark !== undefined;
     });
 
-    if (toSave.length === 0) { onSettled?.(); return; }
+    if (toSave.length === 0) return;
 
+    setSaveStatus("saving");
     let remaining = toSave.length;
     let hasError = false;
 
@@ -111,58 +108,61 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
           onSuccess: () => {
             remaining--;
             if (remaining === 0 && !hasError) {
-              setAutoSaveStatus("saved");
-              setTimeout(() => setAutoSaveStatus("idle"), 2000);
-              onSettled?.();
+              setSaveStatus("saved");
+              setIsDirty(false);
+              toast.success("Re-exam marks saved");
+              setTimeout(() => setSaveStatus("idle"), 2500);
             }
           },
           onError: () => {
-            hasError = true;
-            setAutoSaveStatus("error");
-            setTimeout(() => setAutoSaveStatus("idle"), 3000);
-            onSettled?.();
+            if (!hasError) {
+              hasError = true;
+              setSaveStatus("error");
+              toast.error("Failed to save re-exam marks");
+              setTimeout(() => setSaveStatus("idle"), 3000);
+            }
           },
         },
       );
     }
   }, [evaluation.learningOutcomes, student.id, reExamAssessment]);
 
-  const triggerAutoSave = useCallback(() => {
-    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-    setAutoSaveStatus("saving");
-    autoSaveTimerRef.current = setTimeout(() => {
-      const marks = localMarksRef.current;
-      if (marks) saveAll(marks);
-    }, 1000);
-  }, [saveAll]);
+  const handleSave = useCallback(() => {
+    if (!localMarks) return;
+    saveAll(localMarks);
+  }, [localMarks, saveAll]);
 
-  useEffect(() => () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); }, []);
-
-  const saveAndGoBack = useCallback(() => {
-    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-    const marks = localMarksRef.current;
-    if (marks) { saveAll(marks, () => router.push(backHref)); return; }
+  const handleBack = useCallback(() => {
+    if (isDirty) {
+      const hasEnteredMarks = evaluation.learningOutcomes.some(lo => {
+        const m = localMarks?.outcomeMarks[lo.name];
+        return m?.reExamMark !== null && m?.reExamMark !== undefined;
+      });
+      if (hasEnteredMarks) {
+        toast.warning("Please save before going back", { duration: 3000 });
+        setShakeSave(true);
+        setTimeout(() => setShakeSave(false), 600);
+        return;
+      }
+    }
     router.push(backHref);
-  }, [saveAll, backHref, router]);
+  }, [isDirty, localMarks, evaluation.learningOutcomes, router, backHref]);
 
   const handleReExamMark = (outcomeName: string, value: string, max: number) => {
     const num = value === "" ? null : Math.min(Math.max(0, Number(value)), max);
     updateMark(outcomeName, { reExamMark: num });
-    triggerAutoSave();
   };
   const handleReExamDate = (outcomeName: string, value: string) => {
     updateMark(outcomeName, { reExamDate: value });
-    triggerAutoSave();
   };
   const handleRemarks = (outcomeName: string, value: string) => {
     updateMark(outcomeName, { remarks: value });
-    triggerAutoSave();
   };
 
   const outcomes = evaluation.learningOutcomes;
   const obtained = outcomes.reduce((sum, lo) => {
     const m = localMarks?.outcomeMarks[lo.name];
-    return sum + (m?.reExamMark ?? m?.regularMark ?? 0);
+    return sum + Number(m?.reExamMark ?? m?.regularMark ?? 0);
   }, 0);
   const fullTotal = calcFullMarks(outcomes);
 
@@ -199,7 +199,7 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-card text-card-foreground p-4 rounded-xl border border-border shadow-sm gap-4">
         <div className="flex items-center gap-3">
-          <button onClick={saveAndGoBack} className="p-1.5 hover:bg-muted rounded-full transition-colors border border-border">
+          <button onClick={handleBack} className="p-1.5 hover:bg-muted rounded-full transition-colors border border-border">
             <ArrowLeft className="w-4 h-4 text-foreground" />
           </button>
           <div>
@@ -208,16 +208,32 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className={cn(
-            "px-3 py-1 rounded-full text-xs font-bold uppercase border",
-            status === "Pass" ? "bg-emerald-100 dark:bg-emerald-950/45 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/40"
-              : status === "Fail" ? "bg-destructive/10 text-destructive border-destructive/20"
-              : "bg-muted text-muted-foreground border-border",
-          )}>{status}</span>
-          <span className="font-bold text-sm text-foreground">{obtained} / {fullTotal}</span>
-          {autoSaveStatus === "saving" && <span className="text-xs text-muted-foreground animate-pulse">Saving...</span>}
-          {autoSaveStatus === "saved" && <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1"><CheckCircle className="w-3 h-3" />Saved</span>}
-          {autoSaveStatus === "error" && <span className="text-xs text-destructive">✗ Save failed</span>}
+          <motion.button
+            onClick={handleSave}
+            disabled={saveStatus === "saving"}
+            animate={shakeSave ? { x: [0, -6, 6, -6, 6, 0] } : {}}
+            transition={{ duration: 0.4 }}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border",
+              saveStatus === "saved"
+                ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800"
+                : saveStatus === "error"
+                  ? "bg-destructive/10 text-destructive border-destructive/30"
+                  : saveStatus === "saving"
+                    ? "opacity-60 cursor-not-allowed bg-muted text-muted-foreground border-border"
+                    : isDirty
+                      ? "bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+                      : "bg-muted text-muted-foreground border-border hover:bg-muted/80",
+            )}
+          >
+            {saveStatus === "saved" ? (
+              <><CheckCircle className="w-3.5 h-3.5" /> Saved</>
+            ) : saveStatus === "saving" ? (
+              <><svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg> Saving...</>
+            ) : (
+              <><Save className="w-3.5 h-3.5" /> Save</>
+            )}
+          </motion.button>
         </div>
       </div>
 
@@ -339,7 +355,7 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
             "px-3 py-1 rounded-full text-sm font-bold uppercase border",
             status === "Pass" ? "bg-emerald-100 dark:bg-emerald-950/45 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/40"
               : status === "Fail" ? "bg-destructive/10 text-destructive border-destructive/20"
-              : "bg-muted text-muted-foreground border-border",
+                : "bg-muted text-muted-foreground border-border",
           )}>{status}</span>
         </div>
         <div className="border-l border-border pl-8">

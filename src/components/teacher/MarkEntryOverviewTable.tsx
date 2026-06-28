@@ -25,7 +25,7 @@ import {
 import { useStudents } from "@/hooks/use-students";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useMarksContext } from "@/contexts/marks-context";
-
+import { toast } from "sonner";
 import MarkEntrySkeleton from "@/components/teacher/MarkEntrySkeleton";
 
 export default function MarkEntryOverviewTable() {
@@ -50,6 +50,7 @@ export default function MarkEntryOverviewTable() {
   const selectedSubject = searchParams.get("subject") ?? "";
   const selectedEvalPlan = searchParams.get("eval") ?? "";
   const [page, setPage] = useState(1);
+  const [confirmPublish, setConfirmPublish] = useState(false);
   const PAGE_SIZE = 10;
 
   const { data: studentsData, isLoading: isStudentsLoading } = useStudents(
@@ -151,6 +152,51 @@ export default function MarkEntryOverviewTable() {
   if (isLoading) {
     return <MarkEntrySkeleton />;
   }
+
+  // Validation before publish
+  const doPublish = async () => {
+    const query = searchParams.toString();
+    await handleSaveAll(true);
+    router.push(`/teacher/evaluations${query ? `?${query}` : ""}`);
+  };
+
+  const handlePublish = async () => {
+    // Check 1: any student with missing marks
+    const evalIdSet = new Set(evalIds);
+    const hasMissingMarks = classStudents.some(student =>
+      outcomeColumns.some(col => {
+        const mark = getStudentMark(student.id, col.evalId);
+        const val = mark?.outcomeMarks[col.name]?.regularMark;
+        return val === null || val === undefined;
+      })
+    );
+    if (hasMissingMarks) {
+      toast.error("Fill in all marks before publishing. Use Draft to save incomplete marks.");
+      return;
+    }
+
+    // Check 2: any student failed with no re-exam result
+    const failedWithNoReExam = classStudents.filter(student => {
+      const studentEvalIds = evalIds.filter(eid => evalIdSet.has(eid));
+      const studentResults = resultsData.filter(
+        r => studentEvalIds.includes(r.evaluationTemplateId) && r.syncedStudentId === student.id
+      );
+      const hasFail = outcomeColumns.some(col => {
+        const mark = getStudentMark(student.id, col.evalId);
+        const val = mark?.outcomeMarks[col.name]?.regularMark;
+        return val !== null && val !== undefined && val < col.passMarks;
+      });
+      const hasReExam = studentResults.some(r => r.reExamResult);
+      return hasFail && !hasReExam;
+    });
+
+    if (failedWithNoReExam.length > 0) {
+      setConfirmPublish(true);
+      return;
+    }
+
+    await doPublish();
+  };
 
   return (
     <motion.div
@@ -254,11 +300,7 @@ export default function MarkEntryOverviewTable() {
                 {evalGroupStatus === 'SUBMITTED' ? 'Drafted' : 'Draft'}
               </button>}
               {!isAdmin && <button
-                onClick={async () => {
-                  await handleSaveAll(true);
-                  const query = searchParams.toString();
-                  router.push(`/teacher/evaluations${query ? `?${query}` : ""}`);
-                }}
+                onClick={handlePublish}
                 disabled={isSaving || evalGroupStatus === 'SUBMITTED'}
                 className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors shadow-sm flex items-center gap-1.5 ${evalGroupStatus === 'SUBMITTED'
                     ? 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed'
@@ -653,6 +695,37 @@ export default function MarkEntryOverviewTable() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ── Publish confirmation dialog ─────────────────────────── */}
+      {confirmPublish && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-card border border-border rounded-xl shadow-xl p-6 max-w-sm w-full space-y-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-sm text-foreground">Students have failed marks</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  One or more students have failed outcomes with no re-exam recorded. Publishing will lock these failed marks permanently.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setConfirmPublish(false)}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-border bg-background hover:bg-muted transition-colors"
+              >
+                Cancel (Save Draft)
+              </button>
+              <button
+                onClick={async () => { setConfirmPublish(false); await doPublish(); }}
+                className="px-3 py-1.5 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+              >
+                Publish Anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }
