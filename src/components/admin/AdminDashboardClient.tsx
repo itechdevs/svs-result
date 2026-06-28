@@ -8,13 +8,13 @@ import AdminDashboardSkeleton from "@/components/admin/AdminDashboardSkeleton";
 import { useAdminDashboard } from "@/hooks/use-admin-dashboard";
 
 export default function AdminDashboardClient() {
-  const { data, isLoading } = useAdminDashboard();
+  const { data, isLoading, isError } = useAdminDashboard();
 
   if (isLoading) {
     return <AdminDashboardSkeleton />;
   }
 
-  if (!data) {
+  if (isError || !data || !data.results) {
     return (
       <div className="flex items-center justify-center min-h-[400px] text-muted-foreground text-sm">
         No dashboard data available.

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { ok } from "@/lib/response";
+import { ok, notFound } from "@/lib/response";
 import { withHandler } from "@/lib/handlers";
 
 // GET /api/admin/dashboard?academicYearId=
@@ -14,7 +14,7 @@ export const GET = withHandler(
       : await prisma.academicYear.findFirst({ where: { isCurrent: true } });
 
     if (!year) {
-      return ok({ message: "No academic year configured" });
+      return notFound("No academic year configured");
     }
 
     const [
