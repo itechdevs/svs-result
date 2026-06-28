@@ -4,6 +4,7 @@ import { ROUTES } from "@/lib/constants";
 import { Navbar } from "@/components/shared/common/navbar";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { Suspense } from "react";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,9 @@ export default async function TeacherLayout({ children }: { children: React.Reac
       <div className="h-screen overflow-hidden flex flex-col w-full">
         <Navbar user={session.user} />
         <div className="flex flex-1 overflow-hidden">
-          <TeacherSidebar />
+          <Suspense fallback={null}>
+            <TeacherSidebar />
+          </Suspense>
           <SidebarInset className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 bg-transparent">
             {children}
           </SidebarInset>

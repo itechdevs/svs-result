@@ -65,8 +65,11 @@ export function TeacherSidebar() {
             pathname === item.href ||
             (item.href === ROUTES.TEACHER_EVALUATIONS && (
               pathname === "/teacher/create-evaluation" ||
-              pathname.startsWith("/teacher/edit-evaluation")
-            ));
+              pathname.startsWith("/teacher/edit-evaluation") ||
+              pathname.startsWith(ROUTES.TEACHER_MARK_ENTRY) ||
+              pathname.startsWith("/teacher/result-compilation")
+            )) ||
+            (item.href === ROUTES.TEACHER_RE_EXAM && pathname.startsWith(ROUTES.TEACHER_RE_EXAM));
 
           return (
             <div key={item.href}>
@@ -116,9 +119,14 @@ export function TeacherSidebar() {
                   {assignedPairs.map(({ className, subject }) => {
                     const params = new URLSearchParams({ class: className, subject });
                     const href = `${ROUTES.TEACHER_EVALUATIONS}?${params}`;
-                    const isSubActive = pathname === ROUTES.TEACHER_EVALUATIONS &&
+                    const isSubActive =
                       searchParams.get('class') === className &&
-                      searchParams.get('subject') === subject;
+                      searchParams.get('subject') === subject &&
+                      (
+                        pathname === ROUTES.TEACHER_EVALUATIONS ||
+                        pathname.startsWith(ROUTES.TEACHER_MARK_ENTRY) ||
+                        pathname.startsWith("/teacher/result-compilation")
+                      );
                     return (
                       <Link
                         key={`${className}-${subject}`}
