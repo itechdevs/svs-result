@@ -10,6 +10,15 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
+  // Root route
+  if (pathname === "/") {
+    if (user) {
+      const redirectPath = user.role === "ADMIN" ? "/admin/dashboard" : "/teacher/dashboard";
+      return NextResponse.redirect(new URL(redirectPath, req.url));
+    }
+    return NextResponse.redirect(new URL("/login", req.url));
+  }
+
   // Public routes
   if (pathname.startsWith("/login") || pathname.startsWith("/register") || pathname.startsWith("/verify-email") || pathname.startsWith("/reset-password") || pathname.startsWith("/forgot-password")) {
     if (user) {
