@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, CheckCircle, AlertTriangle, Calendar, Save } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
+import { formatToBSFullString } from '@/lib/bs-calendar';
 import { Student, EvaluationPlan, StudentOutcomeMark, OutcomeMark } from '@/types/academic';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -202,7 +203,7 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
               {evaluation.date && evaluation.date !== 'TBD' && (
                 <span className="ml-2 inline-flex items-center gap-1 text-[10px] text-blue-600 dark:text-blue-400">
                   <Calendar className="w-3 h-3" />
-                  {evaluation.date}
+                  {formatToBSFullString(evaluation.date)}
                 </span>
               )}
             </p>
@@ -453,7 +454,7 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Scheduled Date</p>
             <p className="text-sm font-semibold text-foreground flex items-center gap-1">
               <Calendar className="w-4 h-4 text-blue-500" />
-              {evaluation.date}
+              {formatToBSFullString(evaluation.date)}
             </p>
           </div>
         )}
