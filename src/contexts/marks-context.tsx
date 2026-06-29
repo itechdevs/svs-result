@@ -15,6 +15,7 @@ import {
   useBulkSaveMarks,
   EvaluationTemplate,
 } from '@/hooks/use-evaluations';
+import { apiClient } from '@/lib/api-client';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -190,6 +191,33 @@ export function MarksProvider({ children }: { children: React.ReactNode }) {
       patch: Partial<OutcomeMark>
     ) => {
       setLocalMarks((prev) => {
+        const isDatePatch = 'regularDate' in patch;
+
+        if (isDatePatch) {
+          // Propagate the regularDate update to all students for this template/outcome
+          return prev.map((m) => {
+            if (m.evaluationId === evalId) {
+              const existing = m.outcomeMarks[outcomeName] ?? {
+                regularMark: null,
+                regularDate: '',
+                supportMark: null,
+                supportDate: '',
+                reExamMark: null,
+                reExamDate: '',
+                remarks: '',
+              };
+              return {
+                ...m,
+                outcomeMarks: {
+                  ...m.outcomeMarks,
+                  [outcomeName]: { ...existing, regularDate: patch.regularDate! },
+                },
+              };
+            }
+            return m;
+          });
+        }
+
         const idx = prev.findIndex(
           (m) => m.studentId === studentId && m.evaluationId === evalId
         );
@@ -251,6 +279,31 @@ export function MarksProvider({ children }: { children: React.ReactNode }) {
             };
           }),
         });
+
+        // Save template regular date (scheduledDate) if changed
+        const firstMark = relevantMarks[0]?.outcomeMarks[t.name];
+        const newRegDate = firstMark?.regularDate;
+        const oldRegDate = t.scheduledDate ? new Date(t.scheduledDate).toISOString().split('T')[0] : '';
+        if (newRegDate && newRegDate !== oldRegDate) {
+          await apiClient.patch(`/teacher/evaluation-plans/${t.id}`, {
+            scheduledDate: new Date(newRegDate),
+          });
+          t.scheduledDate = new Date(newRegDate).toISOString();
+        }
+
+        // Save student-specific re-exam date if changed
+        for (const m of relevantMarks) {
+          const mark = m.outcomeMarks[t.name];
+          if (mark?.reExamMark !== null && mark?.reExamMark !== undefined && mark?.reExamDate) {
+            await apiClient.post('/admin/re-exam-portal', {
+              evaluationTemplateId: t.id,
+              syncedStudentId: m.studentId,
+              marksObtained: mark.reExamMark,
+              scheduledDate: new Date(mark.reExamDate),
+              remarks: mark.remarks || undefined,
+            });
+          }
+        }
       }
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);

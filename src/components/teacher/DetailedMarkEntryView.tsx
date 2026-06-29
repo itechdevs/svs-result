@@ -16,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { BSCalendarSelector } from '@/components/shared/ui/bs-calendar-selector';
 
 
 // ── Pure calculation helpers (exported for reuse) ─────────────────────────────
@@ -142,6 +143,11 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
     } else {
       updateOutcomeMark(student.id, templateId, outcomeName, { regularDate: value });
     }
+    triggerAutoSave();
+  };
+
+  const handleReExamDate = (outcomeName: string, templateId: string, value: string) => {
+    updateOutcomeMark(student.id, templateId, outcomeName, { reExamDate: value });
     triggerAutoSave();
   };
 
@@ -331,26 +337,14 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
                       </div>
                     </TableCell>
 
-                    {/* Regular: Date — shows assignment date from template (read-only) */}
+                    {/* Regular: Date */}
                     <TableCell className="text-center border-r border-border">
-                      {lo.regularDate ? (
-                        <div className="flex items-center justify-center gap-1.5 bg-blue-50/50 dark:bg-blue-950/20 py-1 px-2 rounded-md border border-blue-100 dark:border-blue-900/50 w-fit mx-auto">
-                          <Calendar className="w-3 h-3 text-blue-500 shrink-0" />
-                          <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400">
-                            {new Date(
-                              Number(lo.regularDate.split('-')[0]),
-                              Number(lo.regularDate.split('-')[1]) - 1,
-                              Number(lo.regularDate.split('-')[2])
-                            ).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: '2-digit',
-                              year: 'numeric',
-                            })}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-[10px] text-muted-foreground/40">—</span>
-                      )}
+                      <BSCalendarSelector
+                        value={m?.regularDate || lo.regularDate || ''}
+                        onChange={(val) => handleRegular(lo.name, lo.templateId!, 'regularDate', val, max)}
+                        disabled={readOnly}
+                        className="w-32 text-center mx-auto text-xs"
+                      />
                     </TableCell>
 
                     {/* Regular: Marks */}
@@ -377,23 +371,15 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
                       />
                     </TableCell>
 
-                    {/* Re-Exam: Date (read-only) */}
+                    {/* Re-Exam: Date */}
                     <TableCell className="text-center border-r border-border bg-orange-50/20 dark:bg-orange-950/5">
-                      {hasReExam && m?.reExamDate ? (
-                        <div className="flex items-center justify-center gap-1 bg-orange-50 dark:bg-orange-950/30 py-1 px-2 rounded-md border border-orange-200 dark:border-orange-900/50 w-fit mx-auto">
-                          <Calendar className="w-3 h-3 text-orange-500 shrink-0" />
-                          <span className="text-[10px] font-semibold text-orange-600 dark:text-orange-400">
-                            {new Date(
-                              Number(m.reExamDate.split('-')[0]),
-                              Number(m.reExamDate.split('-')[1]) - 1,
-                              Number(m.reExamDate.split('-')[2])
-                            ).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: '2-digit',
-                              year: 'numeric',
-                            })}
-                          </span>
-                        </div>
+                      {hasReExam ? (
+                        <BSCalendarSelector
+                          value={m?.reExamDate ?? ''}
+                          onChange={(val) => handleReExamDate(lo.name, lo.templateId!, val)}
+                          disabled={readOnly}
+                          className="w-32 text-center mx-auto text-xs"
+                        />
                       ) : (
                         <span className="text-[10px] text-muted-foreground/30">—</span>
                       )}
