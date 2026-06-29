@@ -31,10 +31,10 @@ export function calcObtainedMarks(
     if (!lo.templateId) return sum;
     const mark = getStudentMark(studentId, lo.templateId);
     const m = mark?.outcomeMarks[lo.name];
-    // Effective mark priority: re-exam > regular
+    // Final mark = MAX(regularMark, reExamMark)
     const finalMark =
       m?.reExamMark !== null && m?.reExamMark !== undefined
-        ? m.reExamMark
+        ? Math.max(m.reExamMark, m?.regularMark ?? 0)
         : m?.regularMark;
     return sum + (finalMark ?? 0);
   }, 0);
@@ -67,10 +67,10 @@ export function calcPassFail(
     if (!lo.templateId) return false;
     const mark = getStudentMark(studentId, lo.templateId);
     const m = mark?.outcomeMarks[lo.name];
-    // Effective mark priority: re-exam > regular
+    // Final mark = MAX(regularMark, reExamMark)
     const finalMark =
       m?.reExamMark !== null && m?.reExamMark !== undefined
-        ? m.reExamMark
+        ? Math.max(m.reExamMark, m?.regularMark ?? 0)
         : m?.regularMark;
     if (finalMark === null || finalMark === undefined) return false;
     return finalMark < (lo.passMarks ?? 0);
@@ -136,7 +136,7 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
     const m = mark?.outcomeMarks[lo.name];
     const finalMark =
       m?.reExamMark !== null && m?.reExamMark !== undefined
-        ? m.reExamMark
+        ? Math.max(m.reExamMark, m?.regularMark ?? 0)
         : m?.regularMark ?? 0;
     return sum + finalMark;
   }, 0);
@@ -257,10 +257,10 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
                 const m = markObj?.outcomeMarks[lo.name];
                 const max = lo.fullMarks ?? 100;
                 const pass = lo.passMarks ?? 0;
-                // Effective mark: re-exam > regular
+                // Final mark = MAX(regularMark, reExamMark)
                 const effectiveMark =
                   m?.reExamMark !== null && m?.reExamMark !== undefined
-                    ? m.reExamMark
+                    ? Math.max(m.reExamMark, m?.regularMark ?? 0)
                     : m?.regularMark ?? null;
                 const regFail =
                   m?.regularMark !== null &&

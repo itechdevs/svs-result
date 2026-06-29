@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import {
   Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
 } from "@/components/shared/ui/table";
+import { BSCalendarSelector } from "@/components/shared/ui/bs-calendar-selector";
 
 interface Props {
   student: Student;
@@ -301,11 +302,10 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
                         <span className="px-2 py-1 rounded font-bold font-mono text-sm bg-destructive/10 text-destructive">{originalMark}</span>
                       </TableCell>
                       <TableCell className="px-3 py-4 text-center border-r border-border bg-emerald-50/30 dark:bg-emerald-950/5">
-                        <Input
-                          type="date"
+                        <BSCalendarSelector
                           value={m?.reExamDate ?? ""}
-                          onChange={e => handleReExamDate(lo.name, e.target.value)}
-                          className="w-32 text-center border-emerald-300 dark:border-emerald-800/60 bg-transparent text-foreground h-9"
+                          onChange={val => handleReExamDate(lo.name, val)}
+                          className="w-32 text-center mx-auto text-xs border-emerald-300 dark:border-emerald-800/60 bg-transparent text-foreground h-9"
                         />
                       </TableCell>
                       <TableCell className="px-3 py-4 text-center border-r border-border bg-emerald-50/30 dark:bg-emerald-950/5">
