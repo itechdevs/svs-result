@@ -32,10 +32,10 @@ deploy-to-vps:
     - ssh-keyscan $VPS_HOST >> ~/.ssh/known_hosts
     - chmod 644 ~/.ssh/known_hosts
   script:
-    - ssh $VPS_USERNAME@$VPS_HOST "mkdir -p /var/www/svsresult"
-    - scp docker-compose.yaml $VPS_USERNAME@$VPS_HOST:/var/www/svsresult/docker-compose.yaml
+    - ssh $VPS_USERNAME@$VPS_HOST "mkdir -p /var/www/balkhuresult"
+    - scp docker-compose.yaml $VPS_USERNAME@$VPS_HOST:/var/www/balkhuresult/docker-compose.yaml
     - |
-      ssh $VPS_USERNAME@$VPS_HOST "cat > /var/www/svsresult/.env << 'ENVEOF'
+      ssh $VPS_USERNAME@$VPS_HOST "cat > /var/www/balkhuresult/.env << 'ENVEOF'
       DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       NEXTAUTH_URL=${NEXTAUTH_URL}
@@ -54,7 +54,7 @@ deploy-to-vps:
     - >
       ssh $VPS_USERNAME@$VPS_HOST "
         docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY &&
-        cd /var/www/svsresult &&
+        cd /var/www/balkhuresult &&
         IMAGE_NAME=$CI_REGISTRY_IMAGE:latest docker compose pull &&
         IMAGE_NAME=$CI_REGISTRY_IMAGE:latest docker compose up -d
       "
@@ -75,7 +75,7 @@ run-migrations:
     - ssh-keyscan $VPS_HOST >> ~/.ssh/known_hosts
     - chmod 644 ~/.ssh/known_hosts
   script:
-    - ssh $VPS_USERNAME@$VPS_HOST "cd /var/www/svsresult && docker compose exec -T web-service npx prisma migrate deploy"
+    - ssh $VPS_USERNAME@$VPS_HOST "cd /var/www/balkhuresult && docker compose exec -T web-service npx prisma migrate deploy"
   only:
     - main
     - master
