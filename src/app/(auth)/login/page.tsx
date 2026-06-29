@@ -16,9 +16,7 @@ const loginSchema = z.object({
     .string()
     .min(1, "Email address is required.")
     .email("Please enter a valid email address."),
-  password: z
-    .string()
-    .min(1, "Password is required.")
+  password: z.string().min(1, "Password is required."),
 });
 
 type LoginFields = z.infer<typeof loginSchema>;
@@ -28,7 +26,7 @@ type FieldErrors = Partial<Record<keyof LoginFields, string>>;
 
 /** Returns per-field Zod errors as a plain object. */
 function parseFieldErrors(
-  data: LoginFields
+  data: LoginFields,
 ): { success: true } | { success: false; errors: FieldErrors } {
   const result = loginSchema.safeParse(data);
   if (result.success) return { success: true };
@@ -43,13 +41,7 @@ function parseFieldErrors(
 
 // ─── FieldErrorMessage ────────────────────────────────────────────────────────
 
-function FieldErrorMessage({
-  id,
-  message,
-}: {
-  id: string;
-  message?: string;
-}) {
+function FieldErrorMessage({ id, message }: { id: string; message?: string }) {
   if (!message) return null;
   return (
     <p
@@ -84,18 +76,15 @@ function LoginForm() {
 
   // ── Validation ──────────────────────────────────────────────────────────────
 
-  const validate = useCallback(
-    (data: LoginFields): boolean => {
-      const result = parseFieldErrors(data);
-      if (result.success) {
-        setFieldErrors({});
-        return true;
-      }
-      setFieldErrors(result.errors);
-      return false;
-    },
-    []
-  );
+  const validate = useCallback((data: LoginFields): boolean => {
+    const result = parseFieldErrors(data);
+    if (result.success) {
+      setFieldErrors({});
+      return true;
+    }
+    setFieldErrors(result.errors);
+    return false;
+  }, []);
 
   // Re-validate on change only after the user has attempted to submit at least
   // once — prevents "screaming" validation on a fresh form.
@@ -157,12 +146,11 @@ function LoginForm() {
 
   return (
     <div className="w-full bg-card border border-border rounded-2xl shadow-lg overflow-hidden">
-
       {/* ── Card Header ── */}
       <div className="px-8 pt-8 pb-6 text-center">
         <div className="flex justify-center mb-5">
           <img
-            src="/SVS LOGO NEW.png"
+            src="https://storage.itechosnepal.com/svs/school-general/3ceaa026-6b4d-4cb9-8660-e420746e46cc.jpg"
             alt="SVS School Logo"
             className="h-16 w-auto object-contain"
           />
@@ -179,7 +167,6 @@ function LoginForm() {
 
       {/* ── Card Body ── */}
       <div className="px-8 pb-8 space-y-6">
-
         {/* Server / auth error banner */}
         {serverError && (
           <div
@@ -191,13 +178,14 @@ function LoginForm() {
               className="mt-0.5 shrink-0 w-4 h-4 text-destructive"
               aria-hidden="true"
             />
-            <p className="text-sm text-destructive leading-snug">{serverError}</p>
+            <p className="text-sm text-destructive leading-snug">
+              {serverError}
+            </p>
           </div>
         )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-
           {/* Email */}
           <div className="space-y-1.5">
             <label
@@ -217,10 +205,11 @@ function LoginForm() {
               aria-required="true"
               aria-invalid={emailInvalid}
               aria-describedby={emailInvalid ? emailErrorId : undefined}
-              className={`h-10 px-3.5 text-sm rounded-xl transition-colors ${emailInvalid
-                ? "border-destructive focus-visible:ring-destructive/30"
-                : ""
-                }`}
+              className={`h-10 px-3.5 text-sm rounded-xl transition-colors ${
+                emailInvalid
+                  ? "border-destructive focus-visible:ring-destructive/30"
+                  : ""
+              }`}
             />
             <FieldErrorMessage id={emailErrorId} message={fieldErrors.email} />
           </div>
@@ -245,10 +234,11 @@ function LoginForm() {
                 aria-required="true"
                 aria-invalid={passwordInvalid}
                 aria-describedby={passwordInvalid ? passwordErrorId : undefined}
-                className={`h-10 px-3.5 pr-10 text-sm rounded-xl transition-colors ${passwordInvalid
-                  ? "border-destructive focus-visible:ring-destructive/30"
-                  : ""
-                  }`}
+                className={`h-10 px-3.5 pr-10 text-sm rounded-xl transition-colors ${
+                  passwordInvalid
+                    ? "border-destructive focus-visible:ring-destructive/30"
+                    : ""
+                }`}
               />
               <button
                 type="button"
@@ -287,7 +277,6 @@ function LoginForm() {
             )}
           </Button>
         </form>
-
       </div>
     </div>
   );
