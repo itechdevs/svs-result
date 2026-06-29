@@ -4,10 +4,10 @@ services:
       context: .
       dockerfile: Dockerfile
     image: ${IMAGE_NAME:-svsresult-app}
-    container_name: svsresult-app
+    container_name: balkhuresult-app
     restart: unless-stopped
     ports:
-      - "7002:3000"
+      - "7003:3000"
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
@@ -19,10 +19,10 @@ services:
 
   postgres:
     image: postgres:16-alpine
-    container_name: svsresult-postgres
+    container_name: balkhuresult-postgres
     restart: unless-stopped
     ports:
-      - "5464:5432"
+      - "5465:5432"
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
