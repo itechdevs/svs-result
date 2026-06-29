@@ -88,7 +88,8 @@ export function MarksProvider({ children }: { children: React.ReactNode }) {
 
   // Always fetch results for the selected evaluation group
   const { data: resultsData = [] } = useStudentEvaluationResults(
-    evalIds.length > 0 ? { limit: 1000 } : {}
+    evalIds.length > 0 ? { limit: 1000, evaluationTemplateIds: evalIds } : {},
+    { refetchOnWindowFocus: false, refetchOnMount: false, staleTime: Infinity }
   );
 
   const bulkSave = useBulkSaveMarks();
