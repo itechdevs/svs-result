@@ -115,7 +115,7 @@ export function TeacherSidebar() {
                 {item.hasSubMenu && !isCollapsed && (
                   <ChevronDown size={14} className={cn("ml-auto transition-transform", evaluationsExpanded && "rotate-180")} />
                 )}
-                {isActive && !isCollapsed && !item.hasSubMenu && (
+                {isActive && !isCollapsed && (!item.hasSubMenu || pathname !== item.href) && (
                   <span className="absolute right-3 w-1.5 h-1.5 rounded-full bg-sidebar-primary" />
                 )}
               </Link>
@@ -131,6 +131,8 @@ export function TeacherSidebar() {
                       searchParams.get('subject') === subject &&
                       (
                         pathname === ROUTES.TEACHER_EVALUATIONS ||
+                        pathname === "/teacher/create-evaluation" ||
+                        pathname.startsWith("/teacher/edit-evaluation") ||
                         pathname.startsWith(ROUTES.TEACHER_MARK_ENTRY) ||
                         pathname.startsWith("/teacher/result-compilation")
                       );
