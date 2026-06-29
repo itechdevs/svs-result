@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, CheckCircle, AlertTriangle, Calendar, Save } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
+import { formatToBSFullString } from '@/lib/bs-calendar';
 import { Student, EvaluationPlan, StudentOutcomeMark, OutcomeMark } from '@/types/academic';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { BSCalendarSelector } from '@/components/shared/ui/bs-calendar-selector';
 
 
 // ── Pure calculation helpers (exported for reuse) ─────────────────────────────
@@ -97,35 +99,10 @@ interface Props {
 
 export default function DetailedMarkEntryView({ student, evaluation, getStudentMark, updateOutcomeMark, handleSaveAll, readOnly = false }: Props) {
   const router = useRouter();
-  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
-  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   const marks = getStudentMark(student.id, evaluation.id);
   const outcomes = evaluation.learningOutcomes;
-
-  const triggerAutoSave = useCallback(() => {
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current);
-    }
-    setAutoSaveStatus('saving');
-    autoSaveTimerRef.current = setTimeout(async () => {
-      try {
-        await handleSaveAll();
-        setAutoSaveStatus('saved');
-        setTimeout(() => setAutoSaveStatus('idle'), 2000);
-      } catch (err) {
-        setAutoSaveStatus('idle');
-      }
-    }, 700);
-  }, [handleSaveAll]);
-
-  useEffect(() => {
-    return () => {
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current);
-      }
-    };
-  }, []);
 
   // Group outcomes by taskType for row-spanning
   const grouped = outcomes.reduce<Record<string, typeof outcomes>>((acc, lo) => {
@@ -142,14 +119,14 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
     } else {
       updateOutcomeMark(student.id, templateId, outcomeName, { regularDate: value });
     }
-    triggerAutoSave();
   };
 
-
+  const handleReExamDate = (outcomeName: string, templateId: string, value: string) => {
+    updateOutcomeMark(student.id, templateId, outcomeName, { reExamDate: value });
+  };
 
   const handleRemarks = (outcomeName: string, templateId: string, value: string) => {
     updateOutcomeMark(student.id, templateId, outcomeName, { remarks: value });
-    triggerAutoSave();
   };
 
   // For display: use effective mark (re-exam > regular)
@@ -196,7 +173,7 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
               {evaluation.date && evaluation.date !== 'TBD' && (
                 <span className="ml-2 inline-flex items-center gap-1 text-[10px] text-blue-600 dark:text-blue-400">
                   <Calendar className="w-3 h-3" />
-                  {evaluation.date}
+                  {formatToBSFullString(evaluation.date)}
                 </span>
               )}
             </p>
@@ -210,14 +187,36 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
             {status}
           </span>
           <span className="font-bold text-sm text-foreground">{obtained} / {fullTotal}</span>
-          {autoSaveStatus === 'saving' && !readOnly && (
-            <span className="text-xs text-muted-foreground animate-pulse">Saving...</span>
-          )}
-          {autoSaveStatus === 'saved' && !readOnly && (
-            <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-              <CheckCircle className="w-3 h-3" />
-              Saved
-            </span>
+          {!readOnly && (
+            <button
+              onClick={async () => {
+                setSaveStatus('saving');
+                try {
+                  await handleSaveAll();
+                  setSaveStatus('saved');
+                  setTimeout(() => setSaveStatus('idle'), 2500);
+                } catch {
+                  setSaveStatus('idle');
+                }
+              }}
+              disabled={saveStatus === 'saving'}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border',
+                saveStatus === 'saved'
+                  ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                  : saveStatus === 'saving'
+                    ? 'opacity-60 cursor-not-allowed bg-muted text-muted-foreground border-border'
+                    : 'bg-primary text-primary-foreground border-primary hover:bg-primary/90',
+              )}
+            >
+              {saveStatus === 'saved' ? (
+                <><CheckCircle className="w-3.5 h-3.5" /> Saved</>
+              ) : saveStatus === 'saving' ? (
+                <><svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg> Saving...</>
+              ) : (
+                <><Save className="w-3.5 h-3.5" /> Save</>
+              )}
+            </button>
           )}
         </div>
       </div>
@@ -331,26 +330,14 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
                       </div>
                     </TableCell>
 
-                    {/* Regular: Date — shows assignment date from template (read-only) */}
+                    {/* Regular: Date */}
                     <TableCell className="text-center border-r border-border">
-                      {lo.regularDate ? (
-                        <div className="flex items-center justify-center gap-1.5 bg-blue-50/50 dark:bg-blue-950/20 py-1 px-2 rounded-md border border-blue-100 dark:border-blue-900/50 w-fit mx-auto">
-                          <Calendar className="w-3 h-3 text-blue-500 shrink-0" />
-                          <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400">
-                            {new Date(
-                              Number(lo.regularDate.split('-')[0]),
-                              Number(lo.regularDate.split('-')[1]) - 1,
-                              Number(lo.regularDate.split('-')[2])
-                            ).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: '2-digit',
-                              year: 'numeric',
-                            })}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-[10px] text-muted-foreground/40">—</span>
-                      )}
+                      <BSCalendarSelector
+                        value={m?.regularDate || lo.regularDate || ''}
+                        onChange={(val) => handleRegular(lo.name, lo.templateId!, 'regularDate', val, max)}
+                        disabled={readOnly}
+                        className="w-32 text-center mx-auto text-xs"
+                      />
                     </TableCell>
 
                     {/* Regular: Marks */}
@@ -377,23 +364,15 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
                       />
                     </TableCell>
 
-                    {/* Re-Exam: Date (read-only) */}
+                    {/* Re-Exam: Date */}
                     <TableCell className="text-center border-r border-border bg-orange-50/20 dark:bg-orange-950/5">
-                      {hasReExam && m?.reExamDate ? (
-                        <div className="flex items-center justify-center gap-1 bg-orange-50 dark:bg-orange-950/30 py-1 px-2 rounded-md border border-orange-200 dark:border-orange-900/50 w-fit mx-auto">
-                          <Calendar className="w-3 h-3 text-orange-500 shrink-0" />
-                          <span className="text-[10px] font-semibold text-orange-600 dark:text-orange-400">
-                            {new Date(
-                              Number(m.reExamDate.split('-')[0]),
-                              Number(m.reExamDate.split('-')[1]) - 1,
-                              Number(m.reExamDate.split('-')[2])
-                            ).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: '2-digit',
-                              year: 'numeric',
-                            })}
-                          </span>
-                        </div>
+                      {hasReExam ? (
+                        <BSCalendarSelector
+                          value={m?.reExamDate ?? ''}
+                          onChange={(val) => handleReExamDate(lo.name, lo.templateId!, val)}
+                          disabled={readOnly}
+                          className="w-32 text-center mx-auto text-xs"
+                        />
                       ) : (
                         <span className="text-[10px] text-muted-foreground/30">—</span>
                       )}
@@ -467,7 +446,7 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Scheduled Date</p>
             <p className="text-sm font-semibold text-foreground flex items-center gap-1">
               <Calendar className="w-4 h-4 text-blue-500" />
-              {evaluation.date}
+              {formatToBSFullString(evaluation.date)}
             </p>
           </div>
         )}
