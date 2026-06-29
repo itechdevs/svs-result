@@ -71,8 +71,20 @@ export function MarksProvider({ children }: { children: React.ReactNode }) {
   const [localMarks, setLocalMarks] = useState<StudentOutcomeMark[]>([]);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // Track which evalId group has been initialized — only load from DB once per group
+  const initializedEvalKey = useRef<string>('');
 
   const evalIds = useMemo(() => evaluations.map((e) => e.id), [evaluations]);
+
+  const handleSetEvaluations = useCallback((evals: EvaluationTemplate[]) => {
+    const newKey = evals.map(e => e.id).join(',');
+    if (newKey !== initializedEvalKey.current) {
+      // New group — reset so DB data loads fresh
+      initializedEvalKey.current = '';
+      setLocalMarks([]);
+    }
+    setEvaluations(evals);
+  }, []);
 
   // Always fetch results for the selected evaluation group
   const { data: resultsData = [] } = useStudentEvaluationResults(
@@ -122,6 +134,11 @@ export function MarksProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (evaluations.length === 0 || resultsData.length === 0) return;
 
+    const currentKey = evalIds.join(',');
+    // Only initialize from DB once per evaluation group — never overwrite local edits
+    if (initializedEvalKey.current === currentKey) return;
+    initializedEvalKey.current = currentKey;
+
     // Group results by (studentId, evalId) → ONE StudentOutcomeMark per (student, template)
     // Use template name as the outcomeMarks key (matches DetailedMarkEntryView lookup)
     const grouped = new Map<string, StudentOutcomeMark>();
@@ -164,15 +181,7 @@ export function MarksProvider({ children }: { children: React.ReactNode }) {
       });
     }
 
-    setLocalMarks((prev) => {
-      // Merge: keep any local edits that are NEWER than DB data
-      // If a record doesn't exist in DB yet, keep any locally created one
-      const dbList = Array.from(grouped.values());
-      const localOnly = prev.filter(
-        (m) => !grouped.has(`${m.studentId}::${m.evaluationId}`)
-      );
-      return [...dbList, ...localOnly];
-    });
+    setLocalMarks(Array.from(grouped.values()));
   }, [resultsData, evalIds.join(',')]);
 
   const getStudentMark = useCallback(
@@ -325,7 +334,7 @@ export function MarksProvider({ children }: { children: React.ReactNode }) {
     isSaving: bulkSave.isPending,
     saveError,
     saved,
-    setEvaluations,
+    setEvaluations: handleSetEvaluations,
   };
 
   return <MarksContext.Provider value={value}>{children}</MarksContext.Provider>;

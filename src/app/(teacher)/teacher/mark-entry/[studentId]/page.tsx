@@ -1,12 +1,14 @@
 'use client';
 
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useStudents } from '@/hooks/use-students';
 import { useEvaluationTemplates } from '@/hooks/use-evaluations';
 import DetailedMarkEntryView from '@/components/teacher/DetailedMarkEntryView';
 import { Student, EvaluationPlan } from '@/types/academic';
 import { useMarksContext } from '@/contexts/marks-context';
+import { CheckCircle, Save } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 import SanskarLoader from '@/components/shared/SanskarLoader';
 
@@ -18,8 +20,8 @@ export default function StudentMarkEntryPage() {
   const { data: studentsData, isLoading: isStudentsLoading } = useStudents({ limit: 500 });
   const { data: templatesData = [], isLoading: isTemplatesLoading } = useEvaluationTemplates();
 
-  // Pull shared marks state from context (same instance as MarkEntryOverviewTable)
   const { getStudentMark, updateOutcomeMark, setEvaluations, handleSaveAll } = useMarksContext();
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   const isLoading = isStudentsLoading || isTemplatesLoading;
 
@@ -173,6 +175,42 @@ export default function StudentMarkEntryPage() {
 
   return (
     <div className="space-y-12 pb-20">
+      {studentId === 'all' && (
+        <div className="sticky top-4 z-50 flex items-center justify-between bg-card/95 backdrop-blur-sm px-4 py-3 rounded-xl border border-border shadow-md">
+          <p className="text-sm font-semibold text-foreground">
+            {studentsToRender.length} student{studentsToRender.length !== 1 ? 's' : ''} · {evaluation?.subject} · {evaluation?.title}
+          </p>
+          <button
+            onClick={async () => {
+              setSaveStatus('saving');
+              try {
+                await handleSaveAll();
+                setSaveStatus('saved');
+                setTimeout(() => setSaveStatus('idle'), 2500);
+              } catch {
+                setSaveStatus('idle');
+              }
+            }}
+            disabled={saveStatus === 'saving'}
+            className={cn(
+              'flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-colors border',
+              saveStatus === 'saved'
+                ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                : saveStatus === 'saving'
+                  ? 'opacity-60 cursor-not-allowed bg-muted text-muted-foreground border-border'
+                  : 'bg-primary text-primary-foreground border-primary hover:bg-primary/90',
+            )}
+          >
+            {saveStatus === 'saved' ? (
+              <><CheckCircle className="w-3.5 h-3.5" /> All Saved</>
+            ) : saveStatus === 'saving' ? (
+              <><svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg> Saving All...</>
+            ) : (
+              <><Save className="w-3.5 h-3.5" /> Save All</>
+            )}
+          </button>
+        </div>
+      )}
       {studentsToRender.map((student) => (
         <DetailedMarkEntryView
           key={student.id}

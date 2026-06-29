@@ -204,6 +204,8 @@ export function useStudentEvaluationResults(filters: ListResultsFilters = {}, op
       return apiClient.get(`/evaluations?${params.toString()}`);
     },
     enabled: options?.enabled,
+    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000,
   });
 }
 

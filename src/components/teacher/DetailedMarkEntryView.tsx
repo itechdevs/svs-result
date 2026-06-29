@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, CheckCircle, AlertTriangle, Calendar, Save } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -99,35 +99,10 @@ interface Props {
 
 export default function DetailedMarkEntryView({ student, evaluation, getStudentMark, updateOutcomeMark, handleSaveAll, readOnly = false }: Props) {
   const router = useRouter();
-  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
-  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   const marks = getStudentMark(student.id, evaluation.id);
   const outcomes = evaluation.learningOutcomes;
-
-  const triggerAutoSave = useCallback(() => {
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current);
-    }
-    setAutoSaveStatus('saving');
-    autoSaveTimerRef.current = setTimeout(async () => {
-      try {
-        await handleSaveAll();
-        setAutoSaveStatus('saved');
-        setTimeout(() => setAutoSaveStatus('idle'), 2000);
-      } catch (err) {
-        setAutoSaveStatus('idle');
-      }
-    }, 700);
-  }, [handleSaveAll]);
-
-  useEffect(() => {
-    return () => {
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current);
-      }
-    };
-  }, []);
 
   // Group outcomes by taskType for row-spanning
   const grouped = outcomes.reduce<Record<string, typeof outcomes>>((acc, lo) => {
@@ -144,19 +119,14 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
     } else {
       updateOutcomeMark(student.id, templateId, outcomeName, { regularDate: value });
     }
-    triggerAutoSave();
   };
 
   const handleReExamDate = (outcomeName: string, templateId: string, value: string) => {
     updateOutcomeMark(student.id, templateId, outcomeName, { reExamDate: value });
-    triggerAutoSave();
   };
-
-
 
   const handleRemarks = (outcomeName: string, templateId: string, value: string) => {
     updateOutcomeMark(student.id, templateId, outcomeName, { remarks: value });
-    triggerAutoSave();
   };
 
   // For display: use effective mark (re-exam > regular)
@@ -217,14 +187,36 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
             {status}
           </span>
           <span className="font-bold text-sm text-foreground">{obtained} / {fullTotal}</span>
-          {autoSaveStatus === 'saving' && !readOnly && (
-            <span className="text-xs text-muted-foreground animate-pulse">Saving...</span>
-          )}
-          {autoSaveStatus === 'saved' && !readOnly && (
-            <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-              <CheckCircle className="w-3 h-3" />
-              Saved
-            </span>
+          {!readOnly && (
+            <button
+              onClick={async () => {
+                setSaveStatus('saving');
+                try {
+                  await handleSaveAll();
+                  setSaveStatus('saved');
+                  setTimeout(() => setSaveStatus('idle'), 2500);
+                } catch {
+                  setSaveStatus('idle');
+                }
+              }}
+              disabled={saveStatus === 'saving'}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border',
+                saveStatus === 'saved'
+                  ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                  : saveStatus === 'saving'
+                    ? 'opacity-60 cursor-not-allowed bg-muted text-muted-foreground border-border'
+                    : 'bg-primary text-primary-foreground border-primary hover:bg-primary/90',
+              )}
+            >
+              {saveStatus === 'saved' ? (
+                <><CheckCircle className="w-3.5 h-3.5" /> Saved</>
+              ) : saveStatus === 'saving' ? (
+                <><svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg> Saving...</>
+              ) : (
+                <><Save className="w-3.5 h-3.5" /> Save</>
+              )}
+            </button>
           )}
         </div>
       </div>
