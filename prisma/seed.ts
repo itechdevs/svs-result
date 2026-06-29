@@ -11,7 +11,7 @@ async function main() {
   // Admin User
   await prisma.user.create({
     data: {
-      email: "sanskarvschool@gmail.com",
+      email: "schooladmin@gmail.com",
       passwordHash,
       role: UserRole.ADMIN,
       name: "Admin Account",
