@@ -269,14 +269,14 @@ export default function EvaluationsTab({
                 </div>
 
                 <div>
-                  <h3 className="font-bold text-sm text-foreground leading-snug line-clamp-1">{evalPlan.title}</h3>
+                  <h3 className="font-bold text-sm text-foreground leading-snug truncate" title={evalPlan.title}>{evalPlan.title}</h3>
                 </div>
 
                 <div>
                   <label className="text-[10px] font-extrabold text-muted-foreground uppercase block mb-1">
                     Unit Title
                   </label>
-                  <div className="w-full bg-muted/40 border border-border rounded-lg p-2.5 text-xs text-foreground font-medium min-h-[34px]">
+                  <div className="w-full bg-muted/40 border border-border rounded-lg px-2.5 py-2 text-xs text-foreground font-medium truncate" title={evalPlan.unit || undefined}>
                     {evalPlan.unit || <span className="text-muted-foreground italic">Not set</span>}
                   </div>
                 </div>

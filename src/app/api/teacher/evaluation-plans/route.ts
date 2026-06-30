@@ -9,7 +9,7 @@ const createPlanSchema = z.object({
   gradeLevel: z.string().min(1),
   gradeConfigId: z.string().optional(),
   examId: z.string().cuid().optional(),
-  name: z.string().min(1).max(100),
+  name: z.string().min(1),
   fullMarks: z.number().min(0),
   passMarks: z.number().min(0),
   weightage: z.number().min(0).max(100),
