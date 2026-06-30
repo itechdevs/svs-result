@@ -190,7 +190,7 @@ export function useDeleteEvaluationTemplate() {
 
 // ─── Evaluation Results Hooks ──────────────────────────────────────────────────
 
-export function useStudentEvaluationResults(filters: ListResultsFilters = {}, options?: { enabled?: boolean }) {
+export function useStudentEvaluationResults(filters: ListResultsFilters = {}, options?: { enabled?: boolean; refetchOnWindowFocus?: boolean; refetchOnMount?: boolean; staleTime?: number }) {
   return useQuery<StudentEvaluationResult[]>({
     queryKey: ["student-evaluation-results", filters],
     queryFn: async () => {
@@ -204,6 +204,9 @@ export function useStudentEvaluationResults(filters: ListResultsFilters = {}, op
       return apiClient.get(`/evaluations?${params.toString()}`);
     },
     enabled: options?.enabled,
+    refetchOnWindowFocus: options?.refetchOnWindowFocus ?? true,
+    refetchOnMount: options?.refetchOnMount ?? true,
+    staleTime: options?.staleTime ?? 0,
   });
 }
 

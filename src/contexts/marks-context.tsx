@@ -15,6 +15,7 @@ import {
   useBulkSaveMarks,
   EvaluationTemplate,
 } from '@/hooks/use-evaluations';
+import { apiClient } from '@/lib/api-client';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -70,12 +71,25 @@ export function MarksProvider({ children }: { children: React.ReactNode }) {
   const [localMarks, setLocalMarks] = useState<StudentOutcomeMark[]>([]);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // Track which evalId group has been initialized — only load from DB once per group
+  const initializedEvalKey = useRef<string>('');
 
   const evalIds = useMemo(() => evaluations.map((e) => e.id), [evaluations]);
 
+  const handleSetEvaluations = useCallback((evals: EvaluationTemplate[]) => {
+    const newKey = evals.map(e => e.id).join(',');
+    if (newKey !== initializedEvalKey.current) {
+      // New group — reset so DB data loads fresh
+      initializedEvalKey.current = '';
+      setLocalMarks([]);
+    }
+    setEvaluations(evals);
+  }, []);
+
   // Always fetch results for the selected evaluation group
   const { data: resultsData = [] } = useStudentEvaluationResults(
-    evalIds.length > 0 ? { limit: 1000 } : {}
+    evalIds.length > 0 ? { limit: 1000, evaluationTemplateIds: evalIds } : {},
+    { refetchOnWindowFocus: false, refetchOnMount: false, staleTime: Infinity }
   );
 
   const bulkSave = useBulkSaveMarks();
@@ -121,6 +135,11 @@ export function MarksProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (evaluations.length === 0 || resultsData.length === 0) return;
 
+    const currentKey = evalIds.join(',');
+    // Only initialize from DB once per evaluation group — never overwrite local edits
+    if (initializedEvalKey.current === currentKey) return;
+    initializedEvalKey.current = currentKey;
+
     // Group results by (studentId, evalId) → ONE StudentOutcomeMark per (student, template)
     // Use template name as the outcomeMarks key (matches DetailedMarkEntryView lookup)
     const grouped = new Map<string, StudentOutcomeMark>();
@@ -163,15 +182,7 @@ export function MarksProvider({ children }: { children: React.ReactNode }) {
       });
     }
 
-    setLocalMarks((prev) => {
-      // Merge: keep any local edits that are NEWER than DB data
-      // If a record doesn't exist in DB yet, keep any locally created one
-      const dbList = Array.from(grouped.values());
-      const localOnly = prev.filter(
-        (m) => !grouped.has(`${m.studentId}::${m.evaluationId}`)
-      );
-      return [...dbList, ...localOnly];
-    });
+    setLocalMarks(Array.from(grouped.values()));
   }, [resultsData, evalIds.join(',')]);
 
   const getStudentMark = useCallback(
@@ -190,6 +201,33 @@ export function MarksProvider({ children }: { children: React.ReactNode }) {
       patch: Partial<OutcomeMark>
     ) => {
       setLocalMarks((prev) => {
+        const isDatePatch = 'regularDate' in patch;
+
+        if (isDatePatch) {
+          // Propagate the regularDate update to all students for this template/outcome
+          return prev.map((m) => {
+            if (m.evaluationId === evalId) {
+              const existing = m.outcomeMarks[outcomeName] ?? {
+                regularMark: null,
+                regularDate: '',
+                supportMark: null,
+                supportDate: '',
+                reExamMark: null,
+                reExamDate: '',
+                remarks: '',
+              };
+              return {
+                ...m,
+                outcomeMarks: {
+                  ...m.outcomeMarks,
+                  [outcomeName]: { ...existing, regularDate: patch.regularDate! },
+                },
+              };
+            }
+            return m;
+          });
+        }
+
         const idx = prev.findIndex(
           (m) => m.studentId === studentId && m.evaluationId === evalId
         );
@@ -251,6 +289,31 @@ export function MarksProvider({ children }: { children: React.ReactNode }) {
             };
           }),
         });
+
+        // Save template regular date (scheduledDate) if changed
+        const firstMark = relevantMarks[0]?.outcomeMarks[t.name];
+        const newRegDate = firstMark?.regularDate;
+        const oldRegDate = t.scheduledDate ? new Date(t.scheduledDate).toISOString().split('T')[0] : '';
+        if (newRegDate && newRegDate !== oldRegDate) {
+          await apiClient.patch(`/teacher/evaluation-plans/${t.id}`, {
+            scheduledDate: new Date(newRegDate),
+          });
+          t.scheduledDate = new Date(newRegDate).toISOString();
+        }
+
+        // Save student-specific re-exam date if changed
+        for (const m of relevantMarks) {
+          const mark = m.outcomeMarks[t.name];
+          if (mark?.reExamMark !== null && mark?.reExamMark !== undefined && mark?.reExamDate) {
+            await apiClient.post('/admin/re-exam-portal', {
+              evaluationTemplateId: t.id,
+              syncedStudentId: m.studentId,
+              marksObtained: mark.reExamMark,
+              scheduledDate: new Date(mark.reExamDate),
+              remarks: mark.remarks || undefined,
+            });
+          }
+        }
       }
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
@@ -272,7 +335,7 @@ export function MarksProvider({ children }: { children: React.ReactNode }) {
     isSaving: bulkSave.isPending,
     saveError,
     saved,
-    setEvaluations,
+    setEvaluations: handleSetEvaluations,
   };
 
   return <MarksContext.Provider value={value}>{children}</MarksContext.Provider>;

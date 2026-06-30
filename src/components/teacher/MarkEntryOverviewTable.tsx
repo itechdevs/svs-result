@@ -123,10 +123,42 @@ export default function MarkEntryOverviewTable() {
     return 'NONE';
   }, [evalIds, resultsData]);
 
-  const classStudents = useMemo(
-    () => studentsData?.students ?? [],
-    [studentsData],
-  );
+  const classStudents = useMemo(() => {
+    const students = studentsData?.students ?? [];
+    if (evalIds.length === 0) return students;
+
+    return [...students].sort((a, b) => {
+      const getStudentGroup = (sid: string) => {
+        const hasReExam = evalIds.some(eid => {
+          const r = resultsData.find(r => r.evaluationTemplateId === eid && r.syncedStudentId === sid);
+          return !!r?.reExamResult;
+        });
+        const hasFail = outcomeColumns.some(col => {
+          const m = getStudentMark(sid, col.evalId)?.outcomeMarks[col.name];
+          const v = m?.reExamMark !== null && m?.reExamMark !== undefined
+            ? Math.max(m.reExamMark, m?.regularMark ?? 0) : m?.regularMark ?? 0;
+          return (m?.regularMark !== null && m?.regularMark !== undefined) && v < col.passMarks;
+        });
+        if (!hasFail && !hasReExam) return 0; // Pass, no reexam
+        if (!hasFail && hasReExam) return 1;  // Pass via reexam
+        if (hasFail && hasReExam) return 2;   // Still fail, reexam given
+        return 3;                              // Fail, no reexam
+      };
+
+      const groupA = getStudentGroup(a.id);
+      const groupB = getStudentGroup(b.id);
+      if (groupA !== groupB) return groupA - groupB;
+
+      // Within same group sort by total marks descending
+      const total = (sid: string) => outcomeColumns.reduce((sum, col) => {
+        const m = getStudentMark(sid, col.evalId)?.outcomeMarks[col.name];
+        const v = m?.reExamMark !== null && m?.reExamMark !== undefined
+          ? Math.max(m.reExamMark, m?.regularMark ?? 0) : m?.regularMark ?? 0;
+        return sum + v;
+      }, 0);
+      return total(b.id) - total(a.id);
+    });
+  }, [studentsData, evalIds, resultsData, outcomeColumns, getStudentMark]);
 
   const handleMarkChange = (
     studentId: string,
@@ -385,10 +417,11 @@ export default function MarkEntryOverviewTable() {
                     // ── Per-student calculations ────────────────
                     const totalObtained = outcomeColumns.reduce((sum, col) => {
                       const mark = getStudentMark(student.id, col.evalId);
-                      const val = mark?.outcomeMarks[col.name]?.regularMark;
-                      return val !== null && val !== undefined
-                        ? sum + val
-                        : sum;
+                      const m = mark?.outcomeMarks[col.name];
+                      const val = m?.reExamMark !== null && m?.reExamMark !== undefined
+                        ? Math.max(m.reExamMark, m?.regularMark ?? 0)
+                        : m?.regularMark;
+                      return val !== null && val !== undefined ? sum + val : sum;
                     }, 0);
 
                     const totalFull = outcomeColumns.reduce(
@@ -398,7 +431,10 @@ export default function MarkEntryOverviewTable() {
 
                     const enteredCount = outcomeColumns.filter((col) => {
                       const mark = getStudentMark(student.id, col.evalId);
-                      const val = mark?.outcomeMarks[col.name]?.regularMark;
+                      const m = mark?.outcomeMarks[col.name];
+                      const val = m?.reExamMark !== null && m?.reExamMark !== undefined
+                        ? Math.max(m.reExamMark, m?.regularMark ?? 0)
+                        : m?.regularMark;
                       return val !== null && val !== undefined;
                     }).length;
 
@@ -410,10 +446,11 @@ export default function MarkEntryOverviewTable() {
                     // A column fails if mark entered AND below passMarks
                     const failedCols = outcomeColumns.filter((col) => {
                       const mark = getStudentMark(student.id, col.evalId);
-                      const val = mark?.outcomeMarks[col.name]?.regularMark;
-                      return (
-                        val !== null && val !== undefined && val < col.passMarks
-                      );
+                      const m = mark?.outcomeMarks[col.name];
+                      const val = m?.reExamMark !== null && m?.reExamMark !== undefined
+                        ? Math.max(m.reExamMark, m?.regularMark ?? 0)
+                        : m?.regularMark;
+                      return val !== null && val !== undefined && val < col.passMarks;
                     });
 
                     const hasMarks = enteredCount > 0;

@@ -36,10 +36,10 @@ const NAV_ITEMS = [
 
 export function Sidebar({ role = "teacher" }: SidebarProps) {
   const pathname = usePathname();
-  // Extract current tab from pathname
-  // "/" -> dashboard, "/evaluations" -> evaluations
-  const pathParts = pathname.split('/dashboard').filter(Boolean);
-  const currentTab = pathParts.length === 0 ? "dashboard" : pathParts[0];
+  // Extract current tab from last pathname segment
+  // "/teacher/create-evaluation" -> "create-evaluation", "/" -> "dashboard"
+  const lastSegment = pathname.split('/').filter(Boolean).pop() ?? "";
+  const currentTab = lastSegment || "dashboard";
   const isAdmin = role === "admin";
   const { state, isMobile, openMobile, setOpenMobile } = useSidebar();
   const isCollapsed = state === "collapsed" && !isMobile;
