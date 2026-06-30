@@ -342,8 +342,10 @@ export default function ReExamPortalTab() {
       </div>
 
       {/* Failed Students Table */}
-      <div className="bg-card text-card-foreground border border-border rounded-xl shadow-sm overflow-hidden">
-        {/* Table Header Bar */}
+      <>
+        {/* Desktop View */}
+        <div className="hidden sm:block bg-card text-card-foreground border border-border rounded-xl shadow-sm overflow-hidden">
+          {/* Table Header Bar */}
         <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-border bg-muted/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
             <h3 className="font-bold text-sm text-foreground">
@@ -537,6 +539,103 @@ export default function ReExamPortalTab() {
           </div>
         )}
       </div>
+
+      {/* Mobile View */}
+      <div className="block sm:hidden space-y-4 pb-4">
+        {/* Mobile Header Text */}
+        <div className="px-1">
+          <h2 className="text-xl font-bold text-teal-400">Failed students registry</h2>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            {groupedRows.length} student{groupedRows.length !== 1 ? 's' : ''} · Tap view to enter re-exam marks
+          </p>
+        </div>
+
+        {/* Mobile Cards */}
+        {pagedRows.length === 0 ? (
+          <div className="bg-card rounded-xl border border-border p-8 text-center text-sm text-muted-foreground">
+             No failed students found matching the current filters.
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {pagedRows.map((row) => {
+              const firstEvalId = row.evaluationIds[0];
+              const viewHref = profile?.role === "ADMIN"
+                ? `/admin/re-exam-portal/${row.studentId}/${firstEvalId}`
+                : `/teacher/re-exam-portal/${row.studentId}/${firstEvalId}`;
+
+              return (
+                <div key={`${row.studentId}-${row.cardId}`} className="bg-card rounded-xl border border-border p-4 flex flex-col gap-3">
+                  {/* Top Row: Avatar, Name, View Button */}
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-bold text-sm text-foreground">
+                        {row.studentName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-sm text-foreground leading-tight">{row.studentName}</h3>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">Roll no. {row.rollNumber}</p>
+                      </div>
+                    </div>
+                    <Link
+                      href={viewHref}
+                      className="px-3 py-1.5 border border-border rounded-lg text-xs font-bold hover:bg-muted transition-colors flex items-center gap-1.5"
+                    >
+                      <Eye className="w-3.5 h-3.5" /> View
+                    </Link>
+                  </div>
+
+                  {/* Class & Subject Badges */}
+                  <div className="flex gap-2 flex-wrap">
+                    <span className="text-[10px] font-bold bg-muted/60 text-muted-foreground px-2.5 py-1 rounded-md">
+                      {row.grade}
+                    </span>
+                    <span className="text-[10px] font-bold bg-muted/60 text-muted-foreground px-2.5 py-1 rounded-md">
+                      {row.subject}
+                    </span>
+                  </div>
+
+                  <div className="space-y-3 pt-3 border-t border-border/50">
+                    <div>
+                      <p className="text-[9px] font-extrabold text-muted-foreground uppercase tracking-wider mb-0.5">Evaluation Title</p>
+                      <p className="text-xs font-bold text-foreground">{row.evaluationTitle}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-extrabold text-muted-foreground uppercase tracking-wider mb-0.5">Unit Title</p>
+                      <p className="text-xs font-medium text-blue-500 leading-snug">{row.unitTitles.join(", ")}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Mobile Pagination Footer */}
+        {totalPages > 1 && (
+          <div className="py-2 flex items-center justify-between">
+            <p className="text-[11px] text-muted-foreground">
+              Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, groupedRows.length)} of {groupedRows.length}
+            </p>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="h-7 w-7 flex items-center justify-center rounded-md border border-border bg-card text-muted-foreground font-bold text-sm"
+              >
+                ‹
+              </button>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="h-7 w-7 flex items-center justify-center rounded-md border border-border bg-card text-muted-foreground font-bold text-sm"
+              >
+                ›
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+      </>
     </motion.div>
   );
 }
