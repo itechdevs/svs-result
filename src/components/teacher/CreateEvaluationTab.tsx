@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft, Plus, Copy, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -232,9 +232,9 @@ export default function CreateEvaluationTab({
                 <select
                   value={selectedExamId}
                   onChange={e => setSelectedExamId?.(e.target.value)}
-                  className="w-full text-xs border border-input bg-background px-3 py-2 rounded-md"
+                  className="w-fit md:w-full text-xs border border-input bg-background px-3 py-2 rounded-md"
                 >
-                  <option value="">-- Select Exam/Term --</option>
+                  <option value="" className=''>-- Select Exam/Term --</option>
                   {exams.map((exam) => (
                     <option key={exam.id} value={exam.id}>
                       {exam.name}
@@ -266,7 +266,8 @@ export default function CreateEvaluationTab({
         <div className="p-6 space-y-8">
           {newOutcomes.map((group, groupIndex) => (
             <div key={groupIndex} className="space-y-4 border border-border rounded-xl p-4 bg-muted/10 relative">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-3">
+              {/* Desktop Header (Original) */}
+              <div className="hidden md:flex flex-row items-center justify-between gap-3 border-b border-border pb-3">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
                     <label className="text-[10px] font-extrabold text-muted-foreground uppercase shrink-0">Task Type Name</label>
@@ -279,7 +280,7 @@ export default function CreateEvaluationTab({
                           i === groupIndex ? { ...g, taskType: val } : g
                         ));
                       }}
-                      className="w-full sm:w-48 text-xs font-bold text-foreground"
+                      className="w-48 text-xs font-bold text-foreground"
                     />
                   </div>
                 </div>
@@ -312,7 +313,55 @@ export default function CreateEvaluationTab({
                 </div>
               </div>
 
-              <div className="overflow-x-auto w-full pb-2">
+              {/* Mobile Header (Stacked) */}
+              <div className="flex md:hidden flex-col justify-between gap-4 border-b border-border pb-4">
+                <div className="w-full space-y-1.5">
+                  <label className="text-[10px] font-extrabold text-muted-foreground uppercase block">Task Type Name</label>
+                  <Input
+                    type="text"
+                    value={group.taskType}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setNewOutcomes(prev => prev.map((g, i) =>
+                        i === groupIndex ? { ...g, taskType: val } : g
+                      ));
+                    }}
+                    className="w-full text-sm font-bold text-foreground"
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-2 w-full">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => duplicateTaskGroup(groupIndex)}
+                    className="text-xs font-bold text-blue-600 dark:text-blue-400 w-full flex items-center justify-center gap-1.5"
+                  >
+                    <Copy className="w-4 h-4" />
+                    <span>Duplicate</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addNewOutcomeRow(groupIndex)}
+                    className="text-xs font-bold text-primary w-full flex items-center justify-center gap-1.5"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => deleteTaskGroup(groupIndex)}
+                    className="text-xs font-bold text-destructive hover:text-destructive hover:bg-destructive/10 border-border w-full flex items-center justify-center gap-1.5"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Delete</span>
+                  </Button>
+                </div>
+              </div>
+
+              {/* Desktop Rows (Original) */}
+              <div className="hidden md:block overflow-x-auto w-full pb-2 mt-3">
                 <div className="space-y-3 min-w-[700px]">
                   <div className="grid grid-cols-12 gap-4 font-bold text-muted-foreground text-[10px] uppercase pb-1 px-2">
                     <div className="col-span-4">Sub Learning outcome criteria</div>
@@ -389,6 +438,93 @@ export default function CreateEvaluationTab({
                           className="text-[10px] font-bold text-destructive hover:text-destructive"
                         >
                           Remove
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Mobile Rows (Stacked) */}
+              <div className="block md:hidden w-full pb-2 mt-4">
+                <div className="space-y-4">
+                  {group.outcomes.map((item, idx) => (
+                    <div key={idx} className="flex flex-col gap-4 bg-card p-4 rounded-xl border border-border shadow-sm">
+                      <div className="w-full space-y-1.5">
+                        <label className="text-[10px] font-extrabold text-muted-foreground uppercase block">Sub Learning Outcome Criteria</label>
+                        <Input
+                          type="text"
+                          value={item.name}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setNewOutcomes(prev => prev.map((g, i) =>
+                              i === groupIndex
+                                ? { ...g, outcomes: g.outcomes.map((o, j) => j === idx ? { ...o, name: val } : o) }
+                                : g
+                            ));
+                          }}
+                          className="w-full text-sm text-foreground font-medium"
+                        />
+                      </div>
+
+                      <div className="flex gap-4 w-full">
+                        <div className="flex-1 space-y-1.5">
+                          <label className="text-[10px] font-extrabold text-muted-foreground uppercase block">Full Marks</label>
+                          <Input
+                            type="number"
+                            value={item.max}
+                            onChange={e => {
+                              const val = Number(e.target.value);
+                              setNewOutcomes(prev => prev.map((g, i) =>
+                                i === groupIndex
+                                  ? { ...g, outcomes: g.outcomes.map((o, j) => j === idx ? { ...o, max: val } : o) }
+                                  : g
+                              ));
+                            }}
+                            className="w-full text-left text-sm font-mono text-foreground"
+                          />
+                        </div>
+                        <div className="flex-1 space-y-1.5">
+                          <label className="text-[10px] font-extrabold text-muted-foreground uppercase block">Pass Marks</label>
+                          <Input
+                            type="number"
+                            value={item.pass}
+                            onChange={e => {
+                              const val = Number(e.target.value);
+                              setNewOutcomes(prev => prev.map((g, i) =>
+                                i === groupIndex
+                                  ? { ...g, outcomes: g.outcomes.map((o, j) => j === idx ? { ...o, pass: val } : o) }
+                                  : g
+                              ));
+                            }}
+                            className="w-full text-left text-sm font-mono text-foreground"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="w-full space-y-1.5">
+                        <label className="text-[10px] font-extrabold text-muted-foreground uppercase block">Assessment Date</label>
+                        <BSCalendarSelector
+                          value={item.date}
+                          onChange={v => {
+                            setNewOutcomes(prev => prev.map((g, i) =>
+                              i === groupIndex
+                                ? { ...g, outcomes: g.outcomes.map((o, j) => j === idx ? { ...o, date: v } : o) }
+                                : g
+                            ));
+                          }}
+                        />
+                      </div>
+
+                      <div className="w-full flex justify-end items-center pt-2 border-t border-border">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => deleteOutcomeRow(groupIndex, idx)}
+                          className="text-xs font-bold text-destructive hover:text-destructive flex items-center gap-1.5"
+                        >
+                          <X className="w-4 h-4" />
+                          <span>Remove</span>
                         </Button>
                       </div>
                     </div>
