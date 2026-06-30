@@ -64,9 +64,16 @@ export default function EvaluationsTab({
   const sorted = useMemo(
     () =>
       [...evaluations].sort((a, b) => {
-        const timeA = a.date !== "TBD" && a.date ? new Date(a.date).getTime() : 0;
-        const timeB = b.date !== "TBD" && b.date ? new Date(b.date).getTime() : 0;
-        return (timeB || 0) - (timeA || 0);
+        // Primary: createdAt ISO timestamp (newest first)
+        const createdA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const createdB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        if (createdB !== createdA) return createdB - createdA;
+        // Fallback: scheduled date
+        const dateA = a.date !== 'TBD' && a.date ? new Date(a.date).getTime() : 0;
+        const dateB = b.date !== 'TBD' && b.date ? new Date(b.date).getTime() : 0;
+        if (dateB !== dateA) return dateB - dateA;
+        // Stable tiebreaker: id
+        return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
       }),
     [evaluations],
   );
@@ -74,10 +81,10 @@ export default function EvaluationsTab({
   const filtered =
     filter === 'All' ? sorted : sorted.filter((e) => e.status === filter);
 
-  // Combine create button with filtered evaluations
+  // Combine filtered evaluations with create button at the end so most recent shows first
   const allItems = [
+    ...filtered.map(e => ({ type: 'eval' as const, data: e, id: e.id })),
     { type: 'create' as const, id: 'create-evaluation-btn' },
-    ...filtered.map(e => ({ type: 'eval' as const, data: e, id: e.id }))
   ];
 
   const pageCount = Math.max(1, Math.ceil(allItems.length / ROWS_PER_PAGE));

@@ -38,6 +38,8 @@ export interface EvaluationPlan {
   fullMarks: number;
   passMarks: number;
   date: string;
+  /** ISO timestamp of the earliest template in this group — used for newest-first sorting */
+  createdAt?: string;
   unit: string;
   learningOutcomes: LearningOutcome[];
   /** All sub-evaluations belonging to this parent group */
