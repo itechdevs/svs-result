@@ -86,14 +86,14 @@ export default function ReExamPortalTab() {
     return map;
   }, [studentsData]);
 
-  // Compute failed items: results where marksObtained < passMarks on the template
   const failedItems = useMemo(() => {
     return resultsData
       .filter((r) => {
         if (r.marksObtained === null || r.marksObtained === undefined)
           return false;
-        const passMarks = r.evaluationTemplate?.passMarks ?? 0;
-        return r.marksObtained < passMarks && r.reExamResult == null;
+        const obtained = Number(r.marksObtained);
+        const passMarks = Number(r.evaluationTemplate?.passMarks ?? 0);
+        return obtained < passMarks && r.reExamResult == null;
       })
       .map((r) => {
         const rawName = r.evaluationTemplate?.name ?? "";
@@ -149,10 +149,10 @@ export default function ReExamPortalTab() {
           evaluationId: r.evaluationTemplateId,
           cardId,
           resultId: r.id,
-          marksObtained: r.marksObtained,
-          passMarks: r.evaluationTemplate?.passMarks ?? 0,
-          fullMarks: r.evaluationTemplate?.fullMarks ?? 0,
-          reExamMarks: r.reExamResult?.marksObtained ?? null,
+          marksObtained: r.marksObtained !== null && r.marksObtained !== undefined ? Number(r.marksObtained) : null,
+          passMarks: Number(r.evaluationTemplate?.passMarks ?? 0),
+          fullMarks: Number(r.evaluationTemplate?.fullMarks ?? 0),
+          reExamMarks: r.reExamResult?.marksObtained != null ? Number(r.reExamResult.marksObtained) : null,
         };
       });
   }, [resultsData, studentsMap]);
