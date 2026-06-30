@@ -31,10 +31,10 @@ export function calcObtainedMarks(
     if (!lo.templateId) return sum;
     const mark = getStudentMark(studentId, lo.templateId);
     const m = mark?.outcomeMarks[lo.name];
-    // Effective mark priority: re-exam > regular
+    // Final mark = MAX(regularMark, reExamMark)
     const finalMark =
       m?.reExamMark !== null && m?.reExamMark !== undefined
-        ? m.reExamMark
+        ? Math.max(m.reExamMark, m?.regularMark ?? 0)
         : m?.regularMark;
     return sum + (finalMark ?? 0);
   }, 0);
@@ -67,10 +67,10 @@ export function calcPassFail(
     if (!lo.templateId) return false;
     const mark = getStudentMark(studentId, lo.templateId);
     const m = mark?.outcomeMarks[lo.name];
-    // Effective mark priority: re-exam > regular
+    // Final mark = MAX(regularMark, reExamMark)
     const finalMark =
       m?.reExamMark !== null && m?.reExamMark !== undefined
-        ? m.reExamMark
+        ? Math.max(m.reExamMark, m?.regularMark ?? 0)
         : m?.regularMark;
     if (finalMark === null || finalMark === undefined) return false;
     return finalMark < (lo.passMarks ?? 0);
@@ -136,7 +136,7 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
     const m = mark?.outcomeMarks[lo.name];
     const finalMark =
       m?.reExamMark !== null && m?.reExamMark !== undefined
-        ? m.reExamMark
+        ? Math.max(m.reExamMark, m?.regularMark ?? 0)
         : m?.regularMark ?? 0;
     return sum + finalMark;
   }, 0);
@@ -257,10 +257,10 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
                 const m = markObj?.outcomeMarks[lo.name];
                 const max = lo.fullMarks ?? 100;
                 const pass = lo.passMarks ?? 0;
-                // Effective mark: re-exam > regular
+                // Final mark = MAX(regularMark, reExamMark)
                 const effectiveMark =
                   m?.reExamMark !== null && m?.reExamMark !== undefined
-                    ? m.reExamMark
+                    ? Math.max(m.reExamMark, m?.regularMark ?? 0)
                     : m?.regularMark ?? null;
                 const regFail =
                   m?.regularMark !== null &&
@@ -272,7 +272,7 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
                   effectiveMark !== undefined &&
                   effectiveMark < pass;
                 const hasReExam =
-                  m?.reExamMark !== null && m?.reExamMark !== undefined;
+                  (m?.reExamMark !== null && m?.reExamMark !== undefined) || !!m?.reExamDate;
                 const rowSn = groupIdx + 1;
 
                 return (
@@ -381,14 +381,27 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
                     {/* Re-Exam: Marks (read-only badge) */}
                     <TableCell className="text-center border-r border-border bg-orange-50/20 dark:bg-orange-950/5">
                       {hasReExam ? (
-                        <span className={cn(
-                          'inline-flex items-center justify-center w-14 px-2 py-1 rounded text-sm font-bold font-mono border',
-                          !effectiveFail
-                            ? 'bg-emerald-100 dark:bg-emerald-950/40 border-emerald-400 dark:border-emerald-700 text-emerald-900 dark:text-emerald-300'
-                            : 'bg-red-100 dark:bg-red-950/40 border-red-400 dark:border-red-700 text-red-900 dark:text-red-300'
-                        )}>
-                          {m!.reExamMark}
-                        </span>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={max}
+                          step="any"
+                          value={m?.reExamMark ?? ''}
+                          placeholder="—"
+                          readOnly={readOnly}
+                          tabIndex={readOnly ? -1 : undefined}
+                          onChange={readOnly ? undefined : (e) => {
+                            const num = e.target.value === '' ? null : Math.min(Math.max(0, Number(e.target.value)), max);
+                            updateOutcomeMark(student.id, lo.templateId!, lo.name, { reExamMark: num });
+                          }}
+                          className={cn(
+                            'w-16 text-center text-sm font-bold mx-auto border-2',
+                            readOnly && 'cursor-default opacity-80',
+                            !effectiveFail
+                              ? 'bg-emerald-100 dark:bg-emerald-950/40 border-emerald-400 dark:border-emerald-700 text-emerald-900 dark:text-emerald-300'
+                              : 'bg-red-100 dark:bg-red-950/40 border-red-400 dark:border-red-700 text-red-900 dark:text-red-300'
+                          )}
+                        />
                       ) : (
                         <span className="text-[10px] text-muted-foreground/30">—</span>
                       )}
