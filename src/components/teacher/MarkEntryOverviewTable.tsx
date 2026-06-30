@@ -51,7 +51,19 @@ export default function MarkEntryOverviewTable() {
   const selectedEvalPlan = searchParams.get("eval") ?? "";
   const [page, setPage] = useState(1);
   const [confirmPublish, setConfirmPublish] = useState(false);
+  const [sortField, setSortField] = useState<"rollNumber" | "name">("rollNumber");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const PAGE_SIZE = 10;
+
+  const handleSortClick = (field: "rollNumber" | "name") => {
+    if (sortField === field) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDir("asc");
+    }
+    setPage(1);
+  };
 
   const { data: studentsData, isLoading: isStudentsLoading } = useStudents(
     selectedClass ? { class: selectedClass, limit: 9999 } : { limit: 1 },
@@ -123,42 +135,34 @@ export default function MarkEntryOverviewTable() {
     return 'NONE';
   }, [evalIds, resultsData]);
 
+  // Stable list — sorted ONLY by roll number initially. Does NOT depend on marks
+  // so it won't re-order while a teacher is entering marks.
   const classStudents = useMemo(() => {
     const students = studentsData?.students ?? [];
-    if (evalIds.length === 0) return students;
-
     return [...students].sort((a, b) => {
-      const getStudentGroup = (sid: string) => {
-        const hasReExam = evalIds.some(eid => {
-          const r = resultsData.find(r => r.evaluationTemplateId === eid && r.syncedStudentId === sid);
-          return !!r?.reExamResult;
-        });
-        const hasFail = outcomeColumns.some(col => {
-          const m = getStudentMark(sid, col.evalId)?.outcomeMarks[col.name];
-          const v = m?.reExamMark !== null && m?.reExamMark !== undefined
-            ? Math.max(m.reExamMark, m?.regularMark ?? 0) : m?.regularMark ?? 0;
-          return (m?.regularMark !== null && m?.regularMark !== undefined) && v < col.passMarks;
-        });
-        if (!hasFail && !hasReExam) return 0; // Pass, no reexam
-        if (!hasFail && hasReExam) return 1;  // Pass via reexam
-        if (hasFail && hasReExam) return 2;   // Still fail, reexam given
-        return 3;                              // Fail, no reexam
-      };
-
-      const groupA = getStudentGroup(a.id);
-      const groupB = getStudentGroup(b.id);
-      if (groupA !== groupB) return groupA - groupB;
-
-      // Within same group sort by total marks descending
-      const total = (sid: string) => outcomeColumns.reduce((sum, col) => {
-        const m = getStudentMark(sid, col.evalId)?.outcomeMarks[col.name];
-        const v = m?.reExamMark !== null && m?.reExamMark !== undefined
-          ? Math.max(m.reExamMark, m?.regularMark ?? 0) : m?.regularMark ?? 0;
-        return sum + v;
-      }, 0);
-      return total(b.id) - total(a.id);
+      const rollA = Number(a.rollNumber) || 0;
+      const rollB = Number(b.rollNumber) || 0;
+      if (rollA !== rollB) return rollA - rollB;
+      return (a.rollNumber ?? "").localeCompare(b.rollNumber ?? "");
     });
-  }, [studentsData, evalIds, resultsData, outcomeColumns, getStudentMark]);
+  }, [studentsData]);
+
+  // Apply the user-selected column sort on top of the stable list
+  const sortedStudents = useMemo(() => {
+    return [...classStudents].sort((a, b) => {
+      let cmp = 0;
+      if (sortField === "rollNumber") {
+        const rollA = Number(a.rollNumber) || 0;
+        const rollB = Number(b.rollNumber) || 0;
+        cmp = rollA !== rollB
+          ? rollA - rollB
+          : (a.rollNumber ?? "").localeCompare(b.rollNumber ?? "");
+      } else {
+        cmp = (a.name ?? "").localeCompare(b.name ?? "");
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [classStudents, sortField, sortDir]);
 
   const handleMarkChange = (
     studentId: string,
@@ -171,8 +175,8 @@ export default function MarkEntryOverviewTable() {
     updateOutcomeMark(studentId, evalId, outcomeName, { regularMark: num });
   };
 
-  const totalPages = Math.max(1, Math.ceil(classStudents.length / PAGE_SIZE));
-  const pagedStudents = classStudents.slice(
+  const totalPages = Math.max(1, Math.ceil(sortedStudents.length / PAGE_SIZE));
+  const pagedStudents = sortedStudents.slice(
     (page - 1) * PAGE_SIZE,
     page * PAGE_SIZE,
   );
@@ -376,11 +380,33 @@ export default function MarkEntryOverviewTable() {
               <table className="w-full text-left border-collapse text-sm">
                 <thead>
                   <tr className="bg-muted/30 border-b border-border">
-                    <th className="px-4 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-                      Roll No
+                    <th
+                      className="px-4 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:text-foreground transition-colors group"
+                      onClick={() => handleSortClick("rollNumber")}
+                      title="Sort by Roll No"
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        Roll No
+                        <span className="text-[9px] opacity-60 group-hover:opacity-100">
+                          {sortField === "rollNumber"
+                            ? sortDir === "asc" ? "▲" : "▼"
+                            : "⇅"}
+                        </span>
+                      </span>
                     </th>
-                    <th className="px-4 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                      Student Name
+                    <th
+                      className="px-4 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider cursor-pointer select-none hover:text-foreground transition-colors group"
+                      onClick={() => handleSortClick("name")}
+                      title="Sort by Student Name"
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        Student Name
+                        <span className="text-[9px] opacity-60 group-hover:opacity-100">
+                          {sortField === "name"
+                            ? sortDir === "asc" ? "▲" : "▼"
+                            : "⇅"}
+                        </span>
+                      </span>
                     </th>
                     {outcomeColumns.map((col) => (
                       <th
@@ -644,10 +670,10 @@ export default function MarkEntryOverviewTable() {
           <div className="px-5 py-3 border-t border-border flex items-center justify-between bg-muted/30">
             <p className="text-[11px] text-muted-foreground">
               Showing{" "}
-              {Math.min((page - 1) * PAGE_SIZE + 1, classStudents.length)}–
-              {Math.min(page * PAGE_SIZE, classStudents.length)} of{" "}
-              {classStudents.length} student
-              {classStudents.length !== 1 ? "s" : ""}
+              {Math.min((page - 1) * PAGE_SIZE + 1, sortedStudents.length)}–
+              {Math.min(page * PAGE_SIZE, sortedStudents.length)} of{" "}
+              {sortedStudents.length} student
+              {sortedStudents.length !== 1 ? "s" : ""}
             </p>
             {totalPages > 1 && (
               <div className="flex items-center gap-1">
