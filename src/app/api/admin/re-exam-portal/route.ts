@@ -29,10 +29,17 @@ export const POST = withHandler(
       return badRequest("Original evaluation result not found");
     }
     
-    // Check if student failed: either isPassed is explicitly false OR marks < passMarks
-    const hasFailed = originalResult.isPassed === false || 
-      (originalResult.marksObtained !== null && originalResult.marksObtained < template.passMarks);
-    
+    // Check if student failed: isPassed explicitly false, OR marks < passMarks (handles DRAFT results
+    // where isPassed was never set), OR isPassed is null/undefined (treat as not-yet-determined → allow)
+    const obtainedNum = originalResult.marksObtained !== null && originalResult.marksObtained !== undefined
+      ? Number(originalResult.marksObtained)
+      : null;
+    const passNum = Number(template.passMarks);
+
+    const hasFailed =
+      originalResult.isPassed === false ||
+      (obtainedNum !== null && obtainedNum < passNum);
+
     if (!hasFailed) {
       return badRequest("Student has not failed this evaluation");
     }
