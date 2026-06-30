@@ -73,6 +73,12 @@ export default function TeacherAllocationsDetailPage() {
         .filter(Boolean)
         .sort((a, b) => b!.getTime() - a!.getTime())[0];
 
+      // Earliest createdAt in the group = when this plan was first created
+      const earliestCreatedAt = group
+        .map(t => t.createdAt)
+        .filter(Boolean)
+        .sort()[0];
+
       return {
         id: first.id,
         title: evalTitle || subjectName,
@@ -113,6 +119,7 @@ export default function TeacherAllocationsDetailPage() {
           scheduledDate: t.scheduledDate,
         })),
         templateIds: group.map(t => t.id),
+        createdAt: earliestCreatedAt,
       } satisfies EvaluationPlan;
     });
   }, [syncedTeacher, templatesData]);

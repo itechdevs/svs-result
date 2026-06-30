@@ -29,11 +29,24 @@ export default function TeacherEvaluationsViewTab({ teacher, evaluations, onView
   );
 
   const filteredEvaluations = useMemo(() => {
-    return evaluations.filter(evaluation => {
-      const matchesClass = selectedClass === 'all' || evaluation.gradeLevel === selectedClass;
-      const matchesSubject = selectedSubject === 'all' || evaluation.subject === selectedSubject;
-      return matchesClass && matchesSubject;
-    });
+    return evaluations
+      .filter(evaluation => {
+        const matchesClass = selectedClass === 'all' || evaluation.gradeLevel === selectedClass;
+        const matchesSubject = selectedSubject === 'all' || evaluation.subject === selectedSubject;
+        return matchesClass && matchesSubject;
+      })
+      .sort((a, b) => {
+        // Primary: createdAt ISO timestamp (newest first)
+        const createdA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const createdB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        if (createdB !== createdA) return createdB - createdA;
+        // Fallback: scheduled date
+        const dateA = a.date !== 'TBD' && a.date ? new Date(a.date).getTime() : 0;
+        const dateB = b.date !== 'TBD' && b.date ? new Date(b.date).getTime() : 0;
+        if (dateB !== dateA) return dateB - dateA;
+        // Stable tiebreaker: id
+        return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+      });
   }, [evaluations, selectedClass, selectedSubject]);
 
   const initials = teacher.teacher
