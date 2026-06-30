@@ -5,25 +5,25 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --background: #FFFFFF;
+  --foreground: #1A1A18;
+  --card: #FAFAF9;
+  --card-foreground: #1A1A18;
+  --popover: #FAFAF9;
+  --popover-foreground: #1A1A18;
+  --primary: #1A1A18;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F2F2F0;
+  --secondary-foreground: #1A1A18;
+  --muted: #F2F2F0;
+  --muted-foreground: #6B6B68;
+  --accent: #F2F2F0;
+  --accent-foreground: #1A1A18;
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --border: #E5E5E2;
+  --input: #E5E5E2;
+  --ring: #E5E5E2;
   --chart-1: oklch(0.81 0.1 252);
   --chart-2: oklch(0.62 0.19 260);
   --chart-3: oklch(0.55 0.22 263);
@@ -333,7 +333,7 @@ body {
    ========================================================= */
 
 .admin-shell {
-  background: #f8fafc;
+  background: #FFFFFF;
 }
 
 .admin-main {
@@ -347,43 +347,43 @@ body {
 }
 
 .admin-main .text-gray-900 {
-  color: #0f172a !important;
+  color: #1A1A18 !important;
 }
 
 .admin-main .text-gray-500 {
-  color: #475569 !important;
+  color: #6B6B68 !important;
 }
 
 .admin-main .border-gray-200,
 .admin-main .border-gray-100 {
-  border-color: rgba(148, 163, 184, 0.34) !important;
+  border-color: #E5E5E2 !important;
 }
 
 .admin-main .bg-gray-50,
 .admin-main .bg-gray-50\/50 {
-  background-color: rgba(248, 250, 252, 0.76) !important;
+  background-color: #F2F2F0 !important;
 }
 
 .admin-main .bg-white.rounded-2xl.shadow-sm.border.border-gray-200 {
-  border-color: rgba(148, 163, 184, 0.35) !important;
-  background: rgba(255, 255, 255, 0.82) !important;
+  border-color: #E5E5E2 !important;
+  background: #FAFAF9 !important;
   backdrop-filter: blur(8px);
-  box-shadow: 0 20px 55px -38px rgba(15, 23, 42, 0.65) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
 }
 
 .admin-main input,
 .admin-main select,
 .admin-main textarea {
   border-radius: 0.8rem;
-  border-color: rgba(148, 163, 184, 0.38);
-  background: rgba(255, 255, 255, 0.95);
+  border-color: #E5E5E2;
+  background: #FAFAF9;
 }
 
 .admin-main input:focus,
 .admin-main select:focus,
 .admin-main textarea:focus {
-  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.18);
-  border-color: rgba(20, 184, 166, 0.7);
+  box-shadow: 0 0 0 3px #F2F2F0;
+  border-color: #1A1A18;
 }
 
 .admin-main button {
