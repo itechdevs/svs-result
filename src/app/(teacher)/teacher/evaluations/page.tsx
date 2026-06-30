@@ -121,6 +121,12 @@ export default function TeacherEvaluationsPage() {
         .filter(Boolean)
         .sort((a, b) => b!.getTime() - a!.getTime())[0];
 
+      // Earliest createdAt in the group = when this plan was first created
+      const earliestCreatedAt = group
+        .map((t) => t.createdAt)
+        .filter(Boolean)
+        .sort()[0];
+
       return {
         id: first.id,
         title: evalTitle || subjectName,
@@ -196,6 +202,7 @@ export default function TeacherEvaluationsPage() {
           };
         }),
         templateIds: group.map((t) => t.id),
+        createdAt: earliestCreatedAt,
       } satisfies EvaluationPlan;
     });
   }, [templatesData, assignedSubjectIds, selectedSubject, templateStatusMap]);
