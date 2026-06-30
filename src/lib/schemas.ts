@@ -188,7 +188,7 @@ export const createEvaluationTemplateSchema = z.object({
   gradeConfigId: z.string().cuid(),
   syncedSubjectId: z.string().cuid(),
   examId: z.string().cuid().optional(),
-  name: z.string().min(1).max(100),
+  name: z.string().min(1),
   fullMarks: z.number().positive(),
   passMarks: z.number().nonnegative(),
   weightage: z.number().positive().max(100),

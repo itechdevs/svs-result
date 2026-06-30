@@ -115,9 +115,9 @@ export function TeacherSidebar() {
                 {item.hasSubMenu && !isCollapsed && (
                   <ChevronDown size={14} className={cn("ml-auto transition-transform", evaluationsExpanded && "rotate-180")} />
                 )}
-                {isActive && !isCollapsed && (!item.hasSubMenu || pathname !== item.href) && (
+                {/* {isActive && !isCollapsed && (!item.hasSubMenu || pathname !== item.href) && (
                   <span className="absolute right-3 w-1.5 h-1.5 rounded-full bg-sidebar-primary" />
-                )}
+                )} */}
               </Link>
 
               {/* Submenu for Evaluations */}
