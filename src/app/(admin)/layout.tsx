@@ -24,7 +24,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <Navbar user={session.user} />
         <div className="flex flex-1 overflow-hidden">
           <AdminSidebar />
-          <SidebarInset className="flex-1 overflow-y-auto p-6 bg-transparent">
+          <SidebarInset className="flex-1 min-h-0 overflow-y-auto scrollbar-minimal p-3 sm:p-4 md:p-6 bg-transparent">
             {children}
           </SidebarInset>
         </div>

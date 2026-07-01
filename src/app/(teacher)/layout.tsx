@@ -27,7 +27,7 @@ export default async function TeacherLayout({ children }: { children: React.Reac
           <Suspense fallback={null}>
             <TeacherSidebar />
           </Suspense>
-          <SidebarInset className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 bg-transparent">
+          <SidebarInset className="flex-1 min-h-[80vh] overflow-y-auto scrollbar-minimal p-3 sm:p-4 md:p-6 bg-transparent">
             {children}
           </SidebarInset>
         </div>
