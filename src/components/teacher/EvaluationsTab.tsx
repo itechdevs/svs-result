@@ -222,7 +222,7 @@ export default function EvaluationsTab({
                     )}>
                       {evalPlan.status}
                     </span>
-                    <span className="text-muted-foreground text-[10px] font-mono block">Created: {evalPlan.date}</span>
+                    <span className="text-muted-foreground text-[10px] font-mono block">Created: {evalPlan.createdAt ? new Date(evalPlan.createdAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : evalPlan.date}</span>
                   </div>
 
                   {/* Subject badge + kebab */}
