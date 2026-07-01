@@ -365,7 +365,7 @@ export default function CreateEvaluationTab({
                 <div className="space-y-3 min-w-[700px]">
                   <div className="grid grid-cols-12 gap-4 font-bold text-muted-foreground text-[10px] uppercase pb-1 px-2">
                     <div className="col-span-4">Sub Learning outcome criteria</div>
-                    <div className="col-span-2">Assessment Date</div>
+                    <div className="col-span-2">Assessment Date <span className="font-normal lowercase">(conducted)</span></div>
                     <div className="col-span-2 text-center">Full Marks</div>
                     <div className="col-span-2 text-center">Pass Marks</div>
                     <div className="col-span-2 text-center">Actions</div>
@@ -503,7 +503,7 @@ export default function CreateEvaluationTab({
                       </div>
 
                       <div className="w-full space-y-1.5">
-                        <label className="text-[10px] font-extrabold text-muted-foreground uppercase block">Assessment Date</label>
+                        <label className="text-[10px] font-extrabold text-muted-foreground uppercase block">Assessment Date <span className="font-normal lowercase">(conducted)</span></label>
                         <BSCalendarSelector
                           value={item.date}
                           onChange={v => {
