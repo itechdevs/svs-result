@@ -862,7 +862,7 @@ export default function MarkEntryOverviewTable() {
                           const val = mark?.outcomeMarks[col.name]?.regularMark;
                           const isFail = val !== null && val !== undefined && val < col.passMarks;
                           return (
-                            <div key={col.evalId} className="flex flex-col gap-1.5 w-24 shrink-0">
+                            <div key={col.evalId} className="flex flex-col gap-1.5 shrink-0" style={{ width: 'calc(50% - 4px)', minWidth: '100px' }}>
                               <label className="text-[9px] font-extrabold text-muted-foreground uppercase truncate px-1" title={col.taskType}>
                                 {col.taskType}
                               </label>
