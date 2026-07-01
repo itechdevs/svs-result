@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle, Calendar, Save } from "lucide-react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
+import { formatToBSFullString } from "@/lib/bs-calendar";
 import { useStudentEvaluationResults } from "@/hooks/use-evaluations";
 import { useReExamAssessment } from "@/hooks/use-re-exams";
 import { calcFullMarks } from "@/components/teacher/DetailedMarkEntryView";
@@ -51,7 +52,7 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
       const r = lo.templateId ? byTemplateId.get(lo.templateId) : undefined;
       outcomeMarks[lo.name] = {
         regularMark: r?.marksObtained ?? null,
-        regularDate: r?.submittedAt ? new Date(r.submittedAt).toISOString().split("T")[0] : "",
+      regularDate: lo.regularDate || "",
         supportMark: null,
         supportDate: "",
         reExamMark: r?.reExamResult?.marksObtained ?? null,
@@ -251,6 +252,7 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
                 <TableHead className="px-4 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider border-r border-border h-auto">Task Type</TableHead>
                 <TableHead className="px-4 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider border-r border-border h-auto">Learning Outcome</TableHead>
                 <TableHead className="px-3 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center border-r border-border h-auto">Full / Pass</TableHead>
+                <TableHead className="px-3 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center border-r border-border h-auto">Assessment Date</TableHead>
                 <TableHead className="px-3 py-3 text-[10px] font-bold text-destructive uppercase tracking-wider text-center border-r border-border bg-destructive/5 h-auto">Original Mark</TableHead>
                 <TableHead className="px-4 py-3 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider text-center border-r border-border bg-emerald-50/30 dark:bg-emerald-950/10 h-auto" colSpan={2}>
                   Re-Exam Assessment
@@ -260,6 +262,7 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
               <TableRow className="bg-muted/40 text-[9px] font-semibold text-muted-foreground uppercase hover:bg-muted/50">
                 <TableHead className="px-4 py-2 border-r border-border h-8" />
                 <TableHead className="px-4 py-2 border-r border-border h-8" />
+                <TableHead className="px-3 py-2 text-center border-r border-border h-8" />
                 <TableHead className="px-3 py-2 text-center border-r border-border h-8" />
                 <TableHead className="px-3 py-2 text-center border-r border-border h-8 bg-destructive/5" />
                 <TableHead className="px-3 py-2 text-center border-r border-border bg-emerald-50/40 dark:bg-emerald-950/10 h-8">
@@ -272,7 +275,7 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
             <TableBody>
               {failedOutcomes.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={8} className="px-4 py-8 text-center text-sm text-muted-foreground">
                     No failed outcomes found. Marks may not have been entered yet.
                   </TableCell>
                 </TableRow>
@@ -297,6 +300,9 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
                       <TableCell className="px-3 py-4 text-center border-r border-border">
                         <p className="text-xs font-mono font-bold text-foreground">{max}</p>
                         <p className="text-[10px] text-muted-foreground font-mono">Pass: {pass}</p>
+                      </TableCell>
+                      <TableCell className="px-3 py-4 text-center border-r border-border">
+                        <span className="text-xs text-muted-foreground">{lo.regularDate ? formatToBSFullString(lo.regularDate) : '—'}</span>
                       </TableCell>
                       <TableCell className="px-3 py-4 text-center border-r border-border bg-destructive/5">
                         <span className="px-2 py-1 rounded font-bold font-mono text-sm bg-destructive/10 text-destructive">{originalMark}</span>
