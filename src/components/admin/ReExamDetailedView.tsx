@@ -344,23 +344,23 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
       </div>
 
       {/* Summary Footer */}
-      <div className="bg-card text-card-foreground rounded-xl border border-border p-5 flex flex-wrap items-center gap-8 shadow-sm">
-        <div>
+      <div className="bg-card text-card-foreground rounded-xl border border-border p-3 sm:p-5 flex items-center gap-3 sm:gap-8 shadow-sm overflow-x-auto">
+        <div className="shrink-0">
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Total Obtained</p>
-          <p className="text-2xl font-bold text-foreground">{obtained} <span className="text-base text-muted-foreground">/ {fullTotal}</span></p>
+          <p className="text-lg sm:text-2xl font-bold text-foreground whitespace-nowrap">{obtained} <span className="text-sm sm:text-base text-muted-foreground">/ {fullTotal}</span></p>
         </div>
-        <div className="border-l border-border pl-8">
+        <div className="border-l border-border pl-3 sm:pl-8 shrink-0">
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Final Result</p>
           <span className={cn(
-            "px-3 py-1 rounded-full text-sm font-bold uppercase border",
+            "px-2 sm:px-3 py-1 rounded-full text-[11px] sm:text-sm font-bold uppercase border whitespace-nowrap",
             status === "Pass" ? "bg-emerald-100 dark:bg-emerald-950/45 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/40"
               : status === "Fail" ? "bg-destructive/10 text-destructive border-destructive/20"
                 : "bg-muted text-muted-foreground border-border",
           )}>{status}</span>
         </div>
-        <div className="border-l border-border pl-8">
+        <div className="border-l border-border pl-3 sm:pl-8 shrink-0">
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Failed Outcomes</p>
-          <p className="text-xl font-bold text-destructive">{failedOutcomes.length}</p>
+          <p className="text-lg sm:text-xl font-bold text-destructive whitespace-nowrap">{failedOutcomes.length}</p>
         </div>
       </div>
     </motion.div>
