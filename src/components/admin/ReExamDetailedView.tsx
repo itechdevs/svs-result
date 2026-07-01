@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle, Calendar, Save } from "lucide-react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
+import { formatToBSFullString } from "@/lib/bs-calendar";
 import { useStudentEvaluationResults } from "@/hooks/use-evaluations";
 import { useReExamAssessment } from "@/hooks/use-re-exams";
 import { calcFullMarks } from "@/components/teacher/DetailedMarkEntryView";
@@ -51,7 +52,7 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
       const r = lo.templateId ? byTemplateId.get(lo.templateId) : undefined;
       outcomeMarks[lo.name] = {
         regularMark: r?.marksObtained ?? null,
-        regularDate: r?.submittedAt ? new Date(r.submittedAt).toISOString().split("T")[0] : "",
+      regularDate: lo.regularDate || "",
         supportMark: null,
         supportDate: "",
         reExamMark: r?.reExamResult?.marksObtained ?? null,
@@ -89,7 +90,15 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
       return lo.templateId && m?.reExamMark !== null && m?.reExamMark !== undefined;
     });
 
-    if (toSave.length === 0) return;
+    if (toSave.length === 0) {
+      const missingTemplate = outcomes.some(lo => !lo.templateId && marks.outcomeMarks[lo.name]?.reExamMark != null);
+      if (missingTemplate) {
+        toast.error("Some outcomes have no template ID — cannot save");
+      } else {
+        toast.error("No re-exam marks entered to save");
+      }
+      return;
+    }
 
     setSaveStatus("saving");
     let remaining = toSave.length;
@@ -115,11 +124,11 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
               setTimeout(() => setSaveStatus("idle"), 2500);
             }
           },
-          onError: () => {
+          onError: (error) => {
             if (!hasError) {
               hasError = true;
               setSaveStatus("error");
-              toast.error("Failed to save re-exam marks");
+              toast.error(error?.message || "Failed to save re-exam marks");
               setTimeout(() => setSaveStatus("idle"), 3000);
             }
           },
@@ -251,6 +260,7 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
                 <TableHead className="px-4 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider border-r border-border h-auto">Task Type</TableHead>
                 <TableHead className="px-4 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider border-r border-border h-auto">Learning Outcome</TableHead>
                 <TableHead className="px-3 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center border-r border-border h-auto">Full / Pass</TableHead>
+                <TableHead className="px-3 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center border-r border-border h-auto">Assessment Date</TableHead>
                 <TableHead className="px-3 py-3 text-[10px] font-bold text-destructive uppercase tracking-wider text-center border-r border-border bg-destructive/5 h-auto">Original Mark</TableHead>
                 <TableHead className="px-4 py-3 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider text-center border-r border-border bg-emerald-50/30 dark:bg-emerald-950/10 h-auto" colSpan={2}>
                   Re-Exam Assessment
@@ -260,6 +270,7 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
               <TableRow className="bg-muted/40 text-[9px] font-semibold text-muted-foreground uppercase hover:bg-muted/50">
                 <TableHead className="px-4 py-2 border-r border-border h-8" />
                 <TableHead className="px-4 py-2 border-r border-border h-8" />
+                <TableHead className="px-3 py-2 text-center border-r border-border h-8" />
                 <TableHead className="px-3 py-2 text-center border-r border-border h-8" />
                 <TableHead className="px-3 py-2 text-center border-r border-border h-8 bg-destructive/5" />
                 <TableHead className="px-3 py-2 text-center border-r border-border bg-emerald-50/40 dark:bg-emerald-950/10 h-8">
@@ -272,7 +283,7 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
             <TableBody>
               {failedOutcomes.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={8} className="px-4 py-8 text-center text-sm text-muted-foreground">
                     No failed outcomes found. Marks may not have been entered yet.
                   </TableCell>
                 </TableRow>
@@ -297,6 +308,9 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
                       <TableCell className="px-3 py-4 text-center border-r border-border">
                         <p className="text-xs font-mono font-bold text-foreground">{max}</p>
                         <p className="text-[10px] text-muted-foreground font-mono">Pass: {pass}</p>
+                      </TableCell>
+                      <TableCell className="px-3 py-4 text-center border-r border-border">
+                        <span className="text-xs text-muted-foreground">{lo.regularDate ? formatToBSFullString(lo.regularDate) : '—'}</span>
                       </TableCell>
                       <TableCell className="px-3 py-4 text-center border-r border-border bg-destructive/5">
                         <span className="px-2 py-1 rounded font-bold font-mono text-sm bg-destructive/10 text-destructive">{originalMark}</span>
@@ -344,23 +358,23 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
       </div>
 
       {/* Summary Footer */}
-      <div className="bg-card text-card-foreground rounded-xl border border-border p-5 flex flex-wrap items-center gap-8 shadow-sm">
-        <div>
+      <div className="bg-card text-card-foreground rounded-xl border border-border p-3 sm:p-5 flex items-center gap-3 sm:gap-8 shadow-sm overflow-x-auto">
+        <div className="shrink-0">
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Total Obtained</p>
-          <p className="text-2xl font-bold text-foreground">{obtained} <span className="text-base text-muted-foreground">/ {fullTotal}</span></p>
+          <p className="text-lg sm:text-2xl font-bold text-foreground whitespace-nowrap">{obtained} <span className="text-sm sm:text-base text-muted-foreground">/ {fullTotal}</span></p>
         </div>
-        <div className="border-l border-border pl-8">
+        <div className="border-l border-border pl-3 sm:pl-8 shrink-0">
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Final Result</p>
           <span className={cn(
-            "px-3 py-1 rounded-full text-sm font-bold uppercase border",
+            "px-2 sm:px-3 py-1 rounded-full text-[11px] sm:text-sm font-bold uppercase border whitespace-nowrap",
             status === "Pass" ? "bg-emerald-100 dark:bg-emerald-950/45 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/40"
               : status === "Fail" ? "bg-destructive/10 text-destructive border-destructive/20"
                 : "bg-muted text-muted-foreground border-border",
           )}>{status}</span>
         </div>
-        <div className="border-l border-border pl-8">
+        <div className="border-l border-border pl-3 sm:pl-8 shrink-0">
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Failed Outcomes</p>
-          <p className="text-xl font-bold text-destructive">{failedOutcomes.length}</p>
+          <p className="text-lg sm:text-xl font-bold text-destructive whitespace-nowrap">{failedOutcomes.length}</p>
         </div>
       </div>
     </motion.div>
