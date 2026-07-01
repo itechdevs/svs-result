@@ -352,6 +352,12 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
                         readOnly={readOnly}
                         tabIndex={readOnly ? -1 : undefined}
                         onChange={readOnly ? undefined : (e) => handleRegular(lo.name, lo.templateId!, 'regularMark', e.target.value, max)}
+                        onWheel={(e) => (e.target as HTMLElement).blur()}
+                        onKeyDown={(e) => {
+                          if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+                            e.preventDefault();
+                          }
+                        }}
                         className={cn(
                           'w-16 text-center text-sm font-bold mx-auto border-2',
                           readOnly && 'cursor-default opacity-80',
@@ -394,6 +400,12 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
                             const num = e.target.value === '' ? null : Math.min(Math.max(0, Number(e.target.value)), max);
                             updateOutcomeMark(student.id, lo.templateId!, lo.name, { reExamMark: num });
                           }}
+                          onWheel={(e) => (e.target as HTMLElement).blur()}
+                          onKeyDown={(e) => {
+                            if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+                              e.preventDefault();
+                            }
+                          }}
                           className={cn(
                             'w-16 text-center text-sm font-bold mx-auto border-2',
                             readOnly && 'cursor-default opacity-80',
@@ -430,35 +442,35 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
       </div>
 
       {/* ── Footer Summary ───────────────────────────────────────────────────── */}
-      <div className="bg-muted/30 rounded-xl border border-border p-4 sm:p-5 grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-4 sm:gap-8">
-        <div>
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Total Obtained</p>
-          <p className="text-2xl font-bold text-foreground">
-            {obtained} <span className="text-base text-muted-foreground">/ {fullTotal}</span>
+      <div className="bg-muted/30 rounded-xl border border-border p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-0 sm:divide-x sm:divide-border">
+        <div className="flex justify-between items-center sm:block sm:pr-8">
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider sm:mb-1">Total</p>
+          <p className="text-lg sm:text-2xl font-bold text-foreground">
+            {obtained} <span className="text-sm sm:text-base text-muted-foreground">/ {fullTotal}</span>
           </p>
         </div>
-        <div className="border-l border-border pl-8">
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Percentage</p>
-          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+        <div className="flex justify-between items-center sm:block sm:px-8 border-t border-border pt-3 sm:border-t-0 sm:pt-0">
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider sm:mb-1">Percentage</p>
+          <p className="text-lg sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
             {fullTotal > 0 ? ((obtained / fullTotal) * 100).toFixed(2) : 0}%
           </p>
         </div>
-        <div className="border-l border-border pl-8">
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Result</p>
+        <div className="flex justify-between items-center sm:block sm:px-8 border-t border-border pt-3 sm:border-t-0 sm:pt-0">
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider sm:mb-1">Result</p>
           <span className={cn(
-            'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold',
+            'inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-bold',
             statusStyles[status]
           )}>
-            {status === 'Fail' && <AlertTriangle className="w-4 h-4" />}
-            {isPass && <CheckCircle className="w-4 h-4" />}
+            {status === 'Fail' && <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+            {isPass && <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
             {status}
           </span>
         </div>
         {evaluation.date && evaluation.date !== 'TBD' && (
-          <div className="border-l border-border pl-8">
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Scheduled Date</p>
+          <div className="flex justify-between items-center sm:block sm:pl-8 border-t border-border pt-3 sm:border-t-0 sm:pt-0">
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider sm:mb-1">Date</p>
             <p className="text-sm font-semibold text-foreground flex items-center gap-1">
-              <Calendar className="w-4 h-4 text-blue-500" />
+              <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500" />
               {formatToBSFullString(evaluation.date)}
             </p>
           </div>

@@ -331,6 +331,12 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
                           value={m?.reExamMark ?? ""}
                           placeholder="—"
                           onChange={e => handleReExamMark(lo.name, e.target.value, max)}
+                          onWheel={(e) => (e.target as HTMLElement).blur()}
+                          onKeyDown={(e) => {
+                            if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+                              e.preventDefault();
+                            }
+                          }}
                           className={cn(
                             "w-16 text-center text-sm font-bold h-9",
                             isPassing && reExamMark !== null && reExamMark !== undefined
