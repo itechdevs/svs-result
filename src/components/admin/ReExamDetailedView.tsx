@@ -90,7 +90,15 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
       return lo.templateId && m?.reExamMark !== null && m?.reExamMark !== undefined;
     });
 
-    if (toSave.length === 0) return;
+    if (toSave.length === 0) {
+      const missingTemplate = outcomes.some(lo => !lo.templateId && marks.outcomeMarks[lo.name]?.reExamMark != null);
+      if (missingTemplate) {
+        toast.error("Some outcomes have no template ID — cannot save");
+      } else {
+        toast.error("No re-exam marks entered to save");
+      }
+      return;
+    }
 
     setSaveStatus("saving");
     let remaining = toSave.length;
@@ -116,11 +124,11 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
               setTimeout(() => setSaveStatus("idle"), 2500);
             }
           },
-          onError: () => {
+          onError: (error) => {
             if (!hasError) {
               hasError = true;
               setSaveStatus("error");
-              toast.error("Failed to save re-exam marks");
+              toast.error(error?.message || "Failed to save re-exam marks");
               setTimeout(() => setSaveStatus("idle"), 3000);
             }
           },

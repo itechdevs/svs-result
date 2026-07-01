@@ -10,6 +10,9 @@ import {
   Eye,
   ChevronLeft,
   ChevronRight,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useStudentEvaluationResults } from "@/hooks/use-evaluations";
@@ -213,9 +216,46 @@ export default function ReExamPortalTab() {
     return Array.from(map.values());
   }, [filteredItems]);
 
+  // Sort state: cycles name asc → name desc → roll asc → roll desc
+  const [sortBy, setSortBy] = useState<"name" | "roll">("name");
+  const [sortAsc, setSortAsc] = useState(true);
+
+  const cycleSort = () => {
+    if (sortBy === "name" && sortAsc) { setSortBy("name"); setSortAsc(false); }
+    else if (sortBy === "name" && !sortAsc) { setSortBy("roll"); setSortAsc(true); }
+    else if (sortBy === "roll" && sortAsc) { setSortBy("roll"); setSortAsc(false); }
+    else { setSortBy("name"); setSortAsc(true); }
+    setPage(1);
+  };
+
+  const sortedRows = useMemo(() => {
+    const sorted = [...groupedRows].sort((a, b) => {
+      let cmp: number;
+      if (sortBy === "name") {
+        cmp = a.studentName.localeCompare(b.studentName);
+      } else {
+        const ra = a.rollNumber === "—" ? "" : a.rollNumber;
+        const rb = b.rollNumber === "—" ? "" : b.rollNumber;
+        cmp = ra.localeCompare(rb, undefined, { numeric: true });
+      }
+      return sortAsc ? cmp : -cmp;
+    });
+    return sorted;
+  }, [groupedRows, sortBy, sortAsc]);
+
+  // Search
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchedRows = useMemo(() => {
+    if (!searchQuery.trim()) return sortedRows;
+    const q = searchQuery.trim().toLowerCase();
+    return sortedRows.filter(
+      r => r.studentName.toLowerCase().includes(q) || r.rollNumber.toLowerCase().includes(q),
+    );
+  }, [sortedRows, searchQuery]);
+
   // Pagination
-  const totalPages = Math.max(1, Math.ceil(groupedRows.length / PAGE_SIZE));
-  const pagedRows = groupedRows.slice(
+  const totalPages = Math.max(1, Math.ceil(searchedRows.length / PAGE_SIZE));
+  const pagedRows = searchedRows.slice(
     (page - 1) * PAGE_SIZE,
     page * PAGE_SIZE,
   );
@@ -255,7 +295,7 @@ export default function ReExamPortalTab() {
       </div>
 
       {/* Filters */}
-      <div className="bg-card text-card-foreground rounded-xl border border-border shadow-sm p-5">
+      <div className="bg-card text-card-foreground rounded-xl border border-border shadow-sm p-5 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
@@ -293,6 +333,18 @@ export default function ReExamPortalTab() {
               </SelectContent>
             </Select>
           </div>
+        </div>
+        <div>
+          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+            Search Student
+          </label>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => { setSearchQuery(e.target.value); setPage(1); }}
+            placeholder="Search by name or roll number..."
+            className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors placeholder:text-muted-foreground/60 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
+          />
         </div>
       </div>
 
@@ -352,8 +404,8 @@ export default function ReExamPortalTab() {
               Failed Students Registry
             </h3>
             <p className="text-[11px] text-muted-foreground mt-0.5">
-              {groupedRows.length} student
-              {groupedRows.length !== 1 ? "s" : ""} · Click View to enter
+              {searchedRows.length} student
+              {searchedRows.length !== 1 ? "s" : ""} · Click View to enter
               re-exam marks
             </p>
           </div>
@@ -372,8 +424,14 @@ export default function ReExamPortalTab() {
                 <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground w-[40px]">
                   SN
                 </TableHead>
-                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Student
+                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground cursor-pointer select-none" onClick={cycleSort}>
+                  <div className="flex items-center gap-1">
+                    <span>Student</span>
+                    {sortAsc ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
+                    <span className="text-[8px] font-normal normal-case ml-0.5">
+                      {sortBy === "name" ? "Name" : "Roll"}
+                    </span>
+                  </div>
                 </TableHead>
                 <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   Class
@@ -399,7 +457,7 @@ export default function ReExamPortalTab() {
                     colSpan={7}
                     className="py-12 text-center text-sm text-muted-foreground"
                   >
-                    No failed students found matching the current filters.
+                    {searchQuery ? `No students match "${searchQuery}".` : "No failed students found matching the current filters."}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -484,8 +542,8 @@ export default function ReExamPortalTab() {
           <div className="px-4 sm:px-5 py-3 border-t border-border flex flex-wrap items-center justify-between gap-2 bg-muted/20">
             <p className="text-[11px] text-muted-foreground">
               Showing {(page - 1) * PAGE_SIZE + 1}–
-              {Math.min(page * PAGE_SIZE, groupedRows.length)} of{" "}
-              {groupedRows.length} results
+              {Math.min(page * PAGE_SIZE, searchedRows.length)} of{" "}
+              {searchedRows.length} results
             </p>
             <div className="flex items-center gap-1">
               <button
@@ -543,17 +601,26 @@ export default function ReExamPortalTab() {
       {/* Mobile View */}
       <div className="block sm:hidden space-y-4 pb-4">
         {/* Mobile Header Text */}
-        <div className="px-1">
-          <h2 className="text-xl font-bold text-teal-400">Failed students registry</h2>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
-            {groupedRows.length} student{groupedRows.length !== 1 ? 's' : ''} · Tap view to enter re-exam marks
-          </p>
+        <div className="px-1 flex items-start justify-between gap-2">
+          <div>
+            <h2 className="text-xl font-bold text-teal-400">Failed students registry</h2>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              {searchedRows.length} student{searchedRows.length !== 1 ? 's' : ''} · Tap view to enter re-exam marks
+            </p>
+          </div>
+          <button
+            onClick={cycleSort}
+            className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border bg-card text-xs font-semibold text-muted-foreground hover:bg-muted transition-colors"
+          >
+            {sortAsc ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />}
+            <span>{sortBy === "name" ? "Name" : "Roll"}</span>
+          </button>
         </div>
 
         {/* Mobile Cards */}
         {pagedRows.length === 0 ? (
           <div className="bg-card rounded-xl border border-border p-8 text-center text-sm text-muted-foreground">
-             No failed students found matching the current filters.
+            {searchQuery ? `No students match "${searchQuery}".` : "No failed students found matching the current filters."}
           </div>
         ) : (
           <div className="flex flex-col gap-4">
@@ -614,7 +681,7 @@ export default function ReExamPortalTab() {
         {totalPages > 1 && (
           <div className="py-2 flex items-center justify-between">
             <p className="text-[11px] text-muted-foreground">
-              Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, groupedRows.length)} of {groupedRows.length}
+              Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, searchedRows.length)} of {searchedRows.length}
             </p>
             <div className="flex items-center gap-1">
               <button
