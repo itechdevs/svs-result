@@ -167,9 +167,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Main content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+      <div className="flex flex-col gap-4 sm:gap-6 w-full">
         {/* Evaluations table */}
-        <div className="lg:col-span-2 bg-card rounded-xl border border-border shadow-sm flex flex-col">
+        <div className="bg-card rounded-xl border border-border shadow-sm flex flex-col w-full">
           <div className="flex items-center justify-between p-4 sm:p-5 border-b border-border">
             <h2 className="text-sm font-bold text-foreground">
               Recent Evaluations
@@ -232,7 +232,7 @@ export default function DashboardPage() {
                           {evalTitle}
                         </div>
                         <div
-                          className="text-[10px] text-muted-foreground mt-0.5 max-w-[180px] sm:max-w-[250px] truncate"
+                          className="text-[10px] text-muted-foreground mt-0.5 truncate"
                           title={subTask}
                         >
                           {subTask}
@@ -275,7 +275,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Re-exam alerts */}
-        <div className="bg-card rounded-xl border border-border shadow-sm flex flex-col">
+        {/* <div className="bg-card rounded-xl border border-border shadow-sm flex flex-col">
           <div className="p-4 sm:p-5 border-b border-border bg-destructive/5 flex items-center gap-2">
             <AlertCircle className="w-5 h-5 text-destructive" />
             <h2 className="text-sm font-bold text-destructive">
@@ -377,7 +377,7 @@ export default function DashboardPage() {
               </>
             )}
           </div>
-        </div>
+        </div> */}
       </div>
     </motion.div>
   );
