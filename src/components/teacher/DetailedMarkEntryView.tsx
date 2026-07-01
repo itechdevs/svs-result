@@ -352,6 +352,12 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
                         readOnly={readOnly}
                         tabIndex={readOnly ? -1 : undefined}
                         onChange={readOnly ? undefined : (e) => handleRegular(lo.name, lo.templateId!, 'regularMark', e.target.value, max)}
+                        onWheel={(e) => (e.target as HTMLElement).blur()}
+                        onKeyDown={(e) => {
+                          if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+                            e.preventDefault();
+                          }
+                        }}
                         className={cn(
                           'w-16 text-center text-sm font-bold mx-auto border-2',
                           readOnly && 'cursor-default opacity-80',
@@ -393,6 +399,12 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
                           onChange={readOnly ? undefined : (e) => {
                             const num = e.target.value === '' ? null : Math.min(Math.max(0, Number(e.target.value)), max);
                             updateOutcomeMark(student.id, lo.templateId!, lo.name, { reExamMark: num });
+                          }}
+                          onWheel={(e) => (e.target as HTMLElement).blur()}
+                          onKeyDown={(e) => {
+                            if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+                              e.preventDefault();
+                            }
                           }}
                           className={cn(
                             'w-16 text-center text-sm font-bold mx-auto border-2',
