@@ -91,21 +91,32 @@ export function BSCalendarSelector({
   useEffect(() => {
     if (isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
       const popoverHeight = 350;
-      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceBelow = vh - rect.bottom;
       const goUp = spaceBelow < popoverHeight && rect.top > spaceBelow;
+
+      // Responsive width: on mobile, leave 8px margin on each side
+      const minWidth = Math.max(rect.width, 288);
+      const maxWidth = vw - 16;
+      const popoverWidth = Math.min(minWidth, maxWidth);
+
+      // Responsive left: ensure popover doesn't overflow viewport edges
+      const idealLeft = rect.left + (rect.width - popoverWidth) / 2;
+      const clampedLeft = Math.max(8, Math.min(idealLeft, vw - popoverWidth - 8));
 
       // Offset to apply when inside a dialog (dialog's top-left in viewport coords)
       const dialogRect = dialogPortalContainer ? dialogContentEl?.getBoundingClientRect() ?? null : null;
       const offsetLeft = dialogRect?.left ?? 0;
       const offsetTop = dialogRect?.top ?? 0;
       // For "go up" positioning the effective bottom of the containing block
-      const effectiveBottom = dialogRect ? dialogRect.bottom : window.innerHeight;
+      const effectiveBottom = dialogRect ? dialogRect.bottom : vh;
 
       setPopoverStyle({
         position: "fixed",
-        left: rect.left - offsetLeft,
-        width: Math.max(rect.width, 288), // min 288 = w-72
+        left: clampedLeft - offsetLeft,
+        width: popoverWidth,
         ...(goUp
           ? { bottom: effectiveBottom - rect.top + 4 }
           : { top: rect.bottom + 4 - offsetTop }),
@@ -211,17 +222,17 @@ export function BSCalendarSelector({
       ref={popoverRef}
       data-bs-calendar
       style={{ ...popoverStyle, pointerEvents: "auto" }}
-      className="w-72 rounded-lg border border-border bg-popover p-3 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
+      className="rounded-lg border border-border bg-popover p-2 sm:p-3 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-3 gap-1">
+      <div className="flex items-center justify-between mb-2 sm:mb-3 gap-0.5 sm:gap-1">
         <button type="button" onClick={handlePrevMonth}
-          className="h-7 w-7 flex items-center justify-center rounded-md border border-input bg-background hover:bg-accent cursor-pointer">
-          <ChevronLeft className="h-4 w-4" />
+          className="h-6 sm:h-7 w-6 sm:w-7 flex items-center justify-center rounded-md border border-input bg-background hover:bg-accent cursor-pointer">
+          <ChevronLeft className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
         </button>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 sm:gap-1.5">
           <select value={currentMonth} onChange={(e) => setCurrentMonth(parseInt(e.target.value))}
-            className="h-7 rounded-md border border-input bg-background px-1.5 py-0.5 text-xs font-semibold text-foreground cursor-pointer">
+            className="h-6 sm:h-7 rounded-md border border-input bg-background px-1 sm:px-1.5 py-0.5 text-[11px] sm:text-xs font-semibold text-foreground cursor-pointer">
             {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
               <option key={m} value={m}>{getBSMonthName(m).en}</option>
             ))}
@@ -230,29 +241,29 @@ export function BSCalendarSelector({
             value={yearInput}
             onChange={handleYearInputChange}
             onBlur={() => setYearInput(currentYear.toString())}
-            className="h-7 w-14 rounded-md border border-input bg-background px-1.5 py-0.5 text-xs font-semibold text-foreground text-center focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
+            className="h-6 sm:h-7 w-12 sm:w-14 rounded-md border border-input bg-background px-1 sm:px-1.5 py-0.5 text-[11px] sm:text-xs font-semibold text-foreground text-center focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
           />
         </div>
         <button type="button" onClick={handleNextMonth}
-          className="h-7 w-7 flex items-center justify-center rounded-md border border-input bg-background hover:bg-accent cursor-pointer">
-          <ChevronRight className="h-4 w-4" />
+          className="h-6 sm:h-7 w-6 sm:w-7 flex items-center justify-center rounded-md border border-input bg-background hover:bg-accent cursor-pointer">
+          <ChevronRight className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
         </button>
       </div>
 
       {/* Weekday labels */}
-      <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-muted-foreground mb-1 uppercase tracking-wider">
+      <div className="grid grid-cols-7 gap-0.5 sm:gap-1 text-center text-[9px] sm:text-[10px] font-bold text-muted-foreground mb-1 uppercase tracking-wider">
         {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
-          <div key={d} className="h-6 flex items-center justify-center">{d}</div>
+          <div key={d} className="h-5 sm:h-6 flex items-center justify-center">{d}</div>
         ))}
       </div>
 
       {/* Days */}
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
         {gridDays.map((dayObj, i) =>
-          !dayObj ? <div key={`e-${i}`} className="h-8" /> : (
+          !dayObj ? <div key={`e-${i}`} className="h-7 sm:h-8" /> : (
             <button key={`d-${dayObj.day}`} type="button" onClick={() => handleSelectDay(dayObj.day)}
               className={cn(
-                "h-8 w-8 text-xs flex items-center justify-center rounded-md transition-all font-medium cursor-pointer",
+                "h-7 sm:h-8 w-full text-[11px] sm:text-xs flex items-center justify-center rounded-md transition-all font-medium cursor-pointer",
                 dayObj.isSelected
                   ? "bg-primary text-primary-foreground font-bold scale-105 shadow-sm"
                   : dayObj.isToday
@@ -266,17 +277,17 @@ export function BSCalendarSelector({
       </div>
 
       {/* Footer */}
-      <div className="mt-3 pt-2 border-t border-border flex items-center justify-between text-[10px] text-muted-foreground">
-        <span className="truncate max-w-[130px] font-medium">{value ? `${value} AD` : ""}</span>
-        <div className="flex gap-2">
+      <div className="mt-2 sm:mt-3 pt-1.5 sm:pt-2 border-t border-border flex items-center justify-between text-[9px] sm:text-[10px] text-muted-foreground">
+        <span className="truncate max-w-[100px] sm:max-w-[130px] font-medium">{value ? `${value} AD` : ""}</span>
+        <div className="flex gap-1.5 sm:gap-2">
           {value && (
             <button type="button" onClick={handleClear}
-              className="px-1.5 py-0.5 rounded-md hover:bg-accent text-[10px] font-bold cursor-pointer">
+              className="px-1 sm:px-1.5 py-0.5 rounded-md hover:bg-accent text-[9px] sm:text-[10px] font-bold cursor-pointer">
               Clear
             </button>
           )}
           <button type="button" onClick={handleToday}
-            className="px-2 py-0.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 text-[10px] font-bold cursor-pointer">
+            className="px-1.5 sm:px-2 py-0.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 text-[9px] sm:text-[10px] font-bold cursor-pointer">
             Today
           </button>
         </div>
