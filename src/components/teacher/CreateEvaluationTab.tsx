@@ -232,7 +232,7 @@ export default function CreateEvaluationTab({
                 <select
                   value={selectedExamId}
                   onChange={e => setSelectedExamId?.(e.target.value)}
-                  className="w-fit md:w-full text-xs border border-input bg-background px-3 py-2 rounded-md"
+                  className="w-full text-xs border border-input bg-background px-3 py-2 rounded-md"
                 >
                   <option value="" className=''>-- Select Exam/Term --</option>
                   {exams.map((exam) => (
