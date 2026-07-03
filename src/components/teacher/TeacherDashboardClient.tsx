@@ -60,13 +60,23 @@ export default function DashboardPage() {
   const pendingReExam = useMemo(() => {
     if (!profile?.syncedTeacher) return 0;
     const validTemplateIds = new Set(filteredTemplates.map((t) => t.id));
-    return allResults.filter((r) => {
-      if (r.marksObtained === null || r.marksObtained === undefined)
-        return false;
-      if (!validTemplateIds.has(r.evaluationTemplateId)) return false;
-      const passMarks = r.evaluationTemplate?.passMarks ?? 0;
-      return r.marksObtained < passMarks;
-    }).length;
+    // Mirror ReExamPortalTab's groupedRows: failed, no reExamResult yet, grouped by student+evalCard
+    const grouped = new Set<string>();
+    for (const r of allResults) {
+      if (r.marksObtained === null || r.marksObtained === undefined) continue;
+      if (!validTemplateIds.has(r.evaluationTemplateId)) continue;
+      const passMarks = Number(r.evaluationTemplate?.passMarks ?? 0);
+      if (Number(r.marksObtained) >= passMarks) continue;
+      if (r.reExamResult != null) continue;
+      // Determine the cardId (same logic as ReExamPortalTab)
+      const rawName = r.evaluationTemplate?.name ?? '';
+      const newFmt = rawName.match(/^\[([^\]]+)\]\[/);
+      const evalTitle = newFmt ? newFmt[1] : undefined;
+      const template = r.evaluationTemplate as unknown as { examId?: string | null };
+      const cardId = template?.examId ?? evalTitle ?? r.evaluationTemplateId;
+      grouped.add(`${r.syncedStudentId}|${cardId}`);
+    }
+    return grouped.size;
   }, [allResults, filteredTemplates, profile]);
 
   const filteredReExams = useMemo(() => {
