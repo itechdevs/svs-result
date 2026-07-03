@@ -174,9 +174,19 @@ export default function StudentMarkEntryPage() {
   }
 
   return (
-    <div className="space-y-12 pb-20">
+    <div className="space-y-12 pb-20 relative">
+      {studentsToRender.map((student) => (
+        <DetailedMarkEntryView
+          key={student.id}
+          student={student}
+          evaluation={evaluation}
+          getStudentMark={getStudentMark}
+          updateOutcomeMark={updateOutcomeMark}
+          handleSaveAll={handleSaveAll}
+        />
+      ))}
       {studentId === 'all' && (
-        <div className="sticky top-4 z-50 flex items-center justify-between bg-card/95 backdrop-blur-sm px-4 py-3 rounded-xl border border-border shadow-md">
+        <div className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between bg-card/95 backdrop-blur-sm px-4 py-3 rounded-xl border border-border shadow-md">
           <p className="text-sm font-semibold text-foreground">
             {studentsToRender.length} student{studentsToRender.length !== 1 ? 's' : ''} · {evaluation?.subject} · {evaluation?.title}
           </p>
@@ -193,7 +203,7 @@ export default function StudentMarkEntryPage() {
             }}
             disabled={saveStatus === 'saving'}
             className={cn(
-              'flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-colors border',
+              'shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-colors border',
               saveStatus === 'saved'
                 ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
                 : saveStatus === 'saving'
@@ -211,16 +221,6 @@ export default function StudentMarkEntryPage() {
           </button>
         </div>
       )}
-      {studentsToRender.map((student) => (
-        <DetailedMarkEntryView
-          key={student.id}
-          student={student}
-          evaluation={evaluation}
-          getStudentMark={getStudentMark}
-          updateOutcomeMark={updateOutcomeMark}
-          handleSaveAll={handleSaveAll}
-        />
-      ))}
     </div>
   );
 }
