@@ -170,12 +170,12 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
             <h2 className="font-bold text-sm text-foreground truncate">{student.name}</h2>
             <p className="text-[11px] text-muted-foreground truncate">
               {student.rollNo} · {evaluation.subject} · {evaluation.title}
-              {evaluation.date && evaluation.date !== 'TBD' && (
+              {/* {evaluation.date && evaluation.date !== 'TBD' && (
                 <span className="ml-2 inline-flex items-center gap-1 text-[10px] text-blue-600 dark:text-blue-400">
                   <Calendar className="w-3 h-3" />
                   {formatToBSFullString(evaluation.date)}
                 </span>
-              )}
+              )} */}
             </p>
           </div>
         </div>
@@ -466,7 +466,7 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
             {status}
           </span>
         </div>
-        {evaluation.date && evaluation.date !== 'TBD' && (
+        {/* {evaluation.date && evaluation.date !== 'TBD' && (
           <div className="flex justify-between items-center sm:block sm:pl-8 border-t border-border pt-3 sm:border-t-0 sm:pt-0">
             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider sm:mb-1">Date</p>
             <p className="text-sm font-semibold text-foreground flex items-center gap-1">
@@ -474,7 +474,7 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
               {formatToBSFullString(evaluation.date)}
             </p>
           </div>
-        )}
+        )} */}
       </div>
     </motion.div>
   );
