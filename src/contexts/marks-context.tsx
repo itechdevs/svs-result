@@ -302,10 +302,11 @@ export function MarksProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Save student-specific re-exam date if changed
+        const reExamPayloads = [];
         for (const m of relevantMarks) {
           const mark = m.outcomeMarks[t.name];
           if (mark?.reExamMark !== null && mark?.reExamMark !== undefined && mark?.reExamDate) {
-            await apiClient.post('/admin/re-exam-portal', {
+            reExamPayloads.push({
               evaluationTemplateId: t.id,
               syncedStudentId: m.studentId,
               marksObtained: mark.reExamMark,
@@ -313,6 +314,9 @@ export function MarksProvider({ children }: { children: React.ReactNode }) {
               remarks: mark.remarks || undefined,
             });
           }
+        }
+        if (reExamPayloads.length > 0) {
+          await apiClient.post('/admin/re-exam-portal', reExamPayloads);
         }
       }
       setSaved(true);

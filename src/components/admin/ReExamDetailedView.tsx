@@ -101,40 +101,30 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
     }
 
     setSaveStatus("saving");
-    let remaining = toSave.length;
-    let hasError = false;
-
-    for (const lo of toSave) {
+    const payload = toSave.map(lo => {
       const m = marks.outcomeMarks[lo.name];
-      reExamAssessment.mutate(
-        {
-          evaluationTemplateId: lo.templateId!,
-          syncedStudentId: student.id,
-          marksObtained: m.reExamMark!,
-          scheduledDate: m.reExamDate || new Date().toISOString(),
-          remarks: m.remarks,
-        },
-        {
-          onSuccess: () => {
-            remaining--;
-            if (remaining === 0 && !hasError) {
-              setSaveStatus("saved");
-              setIsDirty(false);
-              toast.success("Re-exam marks saved");
-              setTimeout(() => setSaveStatus("idle"), 2500);
-            }
-          },
-          onError: (error) => {
-            if (!hasError) {
-              hasError = true;
-              setSaveStatus("error");
-              toast.error(error?.message || "Failed to save re-exam marks");
-              setTimeout(() => setSaveStatus("idle"), 3000);
-            }
-          },
-        },
-      );
-    }
+      return {
+        evaluationTemplateId: lo.templateId!,
+        syncedStudentId: student.id,
+        marksObtained: m.reExamMark!,
+        scheduledDate: m.reExamDate || new Date().toISOString(),
+        remarks: m.remarks,
+      };
+    });
+
+    reExamAssessment.mutate(payload, {
+      onSuccess: () => {
+        setSaveStatus("saved");
+        setIsDirty(false);
+        toast.success("Re-exam marks saved");
+        setTimeout(() => setSaveStatus("idle"), 2500);
+      },
+      onError: (error) => {
+        setSaveStatus("error");
+        toast.error(error?.message || "Failed to save re-exam marks");
+        setTimeout(() => setSaveStatus("idle"), 3000);
+      },
+    });
   }, [evaluation.learningOutcomes, student.id, reExamAssessment]);
 
   const handleSave = useCallback(() => {
