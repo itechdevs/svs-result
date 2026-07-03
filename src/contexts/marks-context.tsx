@@ -86,10 +86,9 @@ export function MarksProvider({ children }: { children: React.ReactNode }) {
     setEvaluations(evals);
   }, []);
 
-  // Always fetch results for the selected evaluation group
-  const { data: resultsData = [] } = useStudentEvaluationResults(
+  const { data: resultsData = [], dataUpdatedAt } = useStudentEvaluationResults(
     evalIds.length > 0 ? { limit: 1000, evaluationTemplateIds: evalIds } : {},
-    { refetchOnWindowFocus: false, refetchOnMount: false, staleTime: Infinity }
+    { refetchOnWindowFocus: false, staleTime: 0 }
   );
 
   const bulkSave = useBulkSaveMarks();
@@ -132,13 +131,22 @@ export function MarksProvider({ children }: { children: React.ReactNode }) {
     [evaluations]
   );
 
+  const lastProcessedDataAt = useRef<number>(0);
+
   useEffect(() => {
     if (evaluations.length === 0 || resultsData.length === 0) return;
 
     const currentKey = evalIds.join(',');
-    // Only initialize from DB once per evaluation group — never overwrite local edits
-    if (initializedEvalKey.current === currentKey) return;
+    // Initialize from DB once per evaluation group, but also update if fresh DB data arrives
+    // (e.g. after a save or background refetch when navigating back)
+    if (
+      initializedEvalKey.current === currentKey &&
+      lastProcessedDataAt.current === dataUpdatedAt
+    ) {
+      return;
+    }
     initializedEvalKey.current = currentKey;
+    lastProcessedDataAt.current = dataUpdatedAt;
 
     // Group results by (studentId, evalId) → ONE StudentOutcomeMark per (student, template)
     // Use template name as the outcomeMarks key (matches DetailedMarkEntryView lookup)
