@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
 import { Plus, Trash2, BookOpen, Calendar, Pencil, X, Check } from "lucide-react";
 import { toast } from "sonner";
@@ -56,7 +56,23 @@ import SanskarLoader from "@/components/shared/SanskarLoader";
 
 export default function ExamsPage() {
   const router = useRouter();
-  const { data: exams, isLoading } = useExams();
+  const searchParams = useSearchParams();
+
+  // Initialise from URL — pre-selects when coming from /admin/academic-years row click
+  const [academicYearFilter, setAcademicYearFilter] = useState(
+    () => searchParams.get("academicYearId") ?? ""
+  );
+  const [gradeLevelFilter, setGradeLevelFilter] = useState("");
+
+  // Stay in sync when browser navigates back/forward
+  useEffect(() => {
+    setAcademicYearFilter(searchParams.get("academicYearId") ?? "");
+  }, [searchParams]);
+
+  const { data: exams, isLoading } = useExams({
+    ...(academicYearFilter && { academicYearId: academicYearFilter }),
+    ...(gradeLevelFilter && { gradeLevel: gradeLevelFilter }),
+  });
   const { data: academicYears } = useAcademicYears();
   const { data: gradeLevels } = useGradeLevels();
   const createExam = useCreateExam();
@@ -75,12 +91,6 @@ export default function ExamsPage() {
   const [academicYearId, setAcademicYearId] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-
-  const [gradeLevelFilter, setGradeLevelFilter] = useState("");
-
-  const filteredExams = exams?.filter(
-    (exam) => !gradeLevelFilter || exam.gradeLevel === gradeLevelFilter
-  );
 
   const resetForm = () => {
     setName("");
@@ -300,8 +310,8 @@ export default function ExamsPage() {
                     >
                       <div
                         className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${selectedGrades.length === gradeLevels?.length
-                            ? "bg-primary text-primary-foreground"
-                            : "opacity-50"
+                          ? "bg-primary text-primary-foreground"
+                          : "opacity-50"
                           }`}
                       >
                         {selectedGrades.length === gradeLevels?.length && <Check className="h-3 w-3" />}
@@ -329,8 +339,8 @@ export default function ExamsPage() {
                         >
                           <div
                             className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${isChecked
-                                ? "bg-primary text-primary-foreground"
-                                : "opacity-50"
+                              ? "bg-primary text-primary-foreground"
+                              : "opacity-50"
                               }`}
                           >
                             {isChecked && <Check className="h-3 w-3" />}
@@ -498,25 +508,51 @@ export default function ExamsPage() {
       </div>
 
       <div className="bg-card border border-border rounded-xl shadow-sm p-4">
-        <div className="w-full sm:w-56">
-          <Select value={gradeLevelFilter} onValueChange={(val) => setGradeLevelFilter(val === "all" ? "" : val)}>
-            <SelectTrigger className="w-full text-sm h-9">
-              <SelectValue placeholder="All Grade Levels" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Grade Levels</SelectItem>
-              {gradeLevels?.map((level) => (
-                <SelectItem key={level} value={level}>
-                  {level}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex flex-col sm:flex-row gap-3">
+          {/* Academic Year Filter */}
+          <div className="w-full sm:w-60">
+            <Select
+              value={academicYearFilter}
+              onValueChange={(val) => setAcademicYearFilter(val === "all" ? "" : val)}
+            >
+              <SelectTrigger className="w-full text-sm h-9">
+                <SelectValue placeholder="All Academic Years" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Academic Years</SelectItem>
+                {academicYears?.map((year: any) => (
+                  <SelectItem key={year.id} value={year.id}>
+                    {year.name}{year.isCurrent && " (Current)"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Grade Level Filter */}
+          <div className="w-full sm:w-56">
+            <Select
+              value={gradeLevelFilter}
+              onValueChange={(val) => setGradeLevelFilter(val === "all" ? "" : val)}
+            >
+              <SelectTrigger className="w-full text-sm h-9">
+                <SelectValue placeholder="All Grade Levels" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Grade Levels</SelectItem>
+                {gradeLevels?.map((level) => (
+                  <SelectItem key={level} value={level}>
+                    {level}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
       <div className="bg-card border border-border rounded-xl shadow-sm overflow-x-auto w-full">
-        {filteredExams && filteredExams.length > 0 ? (
+        {exams && exams.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow>
@@ -529,7 +565,7 @@ export default function ExamsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredExams.map((exam) => (
+              {exams.map((exam) => (
                 <TableRow
                   key={exam.id}
                   className="cursor-pointer hover:bg-muted/50"
@@ -623,10 +659,12 @@ export default function ExamsPage() {
           <div className="p-12 text-center">
             <BookOpen className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
             <p className="text-sm font-medium text-muted-foreground">
-              {gradeLevelFilter ? "No exams for this grade level" : "No exams yet"}
+              {academicYearFilter || gradeLevelFilter ? "No exams match the selected filters" : "No exams yet"}
             </p>
             <p className="text-xs text-muted-foreground/60 mt-1">
-              {gradeLevelFilter ? "Try selecting a different grade level" : "Create your first exam to get started"}
+              {academicYearFilter || gradeLevelFilter
+                ? "Try selecting different filters"
+                : "Create your first exam to get started"}
             </p>
           </div>
         )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import { Plus, Calendar, Pencil, Trash2, Star } from "lucide-react";
 import { toast } from "sonner";
@@ -44,6 +45,7 @@ import {
 import SanskarLoader from "@/components/shared/SanskarLoader";
 
 export default function AcademicYearsPage() {
+  const router = useRouter();
   const { data: years, isLoading } = useAcademicYears();
   const createYear = useCreateAcademicYear();
   const updateYear = useUpdateAcademicYear();
@@ -66,7 +68,7 @@ export default function AcademicYearsPage() {
   const handleCreate = async () => {
     try {
       const isCurrent = !years || years.length === 0;
-      await createYear.mutateAsync({
+      const newYear = await createYear.mutateAsync({
         name,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
@@ -221,7 +223,11 @@ export default function AcademicYearsPage() {
             </TableHeader>
             <TableBody>
               {years.map((year) => (
-                <TableRow key={year.id}>
+                <TableRow
+                  key={year.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => router.push(`/admin/exams?academicYearId=${year.id}`)}
+                >
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-primary" />
@@ -258,7 +264,10 @@ export default function AcademicYearsPage() {
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
+                    <div
+                      className="flex items-center justify-end gap-1"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {!year.isCurrent && (
                         <Button
                           variant="ghost"
