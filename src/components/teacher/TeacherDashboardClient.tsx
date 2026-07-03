@@ -60,13 +60,23 @@ export default function DashboardPage() {
   const pendingReExam = useMemo(() => {
     if (!profile?.syncedTeacher) return 0;
     const validTemplateIds = new Set(filteredTemplates.map((t) => t.id));
-    return allResults.filter((r) => {
-      if (r.marksObtained === null || r.marksObtained === undefined)
-        return false;
-      if (!validTemplateIds.has(r.evaluationTemplateId)) return false;
-      const passMarks = r.evaluationTemplate?.passMarks ?? 0;
-      return r.marksObtained < passMarks;
-    }).length;
+    // Mirror ReExamPortalTab's groupedRows: failed, no reExamResult yet, grouped by student+evalCard
+    const grouped = new Set<string>();
+    for (const r of allResults) {
+      if (r.marksObtained === null || r.marksObtained === undefined) continue;
+      if (!validTemplateIds.has(r.evaluationTemplateId)) continue;
+      const passMarks = Number(r.evaluationTemplate?.passMarks ?? 0);
+      if (Number(r.marksObtained) >= passMarks) continue;
+      if (r.reExamResult != null) continue;
+      // Determine the cardId (same logic as ReExamPortalTab)
+      const rawName = r.evaluationTemplate?.name ?? '';
+      const newFmt = rawName.match(/^\[([^\]]+)\]\[/);
+      const evalTitle = newFmt ? newFmt[1] : undefined;
+      const template = r.evaluationTemplate as unknown as { examId?: string | null };
+      const cardId = template?.examId ?? evalTitle ?? r.evaluationTemplateId;
+      grouped.add(`${r.syncedStudentId}|${cardId}`);
+    }
+    return grouped.size;
   }, [allResults, filteredTemplates, profile]);
 
   const filteredReExams = useMemo(() => {
@@ -87,7 +97,6 @@ export default function DashboardPage() {
       sub: "Completed this semester",
       icon: <ClipboardList className="w-5 h-5" />,
       danger: false,
-      href: "/teacher/evaluations",
       colorClass:
         "text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40",
     },
@@ -136,9 +145,8 @@ export default function DashboardPage() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         {kpis.map((kpi) => (
-          <Link
+          <div
             key={kpi.label}
-            href={kpi.href}
             className="bg-card rounded-xl border border-border p-4 sm:p-5 relative overflow-hidden hover:border-primary/50 hover:shadow-md transition-all group flex flex-col justify-between min-h-[90px]"
           >
             <div className="flex items-start justify-between">
@@ -162,7 +170,7 @@ export default function DashboardPage() {
               </p>
               <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors opacity-0 group-hover:opacity-100 transform translate-x-[-10px] group-hover:translate-x-0 transition-all duration-300" />
             </div>
-          </Link>
+          </div>
         ))}
       </div>
 
