@@ -204,7 +204,7 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
           </button>
           <div>
             <h2 className="font-bold text-sm text-foreground">{student.name} - Re-Exam Entry</h2>
-            <p className="text-[11px] text-muted-foreground">{student.rollNo} · {evaluation.subject} · {evaluation.title}</p>
+            <p className="text-[11px] text-muted-foreground">{student.rollNo} · {student.class} · {evaluation.subject} · {evaluation.title}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
