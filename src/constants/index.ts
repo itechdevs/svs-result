@@ -28,10 +28,14 @@ export const ROUTES = {
   ADMIN_MARK_ENTRY: "/admin/mark-entry",
   ADMIN_RESULT_COMPILATION: "/admin/result-compilation",
   ADMIN_SYNC: "/admin/sync",
+  ADMIN_SECONDARY_SUBJECT_CONFIG: "/admin/secondary/subject-config",
+  ADMIN_SECONDARY_TERM_WEIGHTS: "/admin/secondary/term-weights",
+  ADMIN_SECONDARY_RESULT_COMPILATION: "/admin/secondary/result-compilation",
   // Teacher routes
   TEACHER_DASHBOARD: "/teacher/dashboard",
   TEACHER_EVALUATIONS: "/teacher/evaluations",
   TEACHER_MARK_ENTRY: "/teacher/mark-entry",
+  TEACHER_SECONDARY_MARK_ENTRY: "/teacher/secondary/mark-entry",
   TEACHER_RE_EXAM: "/teacher/re-exam-portal",
   TEACHER_OBSERVATIONS: "/teacher/observations",
 } as const;

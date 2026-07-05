@@ -1,0 +1,609 @@
+# Secondary Level (Grades 6–10) — NEB Letter-Grade System Implementation Plan
+
+> **Scope**: Extend the existing Playgroup–Grade 5 Result Management System with Grades 6–10 following the NEB / CDC Letter Grading Directive. Planning only — no code until approved.
+
+---
+
+## 1. Gap Analysis — Existing Models
+
+### Reusable As-Is (Shared Infrastructure)
+
+| Model | Reason |
+|-------|--------|
+| `User`, `Session`, `PasswordResetToken`, `VerificationToken`, `LoginAttempt` | Auth — grade-agnostic |
+| `AuditLog`, `SyncLog` | Audit — grade-agnostic |
+| `SyncedStudent`, `SyncedTeacher`, `SyncedSubject` | Already have `gradeLevel`/`class` — handle any grade |
+| `AcademicYear` | Year container — no level logic |
+
+### Need Minor Additions
+
+| Model | Change | Reason |
+|-------|--------|--------|
+| `Exam` | New relations to `Secondary*` models | Term-scoped compilation for 6–10 |
+| `ResultStatus` enum | Add `NG_BLOCKED` | Student has ≥1 NG subject |
+
+### Stay Grade 1–5 Only (Untouched)
+
+| Model | Reason |
+|-------|--------|
+| `GradeConfig` / `GradeScale` | Admin-configurable bands — Secondary uses fixed national scale |
+| `EvaluationTemplate` / `StudentEvaluationResult` | Weighted-% evaluations — Secondary uses IN/TH/PR components |
+| `SubjectResult` / `FinalResult` / `Marksheet` | Percentage-based aggregation — Secondary uses credit-hour GPA |
+| `ReExamSchedule` / `ReExamEnrollment` / `ReExamResult` | Per-evaluation re-exam — not used in Secondary |
+| `TeacherSubjectCompilation` / `TeacherSubjectCompilationResult` | 1–5 teacher flow |
+
+> [!IMPORTANT]
+> Grade 1–5 models are **never modified or deleted**. Secondary gets its own parallel model set.
+
+---
+
+## 2. New Schema Design
+
+### 2.1 Fixed Grade Scale (Seeded, Immutable)
+
+```prisma
+model SecondaryGradeScale {
+  id         String  @id @default(cuid())
+  minPercent Decimal @db.Decimal(5, 2)
+  maxPercent Decimal @db.Decimal(5, 2)
+  grade      String  // "A+", "A", "B+", "B", "C+", "C", "D", "NG"
+  gradePoint Decimal @db.Decimal(3, 2)
+  isNG       Boolean @default(false)
+
+  @@unique([minPercent, maxPercent])
+  @@map("secondary_grade_scales")
+}
+```
+
+| min | max | grade | GP | isNG |
+|-----|-----|-------|----|------|
+| 90 | 100 | A+ | 4.0 | ✗ |
+| 80 | 89.99 | A | 3.6 | ✗ |
+| 70 | 79.99 | B+ | 3.2 | ✗ |
+| 60 | 69.99 | B | 2.8 | ✗ |
+| 50 | 59.99 | C+ | 2.4 | ✗ |
+| 40 | 49.99 | C | 2.0 | ✗ |
+| 35 | 39.99 | D | 1.6 | ✗ |
+| 0 | 34.99 | NG | 0.0 | ✓ |
+
+---
+
+### 2.2 Subject Component Configuration
+
+```prisma
+enum SecondaryComponentType {
+  INTERNAL   // IN — class participation, homework, project
+  THEORY     // TH — written exam
+  PRACTICAL  // PR — lab/practical (optional per subject)
+}
+
+model SecondarySubjectConfig {
+  id              String   @id @default(cuid())
+  syncedSubjectId String
+  academicYearId  String
+  gradeLevel      String   // "Grade 6"…"Grade 10"
+  creditHours     Int      // totalFullMarks / 25
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  syncedSubject SyncedSubject @relation(fields: [syncedSubjectId], references: [id], onDelete: Cascade)
+  academicYear  AcademicYear  @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  components    SecondarySubjectComponent[]
+
+  @@unique([syncedSubjectId, academicYearId, gradeLevel])
+  @@map("secondary_subject_configs")
+}
+
+model SecondarySubjectComponent {
+  id              String                 @id @default(cuid())
+  subjectConfigId String
+  type            SecondaryComponentType
+  fullMarks       Decimal                @db.Decimal(6, 2)
+  passMarks       Decimal                @db.Decimal(6, 2)
+  displayOrder    Int                    @default(0)
+  isActive        Boolean                @default(true)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  subjectConfig       SecondarySubjectConfig        @relation(fields: [subjectConfigId], references: [id], onDelete: Cascade)
+  // For INTERNAL / THEORY — marks entered directly via SecondaryComponentMark
+  componentMarks      SecondaryComponentMark[]
+  // For PRACTICAL only — sub-headings that sum up to the component total
+  practicalHeadings   SecondaryPracticalHeading[]
+
+  @@unique([subjectConfigId, type])
+  @@map("secondary_subject_components")
+}
+```
+
+---
+
+### 2.3 Practical Sub-Headings
+
+Practical marks are **not entered directly** — instead the teacher enters marks per sub-heading, and the system sums them into the PR component total.
+
+```prisma
+/// Configurable sub-headings under a PRACTICAL component
+/// e.g. Experiment(10), Viva(5), Lab Record(5), Attendance(5) = PR total 25
+model SecondaryPracticalHeading {
+  id           String  @id @default(cuid())
+  componentId  String
+  name         String  // "Experiment", "Viva", "Lab Record", "Attendance"
+  fullMarks    Decimal @db.Decimal(6, 2)
+  displayOrder Int     @default(0)
+  isActive     Boolean @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  component     SecondarySubjectComponent     @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  headingMarks  SecondaryPracticalHeadingMark[]
+
+  @@unique([componentId, name])
+  @@map("secondary_practical_headings")
+}
+
+/// Per-student marks for each practical sub-heading
+model SecondaryPracticalHeadingMark {
+  id              String  @id @default(cuid())
+  syncedStudentId String
+  headingId       String
+  examId          String  // Term exam
+  marksObtained   Decimal @db.Decimal(6, 2)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  syncedStudent SyncedStudent             @relation(fields: [syncedStudentId], references: [id], onDelete: Cascade)
+  heading       SecondaryPracticalHeading  @relation(fields: [headingId], references: [id], onDelete: Cascade)
+  exam          Exam                      @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@unique([syncedStudentId, headingId, examId])
+  @@map("secondary_practical_heading_marks")
+}
+```
+
+**Flow**: Teacher enters marks per heading → system sums → auto-populates `SecondaryComponentMark.marksObtained` for the PR component.
+
+---
+
+### 2.4 Component Mark Entry (IN / TH / PR-computed)
+
+```prisma
+/// Per-student per-component marks within a term exam.
+/// For PRACTICAL type, marksObtained is auto-summed from heading marks.
+model SecondaryComponentMark {
+  id              String      @id @default(cuid())
+  syncedStudentId String
+  componentId     String
+  examId          String
+  enteredById     String
+  marksObtained   Decimal?    @db.Decimal(6, 2) // null if absent
+  isAbsent        Boolean     @default(false)
+  status          MarksStatus @default(DRAFT)
+  submittedAt     DateTime?
+  verifiedById    String?
+  verifiedAt      DateTime?
+  remarks         String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  syncedStudent SyncedStudent             @relation(fields: [syncedStudentId], references: [id], onDelete: Cascade)
+  component     SecondarySubjectComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  exam          Exam                      @relation(fields: [examId], references: [id], onDelete: Cascade)
+  enteredBy     User                      @relation("SecEnteredBy", fields: [enteredById], references: [id])
+  verifiedBy    User?                     @relation("SecVerifiedBy", fields: [verifiedById], references: [id])
+
+  @@unique([syncedStudentId, componentId, examId])
+  @@index([examId, status])
+  @@map("secondary_component_marks")
+}
+```
+
+---
+
+### 2.5 Term-Scoped Subject & Final Results
+
+```prisma
+/// Per-subject result within a single term/exam
+model SecondarySubjectResult {
+  id              String   @id @default(cuid())
+  syncedStudentId String
+  subjectConfigId String
+  examId          String
+  internalMarks   Decimal? @db.Decimal(6, 2)
+  theoryMarks     Decimal? @db.Decimal(6, 2)
+  practicalMarks  Decimal? @db.Decimal(6, 2)
+  totalObtained   Decimal  @db.Decimal(8, 2)
+  totalFullMarks  Decimal  @db.Decimal(8, 2)
+  percentage      Decimal  @db.Decimal(5, 2)
+  grade           String
+  gradePoint      Decimal  @db.Decimal(3, 2)
+  isNG            Boolean  @default(false)
+  creditHours     Int
+  weightedPoint   Decimal  @db.Decimal(6, 2) // creditHours × gradePoint
+  remarks         String?
+  computedAt      DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  syncedStudent  SyncedStudent          @relation(fields: [syncedStudentId], references: [id], onDelete: Cascade)
+  subjectConfig  SecondarySubjectConfig @relation(fields: [subjectConfigId], references: [id], onDelete: Cascade)
+  exam           Exam                   @relation(fields: [examId], references: [id], onDelete: Cascade)
+  finalResult    SecondaryTermResult?   @relation(fields: [finalResultId], references: [id])
+  finalResultId  String?
+
+  @@unique([syncedStudentId, subjectConfigId, examId])
+  @@map("secondary_subject_results")
+}
+
+/// Per-student result for a single term with credit-hour-weighted GPA
+model SecondaryTermResult {
+  id              String       @id @default(cuid())
+  syncedStudentId String
+  examId          String
+  academicYearId  String
+  totalSubjects   Int
+  passedSubjects  Int
+  ngSubjects      Int
+  totalCreditHours Int
+  totalWeightedPoints Decimal  @db.Decimal(8, 2)
+  gpa             Decimal      @db.Decimal(4, 2)
+  classRank       Int?
+  resultStatus    ResultStatus @default(PENDING)
+  hasNG           Boolean      @default(false)
+  isPublished     Boolean      @default(false)
+  publishedAt     DateTime?
+  publishedById   String?
+  remarks         String?
+  computedAt      DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  syncedStudent   SyncedStudent            @relation(fields: [syncedStudentId], references: [id], onDelete: Cascade)
+  exam            Exam                     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  academicYear    AcademicYear             @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  publishedBy     User?                    @relation("SecPublishedBy", fields: [publishedById], references: [id])
+  subjectResults  SecondarySubjectResult[]
+  marksheet       SecondaryMarksheet?
+
+  @@unique([syncedStudentId, examId])
+  @@index([examId, resultStatus])
+  @@map("secondary_term_results")
+}
+```
+
+---
+
+### 2.6 Annual Final Result (Weighted from Terms)
+
+The annual result is computed by taking **configured percentage weights from each term** (e.g. First 10%, Second 15%, Third 20%, Final 55%).
+
+```prisma
+/// Admin configures how each term contributes to the annual result
+model SecondaryTermWeight {
+  id             String  @id @default(cuid())
+  academicYearId String
+  gradeLevel     String
+  examId         String  // The term exam
+  termName       String  // "First Term", "Second Term", etc.
+  weightPercent  Decimal @db.Decimal(5, 2) // Must sum to 100 across all terms
+  displayOrder   Int     @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  exam         Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@unique([academicYearId, gradeLevel, examId])
+  @@map("secondary_term_weights")
+}
+
+/// Annual result — weighted aggregation of all term results
+model SecondaryAnnualResult {
+  id              String       @id @default(cuid())
+  syncedStudentId String
+  academicYearId  String
+  totalSubjects   Int
+  passedSubjects  Int
+  ngSubjects      Int
+  totalCreditHours Int
+  totalWeightedPoints Decimal  @db.Decimal(8, 2)
+  gpa             Decimal      @db.Decimal(4, 2) // Credit-hour weighted
+  classRank       Int?
+  resultStatus    ResultStatus @default(PENDING)
+  hasNG           Boolean      @default(false)
+  isPublished     Boolean      @default(false)
+  publishedAt     DateTime?
+  publishedById   String?
+  remarks         String?
+  computedAt      DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  syncedStudent   SyncedStudent @relation(fields: [syncedStudentId], references: [id], onDelete: Cascade)
+  academicYear    AcademicYear  @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  publishedBy     User?         @relation("SecAnnualPublishedBy", fields: [publishedById], references: [id])
+  subjectResults  SecondaryAnnualSubjectResult[]
+  marksheet       SecondaryMarksheet? @relation("AnnualMarksheet")
+
+  @@unique([syncedStudentId, academicYearId])
+  @@map("secondary_annual_results")
+}
+
+/// Per-subject annual result — weighted average from term subject results
+model SecondaryAnnualSubjectResult {
+  id              String  @id @default(cuid())
+  annualResultId  String
+  subjectConfigId String
+  syncedStudentId String
+  // Weighted marks from each term
+  weightedTotalObtained Decimal @db.Decimal(8, 2)
+  weightedTotalFull     Decimal @db.Decimal(8, 2)
+  percentage            Decimal @db.Decimal(5, 2)
+  grade                 String
+  gradePoint            Decimal @db.Decimal(3, 2)
+  isNG                  Boolean @default(false)
+  creditHours           Int
+  weightedPoint         Decimal @db.Decimal(6, 2)
+  remarks               String?
+  computedAt            DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  annualResult   SecondaryAnnualResult  @relation(fields: [annualResultId], references: [id], onDelete: Cascade)
+  subjectConfig  SecondarySubjectConfig @relation(fields: [subjectConfigId], references: [id], onDelete: Cascade)
+  syncedStudent  SyncedStudent          @relation(fields: [syncedStudentId], references: [id], onDelete: Cascade)
+
+  @@unique([annualResultId, subjectConfigId])
+  @@map("secondary_annual_subject_results")
+}
+```
+
+**Annual computation logic:**
+
+```
+For each subject:
+  weightedObtained = Σ(termSubjectResult.totalObtained × termWeight.weightPercent / 100)
+  weightedFull     = Σ(termSubjectResult.totalFullMarks × termWeight.weightPercent / 100)
+  percentage       = weightedObtained / weightedFull × 100
+  → Look up grade/GP from SecondaryGradeScale
+  → isNG if grade == "NG"
+
+GPA = Σ(creditHours × gradePoint) / Σ(creditHours)
+resultStatus = hasNG ? NG_BLOCKED : PROMOTED
+```
+
+---
+
+### 2.7 Secondary Marksheet
+
+```prisma
+model SecondaryMarksheet {
+  id              String   @id @default(cuid())
+  syncedStudentId String
+  termResultId    String?  @unique // For term marksheet
+  annualResultId  String?  @unique // For annual marksheet
+  examId          String?
+  academicYearId  String
+  generatedById   String
+  generatedAt     DateTime @default(now())
+  fileUrl         String?
+  metadata        Json     // Full snapshot
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  syncedStudent  SyncedStudent         @relation(fields: [syncedStudentId], references: [id], onDelete: Cascade)
+  termResult     SecondaryTermResult?  @relation(fields: [termResultId], references: [id], onDelete: Cascade)
+  annualResult   SecondaryAnnualResult? @relation("AnnualMarksheet", fields: [annualResultId], references: [id], onDelete: Cascade)
+  academicYear   AcademicYear          @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  generatedBy    User                  @relation("SecGeneratedBy", fields: [generatedById], references: [id])
+
+  @@map("secondary_marksheets")
+}
+```
+
+---
+
+### 2.8 New Enums Summary
+
+```prisma
+enum ResultStatus {
+  PENDING
+  PROMOTED
+  FAILED
+  PROBATION
+  WITHHELD
+  NG_BLOCKED  // NEW
+}
+
+enum SecondaryComponentType {
+  INTERNAL    // NEW
+  THEORY      // NEW
+  PRACTICAL   // NEW
+}
+```
+
+---
+
+### 2.9 Relation Additions to Existing Models
+
+| Model | New Relations Added |
+|-------|-------------------|
+| `SyncedStudent` | `secondaryComponentMarks`, `secondaryHeadingMarks`, `secondarySubjectResults`, `secondaryTermResults`, `secondaryAnnualResults`, `secondaryAnnualSubjectResults`, `secondaryMarksheets` |
+| `SyncedSubject` | `secondarySubjectConfigs` |
+| `AcademicYear` | `secondarySubjectConfigs`, `secondaryTermResults`, `secondaryAnnualResults`, `secondaryTermWeights`, `secondaryMarksheets` |
+| `Exam` | `secondaryComponentMarks`, `secondaryHeadingMarks`, `secondarySubjectResults`, `secondaryTermResults`, `secondaryTermWeights` |
+| `User` | `secEnteredMarks`, `secVerifiedMarks`, `secPublishedResults`, `secAnnualPublished`, `secGeneratedMarksheets` |
+
+---
+
+## 3. Coexistence Strategy
+
+```mermaid
+graph TD
+    subgraph "Shared Layer"
+        User
+        SyncedStudent
+        SyncedTeacher
+        SyncedSubject
+        AcademicYear
+        Exam
+        AuditLog
+    end
+
+    subgraph "Grade 1–5 Path"
+        GradeConfig --> GradeScale
+        EvaluationTemplate --> StudentEvaluationResult
+        SubjectResult --> FinalResult --> Marksheet
+    end
+
+    subgraph "Grade 6–10 Path"
+        SecondaryGradeScale
+        SecondarySubjectConfig --> SecondarySubjectComponent
+        SecondarySubjectComponent --> SecondaryPracticalHeading
+        SecondaryComponentMark
+        SecondarySubjectResult --> SecondaryTermResult
+        SecondaryTermWeight
+        SecondaryAnnualSubjectResult --> SecondaryAnnualResult
+        SecondaryMarksheet
+    end
+```
+
+**Routing**: `Exam.gradeLevel` determines which code path runs. Grade 1–5 API routes are untouched. All Secondary endpoints live under `/api/admin/secondary/` and `/api/teacher/secondary/`.
+
+---
+
+## 4. GPA / Grade Computation
+
+### Per-Term (at compile time)
+
+```
+For each subject:
+  total = IN + TH + PR(sum of heading marks)
+  percentage = total / fullMarks × 100
+  grade, gradePoint = lookup(SecondaryGradeScale, percentage)
+  isNG = (grade == "NG")
+  weightedPoint = creditHours × gradePoint
+
+Term GPA = Σ(weightedPoint) / Σ(creditHours)
+  - NG subjects: gradePoint = 0, but creditHours still in denominator
+  - hasNG = true → resultStatus = NG_BLOCKED
+```
+
+### Annual (from term-weighted aggregation)
+
+```
+For each subject:
+  annualObtained = Σ(term.totalObtained × termWeight%) for all terms
+  annualFull     = Σ(term.totalFullMarks × termWeight%) for all terms
+  percentage = annualObtained / annualFull × 100
+  grade, GP = lookup(SecondaryGradeScale, percentage)
+
+Annual GPA = Σ(creditHours × gradePoint) / Σ(creditHours)
+```
+
+### Pass Rule
+- **Per-subject**: D (≥35%) minimum in each subject. No aggregate percentage.
+- One NG in any subject → `NG_BLOCKED` regardless of overall GPA.
+
+---
+
+## 5. API Surface
+
+### New Endpoints
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| **Subject Config** |||
+| `POST` | `/api/admin/secondary/subject-configs` | Create subject config (IN/TH/PR, credit hours) |
+| `GET` | `/api/admin/secondary/subject-configs` | List configs by grade/year |
+| `PUT` | `/api/admin/secondary/subject-configs/:id` | Update config |
+| **Practical Headings** |||
+| `POST` | `/api/admin/secondary/components/:id/headings` | Add/update practical sub-headings |
+| `GET` | `/api/admin/secondary/components/:id/headings` | List headings |
+| **Term Weights** |||
+| `POST` | `/api/admin/secondary/term-weights` | Configure term weight percentages (must sum to 100) |
+| `GET` | `/api/admin/secondary/term-weights` | List term weights |
+| **Mark Entry** |||
+| `POST` | `/api/teacher/secondary/marks` | Enter IN/TH component marks |
+| `POST` | `/api/teacher/secondary/practical-marks` | Enter practical heading marks (auto-sums to PR) |
+| `POST` | `/api/teacher/secondary/marks/:id/submit` | Submit marks |
+| `POST` | `/api/admin/secondary/marks/:id/verify` | Verify marks |
+| **Term Compilation** |||
+| `POST` | `/api/admin/secondary/exams/:examId/compile` | Compile term subject/final results |
+| `POST` | `/api/admin/secondary/exams/:examId/publish` | Publish term results |
+| `GET` | `/api/admin/secondary/exams/:examId/results` | Get term results |
+| **Annual Compilation** |||
+| `POST` | `/api/admin/secondary/annual/compile` | Compile annual results from term weights |
+| `POST` | `/api/admin/secondary/annual/publish` | Publish annual results |
+| `GET` | `/api/admin/secondary/annual/results` | Get annual results |
+| **Marksheet** |||
+| `POST` | `/api/admin/secondary/marksheets` | Generate term or annual marksheet |
+| `GET` | `/api/admin/secondary/marksheets/:id` | Get marksheet |
+| **Grade Scale** |||
+| `GET` | `/api/admin/secondary/grade-scale` | Return fixed NEB grade table (read-only) |
+
+### Changes to Existing
+- `POST /api/admin/exams` — validation accepts "Grade 6"–"Grade 10"
+- All other Grade 1–5 endpoints: **no changes**
+
+---
+
+## 6. Migration Plan — Phased Rollout
+
+### Phase 1: Schema + Seed (Week 1)
+- Add enums (`SecondaryComponentType`, `NG_BLOCKED`)
+- Add all `Secondary*` models to [schema.prisma](file:///d:/school/result/svsresult/prisma/schema.prisma)
+- Add relation fields to shared models
+- `prisma migrate dev` + seed `SecondaryGradeScale`
+- Create `src/lib/secondary-grades.ts` lookup utility
+
+### Phase 2: Subject / Component Config (Week 2)
+- Subject config CRUD APIs
+- Practical heading CRUD APIs
+- Term weight configuration API
+- Admin UI: `/admin/secondary/subject-config`
+
+### Phase 3: Teacher Mark Entry (Week 3)
+- Component mark entry APIs (IN, TH direct; PR via heading marks → auto-sum)
+- Submit/verify flow
+- Teacher UI: `/teacher/secondary/mark-entry`
+
+### Phase 4: Compilation Engine (Week 4)
+- Term compile: components → subject percentage → grade lookup → GPA
+- Annual compile: term weights → weighted aggregation → annual grade → annual GPA
+- Admin UI: `/admin/secondary/result-compilation`
+
+### Phase 5: Marksheet / PDF (Week 5)
+- CDC-format template (components, headings, grade, GPA, credit hours)
+- Term & annual marksheet generation
+- NG visual flagging in PDF
+
+### Phase 6: Admin UI Polish (Week 6)
+- Dashboard integration with secondary stats
+- Teacher secondary compilation view
+- Reports and analytics
+
+---
+
+## 7. Open Questions
+
+| # | Question | Default Assumption |
+|---|---------|-------------------|
+| 1 | **Term weights**: What are the exact percentages per term? (e.g. First 10%, Second 15%, Third 20%, Final 55%) | Admin configurable per grade/year — must sum to 100% |
+| 2 | **50/50 split subjects**: Any subjects using 50 TH / 50 PR instead of 25/25/75? | No, but schema supports any split |
+| 3 | **Term names/count**: Exactly "First Term, Second Term, Third Term, Final Term"? | Yes, 4 terms |
+| 4 | **Grade 10 / SEE**: Any special handling for board exams? | Same flow as Grades 6–9 |
+
+---
+
+## Verification Plan
+
+### Automated (Post-Implementation)
+- `npx prisma validate` — schema syntax
+- `npx prisma migrate dev --create-only` — valid SQL
+- Seed test: 8 rows in `SecondaryGradeScale`
+- Unit tests for GPA computation (all A+, one NG, D-threshold, credit-hour weighting, annual term-weighted aggregation)
+
+### Manual
+- Configure subject IN(25)/TH(75)/PR(25) with practical headings → verify credit hours auto-calc
+- Enter heading marks → verify auto-sum to PR component
+- Term compile → verify grades, GPA, NG flags, rank
+- Configure term weights → compile annual → verify weighted aggregation
+- Generate marksheet → verify CDC format, NG highlighting
