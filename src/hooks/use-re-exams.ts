@@ -188,7 +188,7 @@ export function useCompleteReExam() {
 
 export function useReExamAssessment() {
   const queryClient = useQueryClient();
-  return useMutation<ReExamResult, Error, ReExamAssessmentInput>({
+  return useMutation<ReExamResult | ReExamResult[], Error, ReExamAssessmentInput | ReExamAssessmentInput[]>({
     mutationFn: async (data) => {
       return apiClient.post("/admin/re-exam-portal", data);
     },

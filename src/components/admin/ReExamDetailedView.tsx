@@ -101,40 +101,30 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
     }
 
     setSaveStatus("saving");
-    let remaining = toSave.length;
-    let hasError = false;
-
-    for (const lo of toSave) {
+    const payload = toSave.map(lo => {
       const m = marks.outcomeMarks[lo.name];
-      reExamAssessment.mutate(
-        {
-          evaluationTemplateId: lo.templateId!,
-          syncedStudentId: student.id,
-          marksObtained: m.reExamMark!,
-          scheduledDate: m.reExamDate || new Date().toISOString(),
-          remarks: m.remarks,
-        },
-        {
-          onSuccess: () => {
-            remaining--;
-            if (remaining === 0 && !hasError) {
-              setSaveStatus("saved");
-              setIsDirty(false);
-              toast.success("Re-exam marks saved");
-              setTimeout(() => setSaveStatus("idle"), 2500);
-            }
-          },
-          onError: (error) => {
-            if (!hasError) {
-              hasError = true;
-              setSaveStatus("error");
-              toast.error(error?.message || "Failed to save re-exam marks");
-              setTimeout(() => setSaveStatus("idle"), 3000);
-            }
-          },
-        },
-      );
-    }
+      return {
+        evaluationTemplateId: lo.templateId!,
+        syncedStudentId: student.id,
+        marksObtained: m.reExamMark!,
+        scheduledDate: m.reExamDate || new Date().toISOString(),
+        remarks: m.remarks,
+      };
+    });
+
+    reExamAssessment.mutate(payload, {
+      onSuccess: () => {
+        setSaveStatus("saved");
+        setIsDirty(false);
+        toast.success("Re-exam marks saved");
+        setTimeout(() => setSaveStatus("idle"), 2500);
+      },
+      onError: (error) => {
+        setSaveStatus("error");
+        toast.error(error?.message || "Failed to save re-exam marks");
+        setTimeout(() => setSaveStatus("idle"), 3000);
+      },
+    });
   }, [evaluation.learningOutcomes, student.id, reExamAssessment]);
 
   const handleSave = useCallback(() => {
@@ -214,7 +204,7 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
           </button>
           <div>
             <h2 className="font-bold text-sm text-foreground">{student.name} - Re-Exam Entry</h2>
-            <p className="text-[11px] text-muted-foreground">{student.rollNo} · {evaluation.subject} · {evaluation.title}</p>
+            <p className="text-[11px] text-muted-foreground">{student.rollNo} · {student.class} · {evaluation.subject} · {evaluation.title}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">

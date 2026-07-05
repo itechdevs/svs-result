@@ -606,16 +606,35 @@ export default function MarkEntryOverviewTable() {
                               r => evalIdSet.has(r.evaluationTemplateId) && r.syncedStudentId === student.id
                             );
 
-                            // Failed evals: locally computed failed cols per evalId + server-confirmed fails
+                            // Originally failed based on regular mark < passMarks
+                            const localRegularFailedCols = outcomeColumns.filter((col) => {
+                              const mark = getStudentMark(student.id, col.evalId);
+                              const m = mark?.outcomeMarks[col.name];
+                              const val = m?.regularMark;
+                              return val !== null && val !== undefined && val < col.passMarks;
+                            });
+
                             const failedEvalIds = new Set<string>([
-                              ...failedCols.map(c => c.evalId),
-                              ...studentResults.filter(r => r.isPassed === false).map(r => r.evaluationTemplateId),
+                              ...localRegularFailedCols.map(c => c.evalId),
+                              ...studentResults
+                                .filter(
+                                  r =>
+                                    r.isPassed === false ||
+                                    (r.marksObtained !== null &&
+                                      Number(r.marksObtained) < Number(r.evaluationTemplate?.passMarks))
+                                )
+                                .map(r => r.evaluationTemplateId),
                             ]);
 
                             const totalFailed = failedEvalIds.size;
-                            const reExamGiven = studentResults.filter(
-                              r => failedEvalIds.has(r.evaluationTemplateId) && r.reExamResult
-                            ).length;
+                            const reExamGiven = outcomeColumns.filter((col) => {
+                              if (!failedEvalIds.has(col.evalId)) return false;
+                              const mark = getStudentMark(student.id, col.evalId);
+                              const m = mark?.outcomeMarks[col.name];
+                              if (m?.reExamMark !== null && m?.reExamMark !== undefined) return true;
+                              const r = studentResults.find(res => res.evaluationTemplateId === col.evalId);
+                              return !!r?.reExamResult;
+                            }).length;
 
                             if (totalFailed === 0) {
                               return (
@@ -827,12 +846,36 @@ export default function MarkEntryOverviewTable() {
 
                   const evalIdSet = new Set(evalIds);
                   const studentResults = resultsData.filter(r => evalIdSet.has(r.evaluationTemplateId) && r.syncedStudentId === student.id);
+
+                  // Originally failed based on regular mark < passMarks
+                  const localRegularFailedCols = outcomeColumns.filter((col) => {
+                    const mark = getStudentMark(student.id, col.evalId);
+                    const m = mark?.outcomeMarks[col.name];
+                    const val = m?.regularMark;
+                    return val !== null && val !== undefined && val < col.passMarks;
+                  });
+
                   const failedEvalIds = new Set<string>([
-                    ...failedCols.map(c => c.evalId),
-                    ...studentResults.filter(r => r.isPassed === false).map(r => r.evaluationTemplateId),
+                    ...localRegularFailedCols.map(c => c.evalId),
+                    ...studentResults
+                      .filter(
+                        r =>
+                          r.isPassed === false ||
+                          (r.marksObtained !== null &&
+                            Number(r.marksObtained) < Number(r.evaluationTemplate?.passMarks))
+                      )
+                      .map(r => r.evaluationTemplateId),
                   ]);
+
                   const totalFailed = failedEvalIds.size;
-                  const reExamGiven = studentResults.filter(r => failedEvalIds.has(r.evaluationTemplateId) && r.reExamResult).length;
+                  const reExamGiven = outcomeColumns.filter((col) => {
+                    if (!failedEvalIds.has(col.evalId)) return false;
+                    const mark = getStudentMark(student.id, col.evalId);
+                    const m = mark?.outcomeMarks[col.name];
+                    if (m?.reExamMark !== null && m?.reExamMark !== undefined) return true;
+                    const r = studentResults.find(res => res.evaluationTemplateId === col.evalId);
+                    return !!r?.reExamResult;
+                  }).length;
 
                   return (
                     <div key={student.id} className="bg-card rounded-xl border border-border shadow-sm p-4 flex flex-col gap-4">
