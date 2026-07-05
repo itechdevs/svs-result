@@ -70,21 +70,52 @@ export class UnifiedSyncService {
             });
 
             // Update subjects assigned to this teacher
-            // dhalpa-school API returns "subjects" (array of objects), not "subjectIds"
-            const subjectIds = teacher.subjects?.map((s: any) => s.id) ?? [];
-            if (subjectIds.length > 0) {
-              // Find synced subjects by their sourceIds
-              const syncedSubjects = await prisma.syncedSubject.findMany({
+            // Teacher API has the correct gradeLevel; create/update subjects as needed
+            const teacherSubjects: { id: string; name: string; code?: string; gradeLevel?: string }[] = teacher.subjects ?? [];
+            if (teacherSubjects.length > 0) {
+              const subjectIds = teacherSubjects.map(s => s.id);
+              const existingSubjects = await prisma.syncedSubject.findMany({
                 where: { sourceId: { in: subjectIds } },
               });
 
-              // Assign teacher to these subjects
-              if (syncedSubjects.length > 0) {
+              const existingMap = new Map(existingSubjects.map(s => [s.sourceId, s]));
+              const allSyncedSubjects: typeof existingSubjects = [];
+
+              for (const sub of teacherSubjects) {
+                const existing = existingMap.get(sub.id);
+                if (existing) {
+                  // Update gradeLevel from teacher data (teacher API has correct names)
+                  if (sub.gradeLevel && sub.gradeLevel !== existing.gradeLevel) {
+                    await prisma.syncedSubject.update({
+                      where: { id: existing.id },
+                      data: {
+                        gradeLevel: sub.gradeLevel,
+                        name: sub.name,
+                        code: sub.code || sub.name.toUpperCase().substring(0, 6),
+                      },
+                    });
+                  }
+                  allSyncedSubjects.push({ ...existing, gradeLevel: sub.gradeLevel || existing.gradeLevel });
+                } else {
+                  // Create missing subject from teacher data
+                  const created = await prisma.syncedSubject.create({
+                    data: {
+                      sourceId: sub.id,
+                      name: sub.name,
+                      code: sub.code || sub.name.toUpperCase().substring(0, 6),
+                      gradeLevel: sub.gradeLevel || "General",
+                    },
+                  });
+                  allSyncedSubjects.push(created);
+                }
+              }
+
+              if (allSyncedSubjects.length > 0) {
                 await prisma.syncedTeacher.update({
                   where: { id: syncedTeacher.id },
                   data: {
                     subjects: {
-                      set: syncedSubjects.map((s) => ({ id: s.id })),
+                      set: allSyncedSubjects.map(s => ({ id: s.id })),
                     },
                   },
                 });
@@ -324,23 +355,52 @@ export class UnifiedSyncService {
           });
           if (!syncedTeacher) continue;
 
-          const subjectIds = teacher.subjects?.map((s: any) => s.id) ?? [];
-          if (subjectIds.length === 0) continue;
+          const teacherSubjects: { id: string; name: string; code?: string; gradeLevel?: string }[] = teacher.subjects ?? [];
+          if (teacherSubjects.length === 0) continue;
 
-          // Find synced subjects by their sourceIds
-          const syncedSubjects = await prisma.syncedSubject.findMany({
+          const subjectIds = teacherSubjects.map(s => s.id);
+          const existingSubjects = await prisma.syncedSubject.findMany({
             where: { sourceId: { in: subjectIds } },
           });
 
-          // Update teacher subjects — only if we found matching subjects
-          if (syncedSubjects.length > 0) {
+          const existingMap = new Map(existingSubjects.map(s => [s.sourceId, s]));
+          const allSyncedSubjects: typeof existingSubjects = [];
+
+          for (const sub of teacherSubjects) {
+            const existing = existingMap.get(sub.id);
+            if (existing) {
+              if (sub.gradeLevel && sub.gradeLevel !== existing.gradeLevel) {
+                await prisma.syncedSubject.update({
+                  where: { id: existing.id },
+                  data: {
+                    gradeLevel: sub.gradeLevel,
+                    name: sub.name,
+                    code: sub.code || sub.name.toUpperCase().substring(0, 6),
+                  },
+                });
+              }
+              allSyncedSubjects.push({ ...existing, gradeLevel: sub.gradeLevel || existing.gradeLevel });
+            } else {
+              const created = await prisma.syncedSubject.create({
+                data: {
+                  sourceId: sub.id,
+                  name: sub.name,
+                  code: sub.code || sub.name.toUpperCase().substring(0, 6),
+                  gradeLevel: sub.gradeLevel || "General",
+                },
+              });
+              allSyncedSubjects.push(created);
+            }
+          }
+
+          if (allSyncedSubjects.length > 0) {
             await prisma.syncedTeacher.update({
               where: { id: syncedTeacher.id },
               data: {
                 subjects: {
-                  set: syncedSubjects.map(s => ({ id: s.id }))
-                }
-              }
+                  set: allSyncedSubjects.map(s => ({ id: s.id })),
+                },
+              },
             });
             result.synced++;
           }
