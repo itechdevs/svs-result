@@ -1,8 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useQueryState, parseAsString } from "nuqs";
 import { motion } from "motion/react";
-import { BookOpen, AlertCircle } from "lucide-react";
+import { BookOpen, AlertCircle, RotateCcw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { SecondaryMarkEntryFilters } from "@/components/teacher/secondary/SecondaryMarkEntryFilters";
 import { ComponentTabs } from "@/components/teacher/secondary/ComponentTabs";
 import { DirectMarksEntryTable } from "@/components/teacher/secondary/DirectMarksEntryTable";
@@ -15,14 +18,31 @@ import type { SecondaryComponentType } from "@/types/secondary-marks";
 import SanskarLoader from "@/components/shared/SanskarLoader";
 
 export default function SecondaryMarkEntryPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+
+
   // Filter state
-  const [academicYearId, setAcademicYearId] = useState("");
-  const [gradeLevel, setGradeLevel] = useState("");
-  const [syncedSubjectId, setSyncedSubjectId] = useState("");
-  const [examId, setExamId] = useState("");
+  const [academicYearId, setAcademicYearId] = useQueryState("academicYearId", parseAsString.withDefault(""));
+  const [gradeLevel, setGradeLevel] = useQueryState("gradeLevel", parseAsString.withDefault(""));
+  const [syncedSubjectId, setSyncedSubjectId] = useQueryState("syncedSubjectId", parseAsString.withDefault(""));
+  const [examId, setExamId] = useQueryState("examId", parseAsString.withDefault(""));
 
   // Active component tab
-  const [activeComponentType, setActiveComponentType] = useState<SecondaryComponentType | null>(null);
+  const [activeComponentTypeStr, setActiveComponentTypeStr] = useQueryState("activeComponentType", parseAsString);
+  const activeComponentType = activeComponentTypeStr as SecondaryComponentType | null;
+  
+  const setActiveComponentType = (val: SecondaryComponentType | null) => setActiveComponentTypeStr(val);
+
+  const handleResetFilters = () => {
+    setAcademicYearId(null);
+    setGradeLevel(null);
+    setSyncedSubjectId(null);
+    setExamId(null);
+    setActiveComponentType(null);
+  };
 
   // Fetch subject configuration with components
   const {
@@ -110,14 +130,25 @@ export default function SecondaryMarkEntryPage() {
       className="space-y-6"
     >
       {/* Header */}
-      <div>
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
-          <BookOpen className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />
-          Secondary Mark Entry
-        </h1>
-        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-          Enter Internal, Theory, and Practical marks for Secondary levels (Grades 6-12).
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            <BookOpen className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />
+            Secondary Mark Entry
+          </h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+            Enter Internal, Theory, and Practical marks for Secondary levels (Grades 6-12).
+          </p>
+        </div>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleResetFilters}
+          className="flex items-center gap-2"
+        >
+          <RotateCcw className="w-4 h-4" />
+          Reset Filters
+        </Button>
       </div>
 
       {/* Filters */}
