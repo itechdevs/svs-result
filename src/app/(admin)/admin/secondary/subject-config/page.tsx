@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, Calendar, Settings, Plus, Trash2, CheckCircle2, AlertTriangle, Info, ListPlus, Edit2 } from "lucide-react";
+import { BookOpen, Calendar, Settings, Plus, Trash2, CheckCircle2, AlertTriangle, Info, ListPlus, Edit2, Cog } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
 import { useAcademicYears } from "@/hooks/use-academic-config";
@@ -51,7 +51,7 @@ interface HeadingInput {
 
 export default function SecondarySubjectConfigPage() {
   const queryClient = useQueryClient();
-  
+
   // Filter states
   const [selectedYear, setSelectedYear] = useState("");
   const [selectedGrade, setSelectedGrade] = useState("");
@@ -107,7 +107,7 @@ export default function SecondarySubjectConfigPage() {
   });
 
   const saveHeadingsMutation = useMutation({
-    mutationFn: ({ componentId, data }: { componentId: string; data: any }) => 
+    mutationFn: ({ componentId, data }: { componentId: string; data: any }) =>
       apiClient.post(`/admin/secondary/components/${componentId}/headings`, data),
     onSuccess: () => {
       toast.success("Practical headings saved successfully");
@@ -121,7 +121,7 @@ export default function SecondarySubjectConfigPage() {
 
   const openConfigure = (subject: any) => {
     setActiveSubject(subject);
-    
+
     // Check if configuration already exists
     const existingConfig = configs?.find((c) => c.syncedSubjectId === subject.id);
 
@@ -149,7 +149,7 @@ export default function SecondarySubjectConfigPage() {
 
   const openHeadings = (component: any, subjectName: string) => {
     setActiveComponent({ ...component, subjectName });
-    
+
     if (component.practicalHeadings && component.practicalHeadings.length > 0) {
       setHeadings(
         component.practicalHeadings.map((h: any) => ({
@@ -183,7 +183,7 @@ export default function SecondarySubjectConfigPage() {
 
   const handleComponentChange = (index: number, field: keyof ComponentInput, value: any) => {
     const updated = [...components];
-    
+
     if (field === "fullMarks") {
       const fm = Number(value) || 0;
       updated[index] = {
@@ -335,7 +335,7 @@ export default function SecondarySubjectConfigPage() {
           <BookOpen className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3 animate-pulse" />
           <p className="text-base font-semibold">Please select Academic Year and Grade Level</p>
           <p className="text-xs mt-1">
-            {secondaryGrades.length > 0 
+            {secondaryGrades.length > 0
               ? `Select from available secondary grades: ${secondaryGrades.join(", ")}`
               : "Loading available secondary grades..."}
           </p>
@@ -358,7 +358,7 @@ export default function SecondarySubjectConfigPage() {
               {syncedSubjects && syncedSubjects.length > 0 ? (
                 syncedSubjects.map((sub) => {
                   const config = configs?.find((c) => c.syncedSubjectId === sub.id && c.isActive);
-                  
+
                   return (
                     <TableRow key={sub.id} className="hover:bg-muted/20">
                       <TableCell className="font-mono text-xs">{sub.code}</TableCell>
@@ -519,14 +519,29 @@ export default function SecondarySubjectConfigPage() {
                   />
                 </div>
 
-                <div className="w-full sm:w-16 flex items-end">
+                <div className="w-full sm:w-auto flex items-end gap-1">
+                  {comp.type === "PRACTICAL" && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9 text-sky-600 border-sky-200 hover:bg-sky-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={comp.id ? "Configure Headings" : "Save configuration first to add headings"}
+                      disabled={!comp.id}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (comp.id) openHeadings(comp, activeSubject?.name || "");
+                      }}
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-9 w-9 text-destructive hover:bg-destructive/10"
+                    className="h-9 w-9 text-destructive"
                     onClick={() => handleRemoveComponent(idx)}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4 text-red-500 hover:text-red-200" />
                   </Button>
                 </div>
               </div>
@@ -608,7 +623,7 @@ export default function SecondarySubjectConfigPage() {
                   className="h-8 w-8 text-destructive hover:bg-destructive/10"
                   onClick={() => handleRemoveHeading(idx)}
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="w-3.5 h-3.5 text-red-500 hover:text-red-900" />
                 </Button>
               </div>
             ))}

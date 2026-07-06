@@ -33,7 +33,7 @@ export default function SecondaryMarkEntryPage() {
   // Active component tab
   const [activeComponentTypeStr, setActiveComponentTypeStr] = useQueryState("activeComponentType", parseAsString);
   const activeComponentType = activeComponentTypeStr as SecondaryComponentType | null;
-  
+
   const setActiveComponentType = (val: SecondaryComponentType | null) => setActiveComponentTypeStr(val);
 
   const handleResetFilters = () => {
@@ -140,9 +140,9 @@ export default function SecondaryMarkEntryPage() {
             Enter Internal, Theory, and Practical marks for Secondary levels (Grades 6-12).
           </p>
         </div>
-        <Button 
-          variant="outline" 
-          size="sm" 
+        <Button
+          variant="outline"
+          size="sm"
           onClick={handleResetFilters}
           className="flex items-center gap-2"
         >

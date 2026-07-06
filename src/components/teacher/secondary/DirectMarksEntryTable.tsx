@@ -108,7 +108,7 @@ export function DirectMarksEntryTable({
               Unsaved changes
             </span>
           )}
-          
+
           <Button
             onClick={onSaveAll}
             disabled={!hasUnsavedChanges || isSaving}
