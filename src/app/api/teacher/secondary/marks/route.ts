@@ -4,6 +4,45 @@ import { badRequest, ok, notFound } from "@/lib/response";
 import { upsertSecondaryMarksSchema } from "@/lib/schemas";
 import { withHandler } from "@/lib/handlers";
 
+// GET /api/teacher/secondary/marks
+// Fetch marks for a specific component and exam
+export const GET = withHandler(
+  async (req: NextRequest, ctx) => {
+    const { searchParams } = new URL(req.url);
+    const componentId = searchParams.get("componentId");
+    const examId = searchParams.get("examId");
+
+    if (!componentId || !examId) {
+      return badRequest("componentId and examId are required");
+    }
+
+    const marks = await prisma.secondaryComponentMark.findMany({
+      where: {
+        componentId,
+        examId,
+      },
+      include: {
+        syncedStudent: {
+          select: {
+            id: true,
+            name: true,
+            rollNumber: true,
+            section: true,
+          },
+        },
+      },
+      orderBy: {
+        syncedStudent: {
+          rollNumber: "asc",
+        },
+      },
+    });
+
+    return ok(marks);
+  },
+  ["TEACHER", "ADMIN"]
+);
+
 // POST /api/teacher/secondary/marks
 // Bulk insert/update component marks for a given component and exam
 export const POST = withHandler(

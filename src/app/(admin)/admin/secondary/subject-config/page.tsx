@@ -7,7 +7,8 @@ import { BookOpen, Calendar, Settings, Plus, Trash2, CheckCircle2, AlertTriangle
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
 import { useAcademicYears } from "@/hooks/use-academic-config";
-import { useSubjects } from "@/hooks/use-subjects";
+import { useSubjects, useGradeLevels } from "@/hooks/use-subjects";
+import { categorizeGradeLevel } from "@/lib/schemas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -34,8 +35,6 @@ import {
 } from "@/components/ui/table";
 import SanskarLoader from "@/components/shared/SanskarLoader";
 
-const SECONDARY_GRADES = ["Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10"];
-
 interface ComponentInput {
   id?: string;
   type: "INTERNAL" | "THEORY" | "PRACTICAL";
@@ -59,9 +58,16 @@ export default function SecondarySubjectConfigPage() {
 
   // Queries
   const { data: years, isLoading: isLoadingYears } = useAcademicYears();
+  const { data: allGradeLevels, isLoading: isLoadingGrades } = useGradeLevels();
   const { data: syncedSubjects, isLoading: isLoadingSubjects } = useSubjects({
     gradeLevel: selectedGrade || undefined,
   });
+
+  // Filter to only secondary and higher secondary grades
+  const secondaryGrades = allGradeLevels?.filter((grade) => {
+    const category = categorizeGradeLevel(grade);
+    return category === "SECONDARY" || category === "HIGHER_SECONDARY";
+  }) || [];
 
   const { data: configs, isLoading: isLoadingConfigs, refetch: refetchConfigs } = useQuery<any[]>({
     queryKey: ["secondary-subject-configs", selectedYear, selectedGrade],
@@ -280,7 +286,7 @@ export default function SecondarySubjectConfigPage() {
             Secondary Subject Configurations
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-            Configure subjects component weighting (Theory/Practical/Internal) rules for Grades 6-10 (NEB / CDC standard).
+            Configure subjects component weighting (Theory/Practical/Internal) rules for secondary grades (NEB / CDC standard).
           </p>
         </div>
       </div>
@@ -308,12 +314,12 @@ export default function SecondarySubjectConfigPage() {
           <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
             Grade Level
           </label>
-          <Select value={selectedGrade} onValueChange={setSelectedGrade}>
+          <Select value={selectedGrade} onValueChange={setSelectedGrade} disabled={isLoadingGrades || secondaryGrades.length === 0}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select grade level" />
             </SelectTrigger>
             <SelectContent>
-              {SECONDARY_GRADES.map((grade) => (
+              {secondaryGrades.map((grade) => (
                 <SelectItem key={grade} value={grade}>
                   {grade}
                 </SelectItem>
@@ -328,7 +334,11 @@ export default function SecondarySubjectConfigPage() {
         <div className="bg-card border border-dashed rounded-xl p-12 text-center text-muted-foreground">
           <BookOpen className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3 animate-pulse" />
           <p className="text-base font-semibold">Please select Academic Year and Grade Level</p>
-          <p className="text-xs mt-1">Select a grade between 6 and 10 to see its configurations</p>
+          <p className="text-xs mt-1">
+            {secondaryGrades.length > 0 
+              ? `Select from available secondary grades: ${secondaryGrades.join(", ")}`
+              : "Loading available secondary grades..."}
+          </p>
         </div>
       ) : isLoading ? (
         <SanskarLoader message="Fetching configurations..." />

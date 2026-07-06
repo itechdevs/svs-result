@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
 import { useAcademicYears } from "@/hooks/use-academic-config";
 import { useExams } from "@/hooks/use-exams";
+import { useGradeLevels } from "@/hooks/use-subjects";
+import { categorizeGradeLevel } from "@/lib/schemas";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -26,8 +28,6 @@ import {
 } from "@/components/ui/table";
 import SanskarLoader from "@/components/shared/SanskarLoader";
 
-const SECONDARY_GRADES = ["Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10"];
-
 export default function SecondaryResultCompilationPage() {
   const [activeTab, setActiveTab] = useState<"term" | "annual">("term");
   const [selectedYear, setSelectedYear] = useState("");
@@ -35,7 +35,14 @@ export default function SecondaryResultCompilationPage() {
   const [selectedExamId, setSelectedExamId] = useState("");
 
   const { data: years, isLoading: isLoadingYears } = useAcademicYears();
+  const { data: allGradeLevels, isLoading: isLoadingGrades } = useGradeLevels();
   const currentYear = years?.find((y) => y.isCurrent);
+
+  // Filter to only secondary and higher secondary grades
+  const secondaryGrades = allGradeLevels?.filter((grade) => {
+    const category = categorizeGradeLevel(grade);
+    return category === "SECONDARY" || category === "HIGHER_SECONDARY";
+  }) || [];
 
   // Set default current year
   useEffect(() => {
@@ -212,12 +219,12 @@ export default function SecondaryResultCompilationPage() {
           <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
             Grade Level
           </label>
-          <Select value={selectedGrade} onValueChange={setSelectedGrade}>
+          <Select value={selectedGrade} onValueChange={setSelectedGrade} disabled={isLoadingGrades || secondaryGrades.length === 0}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select Grade" />
             </SelectTrigger>
             <SelectContent>
-              {SECONDARY_GRADES.map((grade) => (
+              {secondaryGrades.map((grade) => (
                 <SelectItem key={grade} value={grade}>
                   {grade}
                 </SelectItem>

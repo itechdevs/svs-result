@@ -10,6 +10,7 @@ import {
   Calendar,
   X,
   LogOut,
+  ChevronDown,
   MessageSquareText,
 } from "lucide-react";
 import { ROUTES } from "@/lib/constants";
@@ -32,31 +33,23 @@ const NAV_ITEMS = [
     icon: LayoutGrid,
   },
   { label: "Academic Years", href: "/admin/academic-years", icon: Calendar },
-  { label: "Exam Plan", href: ROUTES.ADMIN_EXAMS, icon: BookOpen },
+  {
+    label: "Exam Plan",
+    href: ROUTES.ADMIN_EXAMS,
+    icon: BookOpen,
+    children: [
+      { label: "Subject Configs", href: ROUTES.ADMIN_SECONDARY_SUBJECT_CONFIG },
+      { label: "Term Weights", href: ROUTES.ADMIN_SECONDARY_TERM_WEIGHTS },
+      {
+        label: "Compile Engine",
+        href: ROUTES.ADMIN_SECONDARY_RESULT_COMPILATION,
+      },
+    ],
+  },
   {
     label: "Teacher Allocation",
     href: ROUTES.ADMIN_ALLOCATIONS,
     icon: Grid2X2,
-  },
-  {
-    label: "Sec. Subject Configs",
-    href: ROUTES.ADMIN_SECONDARY_SUBJECT_CONFIG,
-    icon: BookOpen,
-  },
-  {
-    label: "Sec. Term Weights",
-    href: ROUTES.ADMIN_SECONDARY_TERM_WEIGHTS,
-    icon: Calendar,
-  },
-  {
-    label: "Sec. Compile Engine",
-    href: ROUTES.ADMIN_SECONDARY_RESULT_COMPILATION,
-    icon: LayoutGrid,
-  },
-  {
-    label: "Observations",
-    href: "/admin/observations",
-    icon: MessageSquareText,
   },
 ] as const;
 
@@ -65,7 +58,22 @@ export function AdminSidebar() {
   const { state, isMobile, openMobile, setOpenMobile } = useSidebar();
   const isCollapsed = state === "collapsed" && !isMobile;
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(
+    new Set(["Exam Plan"]),
+  );
   const { data: profile } = useProfile();
+
+  const toggleExpanded = (label: string) => {
+    setExpandedItems((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(label)) {
+        newSet.delete(label);
+      } else {
+        newSet.add(label);
+      }
+      return newSet;
+    });
+  };
 
   const SidebarContent = (
     <aside
@@ -108,54 +116,152 @@ export function AdminSidebar() {
             pathname === item.href ||
             (item.href === ROUTES.ADMIN_EXAMS &&
               pathname.startsWith("/admin/exams"));
+          const hasChildren =
+            "children" in item && item.children && item.children.length > 0;
+          const isExpanded = expandedItems.has(item.label);
+          const isChildActive =
+            hasChildren &&
+            item.children.some((child) => pathname === child.href);
 
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "group relative flex items-center gap-3 py-2.5 rounded-lg border transition-all duration-200 overflow-hidden",
-                isActive
-                  ? "bg-sidebar-accent border-sidebar-border text-sidebar-accent-foreground"
-                  : "border-transparent hover:bg-sidebar-accent/60 hover:border-sidebar-border/50 text-sidebar-foreground/70 hover:text-sidebar-foreground",
-                isCollapsed ? "px-2 justify-center" : "px-3",
-              )}
-              title={item.label}
-              onClick={() => isMobile && setOpenMobile(false)}
-            >
-              <div
-                className={cn(
-                  "w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-all duration-200",
-                  isActive
-                    ? "bg-sidebar-primary/20"
-                    : "bg-sidebar-foreground/5 group-hover:bg-sidebar-primary/10",
-                )}
-              >
-                <Icon
-                  size={16}
-                  strokeWidth={1.8}
+            <div key={item.href}>
+              {hasChildren && !isCollapsed ? (
+                <div>
+                  <div className="flex items-stretch gap-1">
+                    <Link
+                      href={item.href}
+                      className={cn(
+                        "group relative flex items-center gap-3 py-2.5 rounded-lg border transition-all duration-200 overflow-hidden flex-1",
+                        isActive || isChildActive
+                          ? "bg-sidebar-accent border-sidebar-border text-sidebar-accent-foreground"
+                          : "border-transparent hover:bg-sidebar-accent/60 hover:border-sidebar-border/50 text-sidebar-foreground/70 hover:text-sidebar-foreground",
+                        "px-3",
+                      )}
+                      title={item.label}
+                      onClick={() => isMobile && setOpenMobile(false)}
+                    >
+                      <div
+                        className={cn(
+                          "w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-all duration-200",
+                          isActive || isChildActive
+                            ? "bg-sidebar-primary/20"
+                            : "bg-sidebar-foreground/5 group-hover:bg-sidebar-primary/10",
+                        )}
+                      >
+                        <Icon
+                          size={16}
+                          strokeWidth={1.8}
+                          className={cn(
+                            "transition-colors duration-200",
+                            isActive || isChildActive
+                              ? "text-sidebar-primary"
+                              : "text-sidebar-foreground/50 group-hover:text-sidebar-primary/80",
+                          )}
+                        />
+                      </div>
+                      <span
+                        className={cn(
+                          "text-[13px] transition-colors duration-200 whitespace-nowrap flex-1 text-left",
+                          isActive || isChildActive
+                            ? "font-semibold"
+                            : "font-medium",
+                        )}
+                      >
+                        {item.label}
+                      </span>
+                    </Link>
+                    <button
+                      onClick={() => toggleExpanded(item.label)}
+                      className={cn(
+                        "flex items-center justify-center w-9 rounded-lg border transition-all duration-200",
+                        isActive || isChildActive
+                          ? "bg-sidebar-accent border-sidebar-border text-sidebar-accent-foreground"
+                          : "border-transparent hover:bg-sidebar-accent/60 hover:border-sidebar-border/50 text-sidebar-foreground/70 hover:text-sidebar-foreground",
+                      )}
+                      title={isExpanded ? "Collapse" : "Expand"}
+                    >
+                      <ChevronDown
+                        className={cn(
+                          "w-4 h-4 transition-transform duration-200",
+                          isExpanded ? "rotate-180" : "",
+                        )}
+                      />
+                    </button>
+                  </div>
+                  {isExpanded && (
+                    <div className="mt-1 ml-11 flex flex-col gap-0.5">
+                      {item.children.map((child) => {
+                        const isChildItemActive = pathname === child.href;
+                        return (
+                          <Link
+                            key={child.href}
+                            href={child.href}
+                            className={cn(
+                              "group relative flex items-center py-2 px-3 rounded-md transition-all duration-200",
+                              isChildItemActive
+                                ? "bg-sidebar-accent/80 text-sidebar-accent-foreground font-medium"
+                                : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40",
+                            )}
+                            onClick={() => isMobile && setOpenMobile(false)}
+                          >
+                            <span className="text-[12px]">{child.label}</span>
+                            {isChildItemActive && (
+                              <span className="absolute right-2 w-1 h-1 rounded-full bg-sidebar-primary" />
+                            )}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  href={item.href}
                   className={cn(
-                    "transition-colors duration-200",
+                    "group relative flex items-center gap-3 py-2.5 rounded-lg border transition-all duration-200 overflow-hidden",
                     isActive
-                      ? "text-sidebar-primary"
-                      : "text-sidebar-foreground/50 group-hover:text-sidebar-primary/80",
+                      ? "bg-sidebar-accent border-sidebar-border text-sidebar-accent-foreground"
+                      : "border-transparent hover:bg-sidebar-accent/60 hover:border-sidebar-border/50 text-sidebar-foreground/70 hover:text-sidebar-foreground",
+                    isCollapsed ? "px-2 justify-center" : "px-3",
                   )}
-                />
-              </div>
-              {!isCollapsed && (
-                <span
-                  className={cn(
-                    "text-[13px] transition-colors duration-200 whitespace-nowrap",
-                    isActive ? "font-semibold" : "font-medium",
-                  )}
+                  title={item.label}
+                  onClick={() => isMobile && setOpenMobile(false)}
                 >
-                  {item.label}
-                </span>
+                  <div
+                    className={cn(
+                      "w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-all duration-200",
+                      isActive
+                        ? "bg-sidebar-primary/20"
+                        : "bg-sidebar-foreground/5 group-hover:bg-sidebar-primary/10",
+                    )}
+                  >
+                    <Icon
+                      size={16}
+                      strokeWidth={1.8}
+                      className={cn(
+                        "transition-colors duration-200",
+                        isActive
+                          ? "text-sidebar-primary"
+                          : "text-sidebar-foreground/50 group-hover:text-sidebar-primary/80",
+                      )}
+                    />
+                  </div>
+                  {!isCollapsed && (
+                    <span
+                      className={cn(
+                        "text-[13px] transition-colors duration-200 whitespace-nowrap",
+                        isActive ? "font-semibold" : "font-medium",
+                      )}
+                    >
+                      {item.label}
+                    </span>
+                  )}
+                  {isActive && !isCollapsed && (
+                    <span className="absolute right-3 w-1.5 h-1.5 rounded-full bg-sidebar-primary" />
+                  )}
+                </Link>
               )}
-              {isActive && !isCollapsed && (
-                <span className="absolute right-3 w-1.5 h-1.5 rounded-full bg-sidebar-primary" />
-              )}
-            </Link>
+            </div>
           );
         })}
       </nav>

@@ -4,63 +4,135 @@ import { badRequest, ok, notFound } from "@/lib/response";
 import { upsertSecondaryPracticalMarksSchema } from "@/lib/schemas";
 import { withHandler } from "@/lib/handlers";
 
+// GET /api/teacher/secondary/practical-marks
+// Fetch all practical heading marks for a component and exam
+export const GET = withHandler(
+  async (req: NextRequest, ctx) => {
+    const { searchParams } = new URL(req.url);
+    const componentId = searchParams.get("componentId");
+    const examId = searchParams.get("examId");
+
+    if (!componentId || !examId) {
+      return badRequest("componentId and examId are required");
+    }
+
+    // Get all headings for this component
+    const component = await prisma.secondarySubjectComponent.findUnique({
+      where: { id: componentId },
+      include: {
+        practicalHeadings: true,
+      },
+    });
+
+    if (!component) {
+      return notFound("Component not found");
+    }
+
+    if (component.type !== "PRACTICAL") {
+      return badRequest("Component is not a practical component");
+    }
+
+    const headingIds = component.practicalHeadings.map((h) => h.id);
+
+    // Fetch all marks for these headings and exam
+    const marks = await prisma.secondaryPracticalHeadingMark.findMany({
+      where: {
+        headingId: { in: headingIds },
+        examId,
+      },
+      include: {
+        heading: true,
+        syncedStudent: {
+          select: {
+            id: true,
+            name: true,
+            rollNumber: true,
+            section: true,
+          },
+        },
+      },
+      orderBy: {
+        syncedStudent: {
+          rollNumber: "asc",
+        },
+      },
+    });
+
+    return ok(marks);
+  },
+  ["TEACHER", "ADMIN"]
+);
+
 // POST /api/teacher/secondary/practical-marks
 // Enters marks per practical heading and automatically aggregates them into the SecondaryComponentMark
+// Supports multiple headings in a single request by grouping marks by headingId
 export const POST = withHandler(
   async (req: NextRequest, ctx) => {
     const body = upsertSecondaryPracticalMarksSchema.parse(await req.json());
     
-    // Validate heading and component
-    const heading = await prisma.secondaryPracticalHeading.findUnique({
-      where: { id: body.headingId },
-      include: { component: true }
+    // Validate component exists and is practical
+    const component = await prisma.secondarySubjectComponent.findUnique({
+      where: { id: body.componentId },
     });
 
-    if (!heading) return notFound("Practical heading not found");
-    if (heading.componentId !== body.componentId) return badRequest("Heading does not belong to provided component");
-    if (heading.component.type !== "PRACTICAL") return badRequest("Component is not practical");
-
-    // Validate marks do not exceed heading full marks
-    const invalidMarks = body.marks.filter(m => m.marksObtained > Number(heading.fullMarks));
-    if (invalidMarks.length > 0) {
-      return badRequest(`Marks cannot exceed heading full marks (${heading.fullMarks})`);
-    }
+    if (!component) return notFound("Component not found");
+    if (component.type !== "PRACTICAL") return badRequest("Component is not practical");
 
     const userId = ctx.user.id;
+
+    // Group marks by headingId
+    const marksByHeading = new Map<string, typeof body.marks>();
+    for (const m of body.marks) {
+      const existing = marksByHeading.get(m.headingId) || [];
+      existing.push(m);
+      marksByHeading.set(m.headingId, existing);
+    }
     
     await prisma.$transaction(async (tx) => {
-      // 1. Upsert all the individual heading marks
-      for (const m of body.marks) {
-        await tx.secondaryPracticalHeadingMark.upsert({
-          where: {
-            syncedStudentId_headingId_examId: {
-              syncedStudentId: m.syncedStudentId,
-              headingId: body.headingId,
-              examId: body.examId,
-            }
-          },
-          update: { marksObtained: m.marksObtained },
-          create: {
-            syncedStudentId: m.syncedStudentId,
-            headingId: body.headingId,
-            examId: body.examId,
-            marksObtained: m.marksObtained
-          }
+      for (const [headingId, headingMarks] of marksByHeading) {
+        // Validate heading
+        const heading = await tx.secondaryPracticalHeading.findUnique({
+          where: { id: headingId },
         });
+        if (!heading) throw new Error(`Practical heading ${headingId} not found`);
+        if (heading.componentId !== body.componentId) throw new Error(`Heading ${headingId} does not belong to provided component`);
+
+        // Validate marks do not exceed heading full marks
+        const invalidMarks = headingMarks.filter(m => m.marksObtained > Number(heading.fullMarks));
+        if (invalidMarks.length > 0) {
+          throw new Error(`Marks cannot exceed heading full marks (${heading.fullMarks})`);
+        }
+
+        // 1. Upsert heading marks for this heading
+        for (const m of headingMarks) {
+          await tx.secondaryPracticalHeadingMark.upsert({
+            where: {
+              syncedStudentId_headingId_examId: {
+                syncedStudentId: m.syncedStudentId,
+                headingId: m.headingId,
+                examId: body.examId,
+              }
+            },
+            update: { marksObtained: m.marksObtained },
+            create: {
+              syncedStudentId: m.syncedStudentId,
+              headingId: m.headingId,
+              examId: body.examId,
+              marksObtained: m.marksObtained
+            }
+          });
+        }
       }
 
       // 2. Aggregate across ALL headings for this component for these students
-      // Find all headings for this component
       const componentHeadings = await tx.secondaryPracticalHeading.findMany({
         where: { componentId: body.componentId }
       });
       const componentHeadingIds = componentHeadings.map(h => h.id);
 
-      // Unique student IDs to update
       const studentIds = Array.from(new Set(body.marks.map(m => m.syncedStudentId)));
 
       for (const studentId of studentIds) {
-        // Find all heading marks for this student for this component's headings
         const studentHeadingMarks = await tx.secondaryPracticalHeadingMark.findMany({
           where: {
             syncedStudentId: studentId,
@@ -71,7 +143,6 @@ export const POST = withHandler(
 
         const totalPracticalMarks = studentHeadingMarks.reduce((sum, h) => sum + Number(h.marksObtained), 0);
 
-        // Upsert the main component mark record
         await tx.secondaryComponentMark.upsert({
           where: {
             syncedStudentId_componentId_examId: {
@@ -82,7 +153,7 @@ export const POST = withHandler(
           },
           update: {
             marksObtained: totalPracticalMarks,
-            isAbsent: false, // If they have practical marks, they are not absent
+            isAbsent: false,
             status: "DRAFT",
           },
           create: {

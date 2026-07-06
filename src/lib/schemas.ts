@@ -10,14 +10,76 @@ export const paginationSchema = z.object({
 });
 
 export const gradeLevels = [
-  "Playgroup",
-  "KG",
-  "Grade 1",
-  "Grade 2",
-  "Grade 3",
-  "Grade 4",
-  "Grade 5",
+  "Rabbit (Playgroup)",
+  "Penguin (Nursery)",
+  "Panda (L.K.G.)",
+  "Panda - B",
+  "Giraffe (U.K.G.)",
+  "Giraffe - A",
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "10",
+  "11",
+  "12",
 ] as const;
+
+// Grade level classification helper
+export function categorizeGradeLevel(gradeLevel: string): "PRE_PRIMARY" | "PRIMARY" | "SECONDARY" | "HIGHER_SECONDARY" {
+  // Pre-primary: Contains animal names or nursery-related keywords
+  if (
+    gradeLevel.toLowerCase().includes("rabbit") ||
+    gradeLevel.toLowerCase().includes("penguin") ||
+    gradeLevel.toLowerCase().includes("panda") ||
+    gradeLevel.toLowerCase().includes("giraffe") ||
+    gradeLevel.toLowerCase().includes("playgroup") ||
+    gradeLevel.toLowerCase().includes("nursery") ||
+    gradeLevel.toLowerCase().includes("kg") ||
+    gradeLevel.toLowerCase().includes("k.g")
+  ) {
+    return "PRE_PRIMARY";
+  }
+
+  // Extract numeric grade if present
+  const numericMatch = gradeLevel.match(/\d+/);
+  if (numericMatch) {
+    const grade = parseInt(numericMatch[0]);
+    if (grade >= 1 && grade <= 5) return "PRIMARY";
+    if (grade >= 6 && grade <= 10) return "SECONDARY";
+    if (grade >= 11 && grade <= 12) return "HIGHER_SECONDARY";
+  }
+
+  // Default fallback based on common patterns
+  if (gradeLevel.match(/^[1-5]$/)) return "PRIMARY";
+  if (gradeLevel.match(/^([6-9]|10)$/)) return "SECONDARY";
+  if (gradeLevel.match(/^(11|12)$/)) return "HIGHER_SECONDARY";
+
+  // Default to primary if uncertain
+  return "PRIMARY";
+}
+
+// Group grade levels by category
+export function groupGradeLevelsByCategory(gradeLevels: string[]) {
+  const groups = {
+    PRE_PRIMARY: [] as string[],
+    PRIMARY: [] as string[],
+    SECONDARY: [] as string[],
+    HIGHER_SECONDARY: [] as string[],
+  };
+
+  gradeLevels.forEach((level) => {
+    const category = categorizeGradeLevel(level);
+    groups[category].push(level);
+  });
+
+  return groups;
+}
 
 export const gradeLevelSchema = z.string();
 
@@ -506,12 +568,12 @@ export const upsertSecondaryMarksSchema = z.object({
 
 export const secondaryHeadingMarkSchema = z.object({
   syncedStudentId: z.string().cuid(),
+  headingId: z.string().cuid(),
   marksObtained: z.number().min(0),
 });
 
 export const upsertSecondaryPracticalMarksSchema = z.object({
   componentId: z.string().cuid(),
-  headingId: z.string().cuid(),
   examId: z.string().cuid(),
   marks: z.array(secondaryHeadingMarkSchema).min(1),
 });

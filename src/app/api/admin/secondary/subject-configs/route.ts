@@ -10,10 +10,12 @@ export const GET = withHandler(
     const url = new URL(req.url);
     const gradeLevel = url.searchParams.get("gradeLevel");
     const academicYearId = url.searchParams.get("academicYearId");
+    const syncedSubjectId = url.searchParams.get("syncedSubjectId");
 
     const where: any = {};
     if (gradeLevel) where.gradeLevel = gradeLevel;
     if (academicYearId) where.academicYearId = academicYearId;
+    if (syncedSubjectId) where.syncedSubjectId = syncedSubjectId;
 
     const configs = await prisma.secondarySubjectConfig.findMany({
       where,
@@ -35,7 +37,7 @@ export const GET = withHandler(
 
     return ok(configs);
   },
-  ["ADMIN"],
+  ["ADMIN", "TEACHER"], // Allow teachers to access this endpoint
 );
 
 // POST /api/admin/secondary/subject-configs
