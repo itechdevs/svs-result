@@ -14,7 +14,34 @@ export const POST = withHandler(
         where: { id: body.termResultId },
         include: {
           syncedStudent: true,
-          subjectResults: true
+          exam: {
+            select: {
+              id: true,
+              name: true,
+              gradeLevel: true,
+            }
+          },
+          academicYear: {
+            select: {
+              id: true,
+              name: true,
+            }
+          },
+          subjectResults: {
+            include: {
+              subjectConfig: {
+                include: {
+                  syncedSubject: {
+                    select: {
+                      id: true,
+                      name: true,
+                      code: true,
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       });
       if (!termResult) return notFound("Term result not found");
@@ -44,7 +71,27 @@ export const POST = withHandler(
         where: { id: body.annualResultId },
         include: {
           syncedStudent: true,
-          subjectResults: true
+          academicYear: {
+            select: {
+              id: true,
+              name: true,
+            }
+          },
+          subjectResults: {
+            include: {
+              subjectConfig: {
+                include: {
+                  syncedSubject: {
+                    select: {
+                      id: true,
+                      name: true,
+                      code: true,
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       });
       if (!annualResult) return notFound("Annual result not found");

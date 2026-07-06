@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Sparkles, Calendar, BookOpen, Layers, Award, Printer, CheckCircle, AlertTriangle, Eye, Loader2, ArrowRight } from "lucide-react";
+import { Sparkles, Calendar, BookOpen, Layers, Award, Printer, CheckCircle, AlertTriangle, Eye, Loader2, ArrowRight, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
 import { useAcademicYears } from "@/hooks/use-academic-config";
@@ -27,12 +27,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import SanskarLoader from "@/components/shared/SanskarLoader";
+import { SecondaryMarksheetModal } from "@/components/secondary/SecondaryMarksheetModal";
 
 export default function SecondaryResultCompilationPage() {
   const [activeTab, setActiveTab] = useState<"term" | "annual">("term");
   const [selectedYear, setSelectedYear] = useState("");
   const [selectedGrade, setSelectedGrade] = useState("");
   const [selectedExamId, setSelectedExamId] = useState("");
+  const [marksheetModalOpen, setMarksheetModalOpen] = useState(false);
+  const [selectedMarksheetId, setSelectedMarksheetId] = useState<string | null>(null);
 
   const { data: years, isLoading: isLoadingYears } = useAcademicYears();
   const { data: allGradeLevels, isLoading: isLoadingGrades } = useGradeLevels();
@@ -117,7 +120,7 @@ export default function SecondaryResultCompilationPage() {
   });
 
   const generateMarksheetMutation = useMutation({
-    mutationFn: (body: any) => apiClient.post("/api/admin/secondary/marksheets", body),
+    mutationFn: (body: any) => apiClient.post("/admin/secondary/marksheets", body),
     onSuccess: () => {
       toast.success("Marksheet metadata generated successfully!");
       if (activeTab === "term") refetchTermResults();
@@ -452,16 +455,31 @@ export default function SecondaryResultCompilationPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1.5">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-xs font-semibold text-primary"
-                          onClick={() => handleGenerateMarksheet(res.syncedStudentId, res.id)}
-                          disabled={!res.isPublished || generateMarksheetMutation.isPending}
-                        >
-                          <Printer className="w-3.5 h-3.5 mr-1" />
-                          {res.marksheet ? "Regen Sheet" : "Snapshot"}
-                        </Button>
+                        {res.marksheet ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs font-semibold text-emerald-600 border-emerald-200"
+                            onClick={() => {
+                              setSelectedMarksheetId(res.marksheet.id);
+                              setMarksheetModalOpen(true);
+                            }}
+                          >
+                            <FileDown className="w-3.5 h-3.5 mr-1" />
+                            Download
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs font-semibold text-primary"
+                            onClick={() => handleGenerateMarksheet(res.syncedStudentId, res.id)}
+                            disabled={!res.isPublished || generateMarksheetMutation.isPending}
+                          >
+                            <Printer className="w-3.5 h-3.5 mr-1" />
+                            Generate
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -522,16 +540,31 @@ export default function SecondaryResultCompilationPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1.5">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-xs font-semibold text-primary"
-                          onClick={() => handleGenerateMarksheet(res.syncedStudentId, res.id)}
-                          disabled={!res.isPublished || generateMarksheetMutation.isPending}
-                        >
-                          <Printer className="w-3.5 h-3.5 mr-1" />
-                          {res.marksheet ? "Regen Transcript" : "Snapshot"}
-                        </Button>
+                        {res.marksheet ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs font-semibold text-purple-600 border-purple-200"
+                            onClick={() => {
+                              setSelectedMarksheetId(res.marksheet.id);
+                              setMarksheetModalOpen(true);
+                            }}
+                          >
+                            <FileDown className="w-3.5 h-3.5 mr-1" />
+                            Download
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs font-semibold text-primary"
+                            onClick={() => handleGenerateMarksheet(res.syncedStudentId, res.id)}
+                            disabled={!res.isPublished || generateMarksheetMutation.isPending}
+                          >
+                            <Printer className="w-3.5 h-3.5 mr-1" />
+                            Generate
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -547,6 +580,16 @@ export default function SecondaryResultCompilationPage() {
           </Table>
         </div>
       )}
+
+      {/* Marksheet Modal */}
+      <SecondaryMarksheetModal
+        marksheetId={selectedMarksheetId}
+        open={marksheetModalOpen}
+        onClose={() => {
+          setMarksheetModalOpen(false);
+          setSelectedMarksheetId(null);
+        }}
+      />
     </motion.div>
   );
 }
