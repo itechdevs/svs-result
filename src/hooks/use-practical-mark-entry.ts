@@ -61,6 +61,22 @@ export function usePracticalMarkEntry({
     enabled: !!componentId && !!examId,
   });
 
+  // Fetch component marks to get submission status
+  const { data: componentMarks = [] } = useQuery<any[]>({
+    queryKey: ["component-marks", componentId, examId],
+    queryFn: async () => {
+      if (!componentId || !examId) return [];
+
+      const params = new URLSearchParams({
+        componentId,
+        examId,
+      });
+
+      return apiClient.get(`/teacher/secondary/marks?${params.toString()}`);
+    },
+    enabled: !!componentId && !!examId,
+  });
+
   // Group existing marks by student
   const existingMarksByStudent = useMemo(() => {
     const map: Record<string, Record<string, number>> = {};
@@ -87,12 +103,22 @@ export function usePracticalMarkEntry({
     return total;
   }, [localChanges, existingMarksByStudent, practicalHeadings]);
 
+  // Build component marks by student ID for status lookup
+  const componentMarksByStudent = useMemo(() => {
+    const map: Record<string, any> = {};
+    componentMarks.forEach((mark) => {
+      map[mark.syncedStudentId] = mark;
+    });
+    return map;
+  }, [componentMarks]);
+
   // Build display rows
   const practicalMarkEntryRows = useMemo<PracticalMarkEntry[]>(() => {
     return students.map((student) => {
       const studentChanges = localChanges[student.id] || {};
       const studentExisting = existingMarksByStudent[student.id] || {};
-      const isAbsent = absentStatus[student.id] || false;
+      const componentMark = componentMarksByStudent[student.id];
+      const isAbsent = absentStatus[student.id] ?? componentMark?.isAbsent ?? false;
       const hasChanges = Object.keys(studentChanges).length > 0 || absentStatus[student.id] !== undefined;
 
       const headingMarks: Record<string, number | null> = {};
@@ -110,12 +136,12 @@ export function usePracticalMarkEntry({
         isAbsent,
         headingMarks,
         totalMarks,
-        status: "DRAFT", // TODO: Get actual status from component marks
+        status: componentMark?.status || "DRAFT",
         hasUnsavedChanges: hasChanges,
         validationError: null,
       };
     });
-  }, [students, localChanges, existingMarksByStudent, absentStatus, practicalHeadings, calculateTotal]);
+  }, [students, localChanges, existingMarksByStudent, absentStatus, practicalHeadings, calculateTotal, componentMarksByStudent]);
 
   // Update heading mark
   const updateHeadingMark = useCallback((studentId: string, headingId: string, marks: number | null) => {
@@ -206,7 +232,7 @@ export function usePracticalMarkEntry({
     await saveMutation.mutateAsync(marksToSave);
   }, [localChanges, absentStatus, practicalHeadings, componentId, examId, saveMutation]);
 
-  // Submit mutation (placeholder - would need to implement component mark submission)
+  // Submit mutation - submits all component marks for students with practical marks
   const submitMutation = useMutation({
     mutationFn: async () => {
       // First save any pending changes
@@ -214,17 +240,87 @@ export function usePracticalMarkEntry({
         await saveAll();
       }
 
-      // TODO: Implement submission logic for practical marks
-      toast.info("Submission for practical marks coming soon");
+      // Refetch component marks to get fresh data
+      await queryClient.refetchQueries({ queryKey: ["component-marks", componentId, examId] });
+      
+      // Wait a bit for the refetch to complete
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // Get fresh component marks
+      const freshComponentMarks: any[] = queryClient.getQueryData(["component-marks", componentId, examId]) || [];
+
+      // If still no component marks, fetch directly from API
+      let componentMarksToSubmit = freshComponentMarks;
+      if (componentMarksToSubmit.length === 0) {
+        const params = new URLSearchParams({
+          componentId,
+          examId,
+        });
+        componentMarksToSubmit = await apiClient.get(`/teacher/secondary/marks?${params.toString()}`);
+      }
+
+      // Find all DRAFT component marks for our students
+      const draftMarks = componentMarksToSubmit.filter(mark => 
+        mark.status === "DRAFT" && 
+        students.some(s => s.id === mark.syncedStudentId)
+      );
+
+      if (draftMarks.length === 0) {
+        // Check if marks are already submitted
+        const submittedMarks = componentMarksToSubmit.filter(mark =>
+          (mark.status === "SUBMITTED" || mark.status === "VERIFIED") &&
+          students.some(s => s.id === mark.syncedStudentId)
+        );
+
+        if (submittedMarks.length > 0) {
+          throw new Error(`${submittedMarks.length} mark(s) are already submitted or verified.`);
+        }
+
+        throw new Error("No marks found. Please save marks first before submitting.");
+      }
+
+      // Submit each component mark
+      const submitPromises = draftMarks.map(mark =>
+        apiClient.post(`/teacher/secondary/marks/${mark.id}/submit`, {})
+      );
+
+      const results = await Promise.all(submitPromises);
+
+      return { submitted: results.length };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["practical-marks", componentId, examId] });
+      queryClient.invalidateQueries({ queryKey: ["component-marks", componentId, examId] });
+      toast.success(`Successfully submitted practical marks for ${data.submitted} student(s)`);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to submit practical marks");
     },
   });
 
   const submitAll = useCallback(async () => {
     await submitMutation.mutateAsync();
   }, [submitMutation]);
+
+  // Calculate statistics
+  const stats = useMemo(() => {
+    const totalStudents = students.length;
+    const draftCount = practicalMarkEntryRows.filter(row => row.status === "DRAFT").length;
+    const submittedCount = practicalMarkEntryRows.filter(row => row.status === "SUBMITTED").length;
+    const verifiedCount = practicalMarkEntryRows.filter(row => row.status === "VERIFIED").length;
+    const enteredCount = practicalMarkEntryRows.filter(row => 
+      Object.values(row.headingMarks).some(mark => mark !== null && mark > 0) || row.isAbsent
+    ).length;
+
+    return {
+      totalStudents,
+      enteredCount,
+      draftCount,
+      submittedCount,
+      verifiedCount,
+      completionPercentage: totalStudents > 0 ? Math.round((enteredCount / totalStudents) * 100) : 0,
+    };
+  }, [students, practicalMarkEntryRows]);
 
   return {
     practicalMarkEntryRows,
@@ -236,5 +332,6 @@ export function usePracticalMarkEntry({
     isSaving: saveMutation.isPending,
     isSubmitting: submitMutation.isPending,
     hasUnsavedChanges: Object.keys(localChanges).length > 0 || Object.keys(absentStatus).length > 0,
+    stats,
   };
 }

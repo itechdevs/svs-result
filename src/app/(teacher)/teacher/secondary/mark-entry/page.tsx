@@ -79,6 +79,7 @@ export default function SecondaryMarkEntryPage() {
     isSaving: isSavingPractical,
     isSubmitting: isSubmittingPractical,
     hasUnsavedChanges: hasPracticalUnsavedChanges,
+    stats: practicalStats,
   } = usePracticalMarkEntry({
     componentId: activeComponent?.id || "",
     examId,
