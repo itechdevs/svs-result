@@ -32,7 +32,7 @@ export function useSecondaryComponents({
         gradeLevel,
       });
 
-      const configs = await apiClient.get<SecondarySubjectConfig[]>(
+      const configs: SecondarySubjectConfig[] = await apiClient.get(
         `/admin/secondary/subject-configs?${params.toString()}`
       );
 

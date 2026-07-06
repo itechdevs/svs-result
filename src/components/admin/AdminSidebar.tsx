@@ -41,6 +41,10 @@ const NAV_ITEMS = [
       { label: "Subject Configs", href: ROUTES.ADMIN_SECONDARY_SUBJECT_CONFIG },
       { label: "Term Weights", href: ROUTES.ADMIN_SECONDARY_TERM_WEIGHTS },
       {
+        label: "Mark Verification",
+        href: "/admin/secondary/mark-verification",
+      },
+      {
         label: "Compile Engine",
         href: ROUTES.ADMIN_SECONDARY_RESULT_COMPILATION,
       },

@@ -14,6 +14,7 @@
     "db:push": "prisma db push",
     "verify:db": "tsx scripts/verify/db-ping.ts",
     "verify:auth": "tsx scripts/verify/auth-ping.ts",
+    "verify:marks": "tsx scripts/verify-all-marks.ts",
     "analyze": "ANALYZE=true next build"
   },
   "prisma": {
