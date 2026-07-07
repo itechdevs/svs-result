@@ -21,10 +21,11 @@ export const GET = withHandler(
       totalStudents,
       totalTeachers,
       resultStatusBreakdown,
-      pendingVerification,
-      pendingSubmission,
+      evaluationStatusBreakdown,
       reExamStats,
-      gradeBreakdown,
+      published,
+      marksheetsGenerated,
+      classGpaRows,
     ] = await Promise.all([
       prisma.syncedStudent.count({ where: { isActive: true } }),
 
@@ -36,22 +37,16 @@ export const GET = withHandler(
         _count: { resultStatus: true },
       }),
 
-      prisma.studentEvaluationResult.count({
+      // Combine DRAFT + SUBMITTED evaluation counts into one groupBy
+      prisma.studentEvaluationResult.groupBy({
+        by: ["status"],
         where: {
-          status: "SUBMITTED",
+          status: { in: ["DRAFT", "SUBMITTED"] },
           evaluationTemplate: {
             gradeConfig: { academicYearId: year.id },
           },
         },
-      }),
-
-      prisma.studentEvaluationResult.count({
-        where: {
-          status: "DRAFT",
-          evaluationTemplate: {
-            gradeConfig: { academicYearId: year.id },
-          },
-        },
+        _count: { status: true },
       }),
 
       prisma.reExamSchedule.groupBy({
@@ -59,60 +54,50 @@ export const GET = withHandler(
         _count: { status: true },
       }),
 
-      prisma.finalResult.groupBy({
-        by: ["resultStatus"],
-        where: {
-          academicYearId: year.id,
-          syncedStudent: { isNot: undefined },
-        },
-        _count: { id: true },
+      prisma.finalResult.count({
+        where: { academicYearId: year.id, isPublished: true },
       }),
+
+      prisma.marksheet.count({
+        where: { academicYearId: year.id },
+      }),
+
+      // Single aggregation query for class-wise GPA
+      prisma.$queryRaw<
+        { class: string; avgCgpa: number | null; studentCount: bigint }[]
+      >`
+        SELECT s."class", AVG(fr."cgpa") as "avgCgpa", COUNT(*)::int as "studentCount"
+        FROM "final_results" fr
+        INNER JOIN "synced_students" s ON s.id = fr."syncedStudentId"
+        WHERE fr."academicYearId" = ${year.id}
+        GROUP BY s."class"
+        ORDER BY s."class"
+      `,
     ]);
 
-    const published = await prisma.finalResult.count({
-      where: { academicYearId: year.id, isPublished: true },
-    });
+    const totalCount = resultStatusBreakdown.reduce(
+      (sum, r) => sum + r._count.resultStatus,
+      0,
+    );
 
-    const marksheetsGenerated = await prisma.marksheet.count({
-      where: { academicYearId: year.id },
-    });
+    const passCount =
+      resultStatusBreakdown.find((r) => r.resultStatus === "PROMOTED")
+        ?._count.resultStatus ?? 0;
+    const failCount =
+      resultStatusBreakdown.find((r) => r.resultStatus === "FAILED")
+        ?._count.resultStatus ?? 0;
 
-    const reExamTotal = await prisma.reExamSchedule.count();
+    const pendingSubmission =
+      evaluationStatusBreakdown.find((r) => r.status === "DRAFT")
+        ?._count.status ?? 0;
+    const pendingVerification =
+      evaluationStatusBreakdown.find((r) => r.status === "SUBMITTED")
+        ?._count.status ?? 0;
 
-    const finalResultsWithClass = await prisma.finalResult.findMany({
-      where: { academicYearId: year.id },
-      select: {
-        resultStatus: true,
-        cgpa: true,
-        syncedStudent: { select: { class: true } },
-      },
-    });
-
-    const classGpaMap = new Map<string, { sumCgpa: number; count: number }>();
-    let passCount = 0;
-    let failCount = 0;
-
-    for (const fr of finalResultsWithClass) {
-      const cls = fr.syncedStudent.class;
-      if (fr.resultStatus === "PROMOTED") passCount++;
-      else if (fr.resultStatus === "FAILED") failCount++;
-
-      if (fr.cgpa) {
-        const entry = classGpaMap.get(cls) ?? { sumCgpa: 0, count: 0 };
-        entry.sumCgpa += Number(fr.cgpa);
-        entry.count += 1;
-        classGpaMap.set(cls, entry);
-      }
-    }
-
-    const totalCount = finalResultsWithClass.length;
-    const classPerformance = Array.from(classGpaMap.entries())
-      .map(([grade, { sumCgpa, count }]) => ({
-        grade,
-        averageGpa: Math.round((sumCgpa / count) * 100) / 100,
-        studentCount: count,
-      }))
-      .sort((a, b) => a.grade.localeCompare(b.grade));
+    const reExamTotal = reExamStats.reduce(
+      (sum, r) => sum + r._count.status,
+      0,
+    );
 
     return ok({
       academicYear: { id: year.id, name: year.name },
@@ -149,7 +134,13 @@ export const GET = withHandler(
           reExamStats.map((r) => [r.status, r._count.status]),
         ),
       },
-      classPerformance,
+      classPerformance: classGpaRows.map((r) => ({
+        grade: r.class,
+        averageGpa: r.avgCgpa
+          ? Math.round(Number(r.avgCgpa) * 100) / 100
+          : 0,
+        studentCount: Number(r.studentCount),
+      })),
     });
   },
   ["ADMIN"],
