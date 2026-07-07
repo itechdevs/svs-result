@@ -78,47 +78,75 @@ export function TeacherSidebar() {
             )) ||
             (item.href === ROUTES.TEACHER_RE_EXAM && pathname.startsWith(ROUTES.TEACHER_RE_EXAM));
 
+          const isSubMenu = item.hasSubMenu;
+
           return (
             <div key={item.href}>
-              <Link
-                href={item.href}
-                onClick={(e) => {
-                  if (item.hasSubMenu && !isCollapsed) {
-                    e.preventDefault();
+              {isSubMenu ? (
+                <button
+                  onClick={() => {
                     setEvaluationsExpanded(!evaluationsExpanded);
-                  }
-                  if (isMobile && !item.hasSubMenu) setOpenMobile(false);
-                }}
-                className={cn(
-                  "group relative flex items-center gap-3 py-2.5 rounded-lg border transition-all duration-200 overflow-hidden",
-                  isActive
-                    ? "bg-sidebar-accent border-sidebar-border text-sidebar-accent-foreground"
-                    : "border-transparent hover:bg-sidebar-accent/60 hover:border-sidebar-border/50 text-sidebar-foreground/70 hover:text-sidebar-foreground",
-                  isCollapsed ? "px-2 justify-center" : "px-3"
-                )}
-                title={item.label}
-              >
-                <div className={cn(
-                  "w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-all duration-200",
-                  isActive ? "bg-sidebar-primary/20" : "bg-sidebar-foreground/5 group-hover:bg-sidebar-primary/10"
-                )}>
-                  <Icon size={16} strokeWidth={1.8} className={cn(
-                    "transition-colors duration-200",
-                    isActive ? "text-sidebar-primary" : "text-sidebar-foreground/50 group-hover:text-sidebar-primary/80"
-                  )} />
-                </div>
-                {!isCollapsed && (
-                  <span className={cn("text-[13px] transition-colors duration-200 whitespace-nowrap", isActive ? "font-semibold" : "font-medium")}>
-                    {item.label}
-                  </span>
-                )}
-                {item.hasSubMenu && !isCollapsed && (
-                  <ChevronDown size={14} className={cn("ml-auto transition-transform", evaluationsExpanded && "rotate-180")} />
-                )}
-                {/* {isActive && !isCollapsed && (!item.hasSubMenu || pathname !== item.href) && (
-                  <span className="absolute right-3 w-1.5 h-1.5 rounded-full bg-sidebar-primary" />
-                )} */}
-              </Link>
+                    if (isMobile) setOpenMobile(false);
+                  }}
+                  className={cn(
+                    "w-full group relative flex items-center gap-3 py-2.5 rounded-lg border transition-all duration-200 overflow-hidden text-left",
+                    isActive
+                      ? "bg-sidebar-accent border-sidebar-border text-sidebar-accent-foreground"
+                      : "border-transparent hover:bg-sidebar-accent/60 hover:border-sidebar-border/50 text-sidebar-foreground/70 hover:text-sidebar-foreground",
+                    isCollapsed ? "px-2 justify-center" : "px-3"
+                  )}
+                  title={item.label}
+                >
+                  <div className={cn(
+                    "w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-all duration-200",
+                    isActive ? "bg-sidebar-primary/20" : "bg-sidebar-foreground/5 group-hover:bg-sidebar-primary/10"
+                  )}>
+                    <Icon size={16} strokeWidth={1.8} className={cn(
+                      "transition-colors duration-200",
+                      isActive ? "text-sidebar-primary" : "text-sidebar-foreground/50 group-hover:text-sidebar-primary/80"
+                    )} />
+                  </div>
+                  {!isCollapsed && (
+                    <span className={cn("text-[13px] transition-colors duration-200 whitespace-nowrap", isActive ? "font-semibold" : "font-medium")}>
+                      {item.label}
+                    </span>
+                  )}
+                  {!isCollapsed && (
+                    <ChevronDown size={14} className={cn("ml-auto transition-transform", evaluationsExpanded && "rotate-180")} />
+                  )}
+                </button>
+              ) : (
+                <Link
+                  href={item.href}
+                  onClick={() => isMobile && setOpenMobile(false)}
+                  className={cn(
+                    "group relative flex items-center gap-3 py-2.5 rounded-lg border transition-all duration-200 overflow-hidden",
+                    isActive
+                      ? "bg-sidebar-accent border-sidebar-border text-sidebar-accent-foreground"
+                      : "border-transparent hover:bg-sidebar-accent/60 hover:border-sidebar-border/50 text-sidebar-foreground/70 hover:text-sidebar-foreground",
+                    isCollapsed ? "px-2 justify-center" : "px-3"
+                  )}
+                  title={item.label}
+                >
+                  <div className={cn(
+                    "w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-all duration-200",
+                    isActive ? "bg-sidebar-primary/20" : "bg-sidebar-foreground/5 group-hover:bg-sidebar-primary/10"
+                  )}>
+                    <Icon size={16} strokeWidth={1.8} className={cn(
+                      "transition-colors duration-200",
+                      isActive ? "text-sidebar-primary" : "text-sidebar-foreground/50 group-hover:text-sidebar-primary/80"
+                    )} />
+                  </div>
+                  {!isCollapsed && (
+                    <span className={cn("text-[13px] transition-colors duration-200 whitespace-nowrap", isActive ? "font-semibold" : "font-medium")}>
+                      {item.label}
+                    </span>
+                  )}
+                  {/* {isActive && !isCollapsed && (
+                    <span className="absolute right-3 w-1.5 h-1.5 rounded-full bg-sidebar-primary" />
+                  )} */}
+                </Link>
+              )}
 
               {/* Submenu for Evaluations */}
               {item.hasSubMenu && !isCollapsed && evaluationsExpanded && (

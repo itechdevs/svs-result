@@ -7,12 +7,10 @@ import {
   useEvaluationTemplates,
   useStudentEvaluationResults,
 } from "@/hooks/use-evaluations";
-import { useReExamSchedules } from "@/hooks/use-re-exams";
 import { useProfile } from "@/hooks/use-profile";
 import {
   ClipboardList,
   AlertCircle,
-  CalendarClock,
   ArrowRight,
 } from "lucide-react";
 import TeacherDashboardSkeleton from "@/components/teacher/TeacherDashboardSkeleton";
@@ -20,8 +18,6 @@ import TeacherDashboardSkeleton from "@/components/teacher/TeacherDashboardSkele
 export default function DashboardPage() {
   const { data: templatesData = [], isLoading: isTemplatesLoading } =
     useEvaluationTemplates();
-  const { data: reExamData = [], isLoading: isReExamsLoading } =
-    useReExamSchedules("SCHEDULED");
   const { data: allResults = [], isLoading: isResultsLoading } =
     useStudentEvaluationResults({
       limit: 1000,
@@ -30,7 +26,6 @@ export default function DashboardPage() {
 
   const isLoading =
     isTemplatesLoading ||
-    isReExamsLoading ||
     isResultsLoading ||
     isProfileLoading;
 
@@ -79,16 +74,7 @@ export default function DashboardPage() {
     return grouped.size;
   }, [allResults, filteredTemplates, profile]);
 
-  const filteredReExams = useMemo(() => {
-    if (!profile?.syncedTeacher) return [];
-    return reExamData.filter((r) =>
-      assignedSubjectIds.has(r.evaluationTemplate?.syncedSubject?.id ?? ""),
-    );
-  }, [reExamData, profile, assignedSubjectIds]);
-
-  const reExamScheduled = filteredReExams.length;
   const recentEvaluations = filteredTemplates.slice(0, 4);
-  const reExamAlerts = filteredReExams.slice(0, 2);
 
   const kpis = [
     {
