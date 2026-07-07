@@ -5,6 +5,7 @@ export interface AssignedSubject {
   id: string;
   name: string;
   gradeLevel: string;
+  section: string | null;
 }
 
 export interface UserProfile {

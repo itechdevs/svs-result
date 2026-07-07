@@ -313,6 +313,7 @@ model SyncedSubject {
   name       String
   code       String
   gradeLevel String
+  section    String?  // e.g. "A", "B" — null means not section-specific
   isActive   Boolean  @default(true)
   syncedAt   DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -326,6 +327,7 @@ model SyncedSubject {
   secondarySubjectConfigs SecondarySubjectConfig[]
 
   @@index([gradeLevel])
+  @@index([gradeLevel, section])
   @@map("synced_subjects")
 }
 

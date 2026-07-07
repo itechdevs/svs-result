@@ -12,6 +12,16 @@ import { syncWebhookSchema } from "@/lib/schemas";
 
 const SYNC_SECRET = process.env.SYNC_WEBHOOK_SECRET ?? "";
 
+function parseGradeLevel(raw: string | undefined | null, explicitSection?: string | null): { gradeLevel: string; section: string | null } {
+  if (explicitSection != null) {
+    return { gradeLevel: raw || "General", section: explicitSection || null };
+  }
+  if (!raw) return { gradeLevel: "General", section: null };
+  const match = raw.match(/^(.+)-([A-Za-z]{1,2})$/);
+  if (match) return { gradeLevel: match[1].trim(), section: match[2].toUpperCase() };
+  return { gradeLevel: raw, section: null };
+}
+
 function verifySignature(rawBody: string, signature: string): boolean {
   if (!SYNC_SECRET) return true; // Skip in dev if secret not set
   const expected = crypto
@@ -123,6 +133,7 @@ export const POST = withPublicHandler(async (req: NextRequest) => {
         name: string;
         code: string;
         gradeLevel: string;
+        section?: string;
         isActive: boolean;
       };
 
@@ -132,15 +143,16 @@ export const POST = withPublicHandler(async (req: NextRequest) => {
           data: { isActive: false },
         });
       } else {
+        const parsed = parseGradeLevel(data.gradeLevel, data.section);
         await prisma.syncedSubject.upsert({
           where: { sourceId: data.sourceId },
-          create: { ...data },
+          create: { sourceId: data.sourceId, name: data.name, code: data.code, isActive: data.isActive, ...parsed },
           update: {
             name: data.name,
             code: data.code,
-            gradeLevel: data.gradeLevel,
             isActive: data.isActive,
             syncedAt: new Date(),
+            ...parsed,
           },
         });
       }
