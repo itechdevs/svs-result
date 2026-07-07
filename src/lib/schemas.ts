@@ -31,7 +31,9 @@ export const gradeLevels = [
 ] as const;
 
 // Grade level classification helper
-export function categorizeGradeLevel(gradeLevel: string): "PRE_PRIMARY" | "PRIMARY" | "SECONDARY" | "HIGHER_SECONDARY" {
+export function categorizeGradeLevel(
+  gradeLevel: string,
+): "PRE_PRIMARY" | "PRIMARY" | "SECONDARY" | "HIGHER_SECONDARY" {
   // Pre-primary: Contains animal names or nursery-related keywords
   if (
     gradeLevel.toLowerCase().includes("rabbit") ||
@@ -477,6 +479,14 @@ export const listTeacherCompilationsSchema = z.object({
 
 // ─── Secondary Level (Grades 6-10) ─────────────────────────────────────────────
 
+export const secondaryPracticalHeadingSchema = z.object({
+  id: z.string().cuid().optional(),
+  name: z.string().min(1),
+  fullMarks: z.number().positive(),
+  passMarks: z.number().nonnegative().optional(), // Adding passMarks to align with component (though maybe not required by schema, user mentioned it in prompt)
+  displayOrder: z.number().int().min(0).default(0),
+});
+
 export const secondaryComponentTypeSchema = z.enum([
   "INTERNAL",
   "THEORY",
@@ -489,6 +499,7 @@ export const secondarySubjectComponentSchema = z.object({
   fullMarks: z.number().positive(),
   passMarks: z.number().nonnegative(),
   displayOrder: z.number().int().min(0).default(0),
+  practicalHeadings: z.array(secondaryPracticalHeadingSchema).optional(),
 });
 
 export const createSecondarySubjectConfigSchema = z.object({
@@ -505,12 +516,6 @@ export const updateSecondarySubjectConfigSchema =
       isActive: z.boolean().optional(),
     })
     .partial();
-
-export const secondaryPracticalHeadingSchema = z.object({
-  name: z.string().min(1),
-  fullMarks: z.number().positive(),
-  displayOrder: z.number().int().min(0).default(0),
-});
 
 export const createSecondaryPracticalHeadingSchema = z.object({
   headings: z.array(secondaryPracticalHeadingSchema).min(1),

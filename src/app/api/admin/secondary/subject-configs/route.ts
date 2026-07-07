@@ -45,57 +45,96 @@ export const POST = withHandler(
   async (req: NextRequest) => {
     const body = createSecondarySubjectConfigSchema.parse(await req.json());
 
-    // Validation: creditHours calculation check
-    const totalMarks = body.components.reduce((sum, comp) => sum + comp.fullMarks, 0);
-    const calculatedCreditHours = Math.round(totalMarks / 25);
-    
-    if (calculatedCreditHours !== body.creditHours) {
-      return badRequest(`Credit hours mismatch. Based on total marks (${totalMarks}), it should be ${calculatedCreditHours}`);
+    // Validate for duplicate component types
+    const types = body.components.map((c) => c.type);
+    if (new Set(types).size !== types.length) {
+      throw new Error("Duplicate component types are not allowed.");
     }
 
-    // Upsert the configuration
-    const config = await prisma.secondarySubjectConfig.upsert({
-      where: {
-        syncedSubjectId_academicYearId_gradeLevel: {
+    // Validate for duplicate heading names inside practical components
+    for (const comp of body.components) {
+      if (comp.type === "PRACTICAL" && comp.practicalHeadings) {
+        const names = comp.practicalHeadings.map((h) => h.name.trim());
+        if (new Set(names).size !== names.length) {
+          throw new Error("Duplicate sub-category names are not allowed.");
+        }
+        if (names.some(n => n === "")) {
+          throw new Error("Sub-category name cannot be empty.");
+        }
+      }
+    }
+
+    // Run within a transaction to avoid unique constraint race conditions
+    // and safely recreate components and practical headings.
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Upsert the base configuration
+      const config = await tx.secondarySubjectConfig.upsert({
+        where: {
+          syncedSubjectId_academicYearId_gradeLevel: {
+            syncedSubjectId: body.syncedSubjectId,
+            academicYearId: body.academicYearId,
+            gradeLevel: body.gradeLevel,
+          },
+        },
+        update: {
+          creditHours: body.creditHours,
+          isActive: true,
+        },
+        create: {
           syncedSubjectId: body.syncedSubjectId,
           academicYearId: body.academicYearId,
           gradeLevel: body.gradeLevel,
+          creditHours: body.creditHours,
         },
-      },
-      update: {
-        creditHours: body.creditHours,
-        isActive: true,
-        // Replace components
-        components: {
-          deleteMany: {},
-          create: body.components.map((comp) => ({
+      });
+
+      // 2. Delete existing components
+      await tx.secondarySubjectComponent.deleteMany({
+        where: { subjectConfigId: config.id },
+      });
+
+      // 3. Create new components with their practical headings
+      for (const comp of body.components) {
+        await tx.secondarySubjectComponent.create({
+          data: {
+            subjectConfigId: config.id,
             type: comp.type,
             fullMarks: comp.fullMarks,
             passMarks: comp.passMarks,
             displayOrder: comp.displayOrder,
-          })),
+            ...(comp.practicalHeadings && comp.practicalHeadings.length > 0
+              ? {
+                  practicalHeadings: {
+                    create: comp.practicalHeadings.map((heading) => ({
+                      name: heading.name,
+                      fullMarks: heading.fullMarks,
+                      passMarks: heading.passMarks || 0,
+                      displayOrder: heading.displayOrder,
+                    })),
+                  },
+                }
+              : {}),
+          },
+        });
+      }
+
+      // 4. Return populated config
+      return await tx.secondarySubjectConfig.findUnique({
+        where: { id: config.id },
+        include: {
+          components: {
+            orderBy: { displayOrder: "asc" },
+            include: {
+              practicalHeadings: {
+                orderBy: { displayOrder: "asc" },
+              },
+            },
+          },
         },
-      },
-      create: {
-        syncedSubjectId: body.syncedSubjectId,
-        academicYearId: body.academicYearId,
-        gradeLevel: body.gradeLevel,
-        creditHours: body.creditHours,
-        components: {
-          create: body.components.map((comp) => ({
-            type: comp.type,
-            fullMarks: comp.fullMarks,
-            passMarks: comp.passMarks,
-            displayOrder: comp.displayOrder,
-          })),
-        },
-      },
-      include: {
-        components: true,
-      },
+      });
     });
 
-    return ok(config, "Subject configuration saved successfully");
+    return ok(result, "Subject configuration saved successfully");
   },
   ["ADMIN"],
 );

@@ -907,6 +907,7 @@ model SecondaryPracticalHeading {
   componentId  String
   name         String // "Experiment", "Viva", "Lab Record", "Attendance"
   fullMarks    Decimal  @db.Decimal(6, 2)
+  passMarks    Decimal  @db.Decimal(6, 2) @default(0)
   displayOrder Int      @default(0)
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
