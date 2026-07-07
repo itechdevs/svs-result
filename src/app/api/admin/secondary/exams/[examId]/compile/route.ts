@@ -147,10 +147,10 @@ export const POST = withHandler(
       await tx.secondarySubjectResult.deleteMany({ where: { examId: exam.id } });
       await tx.secondaryTermResult.deleteMany({ where: { examId: exam.id } });
 
+      // Create term results and build a map: studentId -> termResultId
+      const termResultIdMap = new Map<string, string>();
       for (const res of termResultsData) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const resultSchemaObj = res;
-        await tx.secondaryTermResult.create({
+        const created = await tx.secondaryTermResult.create({
           data: {
             syncedStudentId: res.syncedStudentId,
             examId: res.examId,
@@ -165,9 +165,12 @@ export const POST = withHandler(
             resultStatus: res.resultStatus as "NG_BLOCKED" | "PROMOTED",
           }
         });
+        termResultIdMap.set(res.syncedStudentId, created.id);
       }
 
+      // Create subject results linked to their term result
       for (const subRes of subjectResultsData) {
+        const finalResultId = termResultIdMap.get(subRes.syncedStudentId);
         await tx.secondarySubjectResult.create({
           data: {
             syncedStudentId: subRes.syncedStudentId,
@@ -184,6 +187,7 @@ export const POST = withHandler(
             isNG: subRes.isNG,
             creditHours: subRes.creditHours,
             weightedPoint: subRes.weightedPoint,
+            finalResultId,
           }
         });
       }

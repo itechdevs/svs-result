@@ -273,7 +273,7 @@ export function usePracticalMarkEntry({
         );
 
         if (submittedMarks.length > 0) {
-          throw new Error(`${submittedMarks.length} mark(s) are already submitted or verified.`);
+          return { submitted: 0, alreadySubmitted: submittedMarks.length };
         }
 
         throw new Error("No marks found. Please save marks first before submitting.");
@@ -291,7 +291,11 @@ export function usePracticalMarkEntry({
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["practical-marks", componentId, examId] });
       queryClient.invalidateQueries({ queryKey: ["component-marks", componentId, examId] });
-      toast.success(`Successfully submitted practical marks for ${data.submitted} student(s)`);
+      if (data.alreadySubmitted) {
+        toast.info(`All marks (${data.alreadySubmitted}) are already submitted or verified.`);
+      } else {
+        toast.success(`Successfully submitted practical marks for ${data.submitted} student(s)`);
+      }
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to submit practical marks");

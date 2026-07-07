@@ -9,240 +9,308 @@ import {
   StyleSheet as PdfStyleSheet,
 } from '@react-pdf/renderer';
 
+const COLORS = {
+  primary: '#1f5e9d',
+  border: '#4a7aa8',
+  lightBlue: '#dbeeff',
+  rowAlt: '#f8fbff',
+  mergedCell: '#f0f6ff',
+  text: '#1a1a1a',
+  muted: '#6b7280',
+  green: '#15803d',
+  red: '#dc2626',
+};
+
 const styles = PdfStyleSheet.create({
-  page: { 
-    padding: 30, 
-    fontFamily: 'Helvetica', 
-    fontSize: 9, 
-    color: '#1a1a1a',
-    backgroundColor: '#ffffff'
-  },
-  outerBorder: { 
-    border: '2pt solid #7c3aed', 
-    padding: 16, 
-    flexGrow: 1 
-  },
-  
-  // Header Styles
-  headerSection: { 
-    alignItems: 'center', 
-    marginBottom: 12,
-    borderBottom: '1pt solid #e5e7eb',
-    paddingBottom: 12
-  },
-  schoolName: { 
-    fontSize: 16, 
-    fontFamily: 'Helvetica-Bold', 
-    textAlign: 'center', 
-    textTransform: 'uppercase',
-    color: '#7c3aed',
-    marginBottom: 4
-  },
-  schoolAddress: { 
-    fontSize: 8, 
-    textAlign: 'center', 
-    color: '#6b7280',
-    marginBottom: 2
-  },
-  marksheetTitle: { 
-    fontSize: 14, 
-    fontFamily: 'Helvetica-Bold', 
-    textTransform: 'uppercase', 
-    letterSpacing: 2, 
-    marginTop: 8,
-    color: '#7c3aed'
-  },
-  academicYearText: { 
-    fontSize: 10, 
-    fontFamily: 'Helvetica-Bold', 
-    marginTop: 4,
-    color: '#374151'
-  },
-  
-  // Student Info Styles
-  studentInfo: { 
-    marginTop: 12, 
-    marginBottom: 12,
-    backgroundColor: '#faf5ff',
-    padding: 10,
-    borderRadius: 4
-  },
-  infoRow: { 
-    flexDirection: 'row', 
-    marginBottom: 4, 
-    fontSize: 8.5 
-  },
-  infoLabel: { 
-    fontFamily: 'Helvetica-Bold',
-    minWidth: 100,
-    color: '#374151'
-  },
-  infoValue: { 
+  page: {
+    padding: 28,
     fontFamily: 'Helvetica',
-    color: '#1f2937',
-    flex: 1
+    fontSize: 9,
+    color: COLORS.text,
+    backgroundColor: '#ffffff',
   },
-  
-  // Table Styles
-  table: { 
-    border: '1pt solid #d1d5db', 
-    marginTop: 10,
-    marginBottom: 12
-  },
-  tableHeader: { 
-    flexDirection: 'row', 
-    backgroundColor: '#7c3aed',
-    borderBottom: '1pt solid #7c3aed'
-  },
-  tableRow: { 
-    flexDirection: 'row', 
-    borderBottom: '0.5pt solid #e5e7eb'
-  },
-  tableRowAlt: { 
-    flexDirection: 'row', 
-    borderBottom: '0.5pt solid #e5e7eb',
-    backgroundColor: '#faf5ff'
-  },
-  th: { 
-    fontFamily: 'Helvetica-Bold', 
-    padding: '6 8', 
-    fontSize: 8,
-    color: '#ffffff',
-    borderRight: '0.5pt solid #ffffff'
-  },
-  td: { 
-    padding: '5 8', 
-    fontSize: 8,
-    borderRight: '0.5pt solid #e5e7eb',
-    color: '#374151'
-  },
-  
-  // Column Widths
-  colSn: { width: '6%', textAlign: 'center' },
-  colSubject: { width: '35%' },
-  colCH: { width: '10%', textAlign: 'center' },
-  colWeightedMarks: { width: '15%', textAlign: 'center' },
-  colPercentage: { width: '10%', textAlign: 'center' },
-  colGP: { width: '10%', textAlign: 'center' },
-  colGrade: { width: '14%', textAlign: 'center' },
-  
-  // Summary Section
-  summarySection: { 
-    marginTop: 12,
+  outerBorder: {
+    border: `2pt solid ${COLORS.border}`,
     padding: 12,
-    backgroundColor: '#fef3c7',
-    border: '1pt solid #fbbf24',
-    borderRadius: 4
+    flexGrow: 1,
   },
-  summaryRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
+  innerBorder: {
+    border: `1pt solid ${COLORS.border}`,
+    margin: 3,
+    flexGrow: 1,
+    padding: '10 12',
+  },
+
+  // Header
+  headerSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingBottom: 6,
+    borderBottom: `1.5pt solid ${COLORS.border}`,
     marginBottom: 6,
-    fontSize: 9
   },
-  summaryLabel: { 
+  headerLeft: { width: '15%', alignItems: 'center' },
+  headerCenter: { width: '70%', alignItems: 'center' },
+  headerRight: { width: '15%' },
+  logo: { fontSize: 24, fontFamily: 'Helvetica-Bold', color: COLORS.primary },
+  schoolName: {
+    fontSize: 15,
     fontFamily: 'Helvetica-Bold',
-    color: '#92400e'
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    color: COLORS.primary,
+    letterSpacing: 1,
   },
-  summaryValue: { 
+  schoolAddress: {
+    fontSize: 8,
+    textAlign: 'center',
+    color: COLORS.primary,
+    fontWeight: 600,
+    marginTop: 1,
+  },
+  schoolContact: {
+    fontSize: 7.5,
+    textAlign: 'center',
+    color: COLORS.primary,
+    marginTop: 1,
+  },
+
+  // Title
+  examTitleSection: {
+    alignItems: 'center',
+    paddingBottom: 4,
+    borderBottom: `1pt solid ${COLORS.border}`,
+    marginBottom: 6,
+  },
+  sheetTitle: {
+    fontSize: 16,
     fontFamily: 'Helvetica-Bold',
-    color: '#1f2937'
+    color: COLORS.primary,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
   },
-  gpaRow: {
-    flexDirection: 'row', 
-    justifyContent: 'space-between',
+  subtitle: {
+    fontSize: 8,
+    color: COLORS.muted,
+    fontFamily: 'Helvetica-Bold',
+    marginTop: 2,
+  },
+
+  // Student info (certificate style)
+  studentInfoSection: {
     marginTop: 6,
-    paddingTop: 8,
-    borderTop: '1pt solid #fbbf24',
-    fontSize: 11
+    marginBottom: 8,
+    fontSize: 8,
+    lineHeight: 1.6,
+  },
+  infoLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  infoText: { fontFamily: 'Helvetica', color: COLORS.text },
+  infoUnderline: {
+    fontFamily: 'Helvetica-Bold',
+    color: COLORS.primary,
+    textDecoration: 'underline',
+    paddingHorizontal: 2,
+  },
+
+  // Table
+  table: {
+    border: `1pt solid ${COLORS.border}`,
+    marginTop: 6,
+    marginBottom: 8,
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.primary,
+    borderBottom: `1pt solid ${COLORS.primary}`,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderBottom: `0.5pt solid ${COLORS.border}`,
+  },
+  tableRowAlt: {
+    flexDirection: 'row',
+    borderBottom: `0.5pt solid ${COLORS.border}`,
+    backgroundColor: COLORS.rowAlt,
+  },
+  th: {
+    fontFamily: 'Helvetica-Bold',
+    padding: '5 6',
+    fontSize: 7.5,
+    color: '#ffffff',
+    borderRight: `0.5pt solid ${COLORS.border}`,
+  },
+  td: {
+    padding: '4 6',
+    fontSize: 7.5,
+    borderRight: `0.5pt solid ${COLORS.border}`,
+    color: COLORS.text,
+  },
+
+  colSn: { width: '6%', textAlign: 'center' },
+  colSubject: { width: '28%' },
+  colCH: { width: '8%', textAlign: 'center' },
+  colWeighted: { width: '16%', textAlign: 'center' },
+  colPercentage: { width: '12%', textAlign: 'center' },
+  colGP: { width: '10%', textAlign: 'center' },
+  colGrade: { width: '10%', textAlign: 'center' },
+  colFinalGrade: { width: '10%', textAlign: 'center', borderRight: 0 },
+
+  // GPA strip
+  gpaStrip: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: COLORS.lightBlue,
+    border: `1pt solid ${COLORS.border}`,
+    padding: '5 10',
+    marginBottom: 6,
   },
   gpaLabel: {
     fontFamily: 'Helvetica-Bold',
-    color: '#92400e',
-    fontSize: 11
+    fontSize: 8.5,
+    color: COLORS.primary,
   },
   gpaValue: {
     fontFamily: 'Helvetica-Bold',
-    color: '#dc2626',
-    fontSize: 13
-  },
-  
-  // Status Badge
-  statusBadge: {
-    padding: '4 10',
-    borderRadius: 3,
     fontSize: 9,
+    color: COLORS.primary,
+  },
+  gpaSeparator: {
+    fontFamily: 'Helvetica',
+    fontSize: 8.5,
+    color: COLORS.border,
+  },
+  gpaRightValue: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 9,
+    color: COLORS.primary,
+  },
+  statusBadge: {
+    padding: '2 6',
+    borderRadius: 2,
+    fontSize: 7,
     fontFamily: 'Helvetica-Bold',
     textAlign: 'center',
-    marginTop: 6
   },
   statusPromoted: {
     backgroundColor: '#dcfce7',
-    color: '#15803d'
+    color: COLORS.green,
   },
   statusNG: {
     backgroundColor: '#fee2e2',
-    color: '#dc2626'
+    color: COLORS.red,
   },
-  
-  // Footer Styles
-  footer: { 
-    marginTop: 20,
-    paddingTop: 12,
-    borderTop: '1pt solid #e5e7eb'
-  },
-  signatureRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    marginTop: 20,
-    marginBottom: 12
-  },
-  signatureBox: { 
-    width: 140, 
-    borderTop: '1pt solid #374151', 
-    paddingTop: 4, 
-    textAlign: 'center', 
-    fontFamily: 'Helvetica-Bold', 
-    fontSize: 8,
-    color: '#374151'
-  },
-  issueDate: { 
-    fontFamily: 'Helvetica', 
-    fontSize: 8,
-    color: '#6b7280',
-    textAlign: 'right'
-  },
-  
+
   // Grade Legend
-  gradeLegend: {
-    marginTop: 10,
-    fontSize: 7,
-    color: '#6b7280',
-    lineHeight: 1.4,
-    padding: 8,
-    backgroundColor: '#f9fafb',
-    borderRadius: 3
+  legendSection: {
+    flexDirection: 'row',
+    marginBottom: 6,
+    gap: 8,
   },
+  legendLeft: { width: '40%' },
+  legendRight: { width: '60%' },
   legendTitle: {
     fontFamily: 'Helvetica-Bold',
-    marginBottom: 3,
-    fontSize: 8
+    fontSize: 7,
+    color: COLORS.primary,
+    marginBottom: 2,
   },
-  
-  // Remarks Section
+  legendNote: {
+    fontSize: 6.5,
+    color: COLORS.muted,
+    lineHeight: 1.5,
+    marginBottom: 1,
+  },
+  legendTable: {
+    border: `0.5pt solid ${COLORS.border}`,
+  },
+  legendTh: {
+    fontFamily: 'Helvetica-Bold',
+    padding: '2 3',
+    fontSize: 6,
+    color: '#ffffff',
+    backgroundColor: COLORS.primary,
+    borderRight: `0.5pt solid ${COLORS.border}`,
+  },
+  legendTd: {
+    padding: '2 3',
+    fontSize: 6,
+    borderRight: `0.5pt solid ${COLORS.border}`,
+    color: COLORS.text,
+  },
+  legendRow: {
+    flexDirection: 'row',
+    borderBottom: `0.5pt solid ${COLORS.border}`,
+  },
+  lColSn: { width: '10%', textAlign: 'center' },
+  lColInterval: { width: '20%', textAlign: 'center' },
+  lColGrade: { width: '15%', textAlign: 'center' },
+  lColGP: { width: '18%', textAlign: 'center' },
+  lColDesc: { width: '37%', textAlign: 'center' },
+
+  // Remarks
   remarksSection: {
-    marginTop: 10,
-    padding: 8,
-    backgroundColor: '#f0f9ff',
-    borderRadius: 3,
-    fontSize: 8
+    marginBottom: 6,
+    padding: 6,
+    backgroundColor: COLORS.lightBlue,
+    border: `0.5pt solid ${COLORS.border}`,
+    borderRadius: 2,
+    fontSize: 7,
   },
   remarksTitle: {
     fontFamily: 'Helvetica-Bold',
-    marginBottom: 4,
-    color: '#1e3a8a'
-  }
+    color: COLORS.primary,
+    marginBottom: 2,
+    fontSize: 7.5,
+  },
+  remarksText: {
+    color: COLORS.text,
+    lineHeight: 1.4,
+  },
+
+  // Footer
+  footer: {
+    marginTop: 'auto',
+    paddingTop: 8,
+    borderTop: `1pt solid ${COLORS.border}`,
+  },
+  signatureRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  signatureBox: {
+    width: 120,
+    borderTop: `1pt solid ${COLORS.text}`,
+    paddingTop: 3,
+    textAlign: 'center',
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 7.5,
+    color: COLORS.text,
+  },
+  issueDate: {
+    fontFamily: 'Helvetica',
+    fontSize: 7,
+    color: COLORS.muted,
+    textAlign: 'right',
+  },
 });
+
+const GRADE_INTERVALS = [
+  { sn: 1, interval: '90 \u2013 100', grade: 'A+', gp: '4.0', desc: 'Outstanding' },
+  { sn: 2, interval: '80 \u2013 <90', grade: 'A', gp: '3.6', desc: 'Excellent' },
+  { sn: 3, interval: '70 \u2013 <80', grade: 'B+', gp: '3.2', desc: 'Very Good' },
+  { sn: 4, interval: '60 \u2013 <70', grade: 'B', gp: '2.8', desc: 'Good' },
+  { sn: 5, interval: '50 \u2013 <60', grade: 'C+', gp: '2.4', desc: 'Satisfactory' },
+  { sn: 6, interval: '40 \u2013 <50', grade: 'C', gp: '2.0', desc: 'Acceptable' },
+  { sn: 7, interval: '35 \u2013 <40', grade: 'D', gp: '1.6', desc: 'Basic' },
+  { sn: 8, interval: '0 \u2013 <35', grade: 'NG', gp: '\u2013', desc: 'Not Graded' },
+];
 
 interface AnnualSubjectResult {
   subject: string;
@@ -277,141 +345,173 @@ interface SecondaryAnnualMarksheetData {
   remarks?: string;
 }
 
+function GradeIntervalTable() {
+  return (
+    <View style={styles.legendTable}>
+      <View style={[styles.legendRow, { backgroundColor: COLORS.primary }]}>
+        <Text style={[styles.legendTh, styles.lColSn]}>SN</Text>
+        <Text style={[styles.legendTh, styles.lColInterval]}>Interval (%)</Text>
+        <Text style={[styles.legendTh, styles.lColGrade]}>Grade</Text>
+        <Text style={[styles.legendTh, styles.lColGP]}>Grade Point</Text>
+        <Text style={[styles.legendTh, styles.lColDesc, { borderRight: 0 }]}>Description</Text>
+      </View>
+      {GRADE_INTERVALS.map((row, i) => (
+        <View key={i} style={i % 2 === 0 ? styles.legendRow : { ...styles.legendRow, backgroundColor: COLORS.rowAlt }}>
+          <Text style={[styles.legendTd, styles.lColSn]}>{row.sn}</Text>
+          <Text style={[styles.legendTd, styles.lColInterval]}>{row.interval}</Text>
+          <Text style={[styles.legendTd, styles.lColGrade, { fontFamily: 'Helvetica-Bold', color: row.grade === 'NG' ? COLORS.red : COLORS.primary }]}>
+            {row.grade}
+          </Text>
+          <Text style={[styles.legendTd, styles.lColGP]}>{row.gp}</Text>
+          <Text style={[styles.legendTd, styles.lColDesc, { borderRight: 0 }]}>{row.desc}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export function SecondaryAnnualMarksheetPDF({ data }: { data: SecondaryAnnualMarksheetData }) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.outerBorder}>
-          {/* Header */}
-          <View style={styles.headerSection}>
-            <Text style={styles.schoolName}>Sanskar Vidhyapith School</Text>
-            <Text style={styles.schoolAddress}>Balkhu, Kathmandu | Phone: 9802036680 | Email: sanskarvschool@gmail.com</Text>
-            <Text style={styles.marksheetTitle}>Annual Transcript</Text>
-            <Text style={styles.academicYearText}>Academic Year: {data.academicYear.name}</Text>
-          </View>
-          
-          {/* Student Information */}
-          <View style={styles.studentInfo}>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Student Name:</Text>
-              <Text style={styles.infoValue}>{data.student.name}</Text>
+          <View style={styles.innerBorder}>
+            {/* School Header */}
+            <View style={styles.headerSection}>
+              <View style={styles.headerLeft}>
+                <Text style={styles.logo}>SVS</Text>
+              </View>
+              <View style={styles.headerCenter}>
+                <Text style={styles.schoolName}>Sanskar Vidhyapith School</Text>
+                <Text style={styles.schoolAddress}>Balkhu, Kathmandu, Nepal</Text>
+                <Text style={styles.schoolContact}>Phone: 9802036680 | Email: sanskarvschool@gmail.com</Text>
+              </View>
+              <View style={styles.headerRight} />
             </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Roll Number:</Text>
-              <Text style={styles.infoValue}>{data.student.rollNumber}</Text>
-              <Text style={[styles.infoLabel, { marginLeft: 40 }]}>Grade:</Text>
-              <Text style={styles.infoValue}>{data.student.gradeLevel}</Text>
+
+            {/* Title */}
+            <View style={styles.examTitleSection}>
+              <Text style={styles.sheetTitle}>Annual Transcript</Text>
+              <Text style={styles.subtitle}>Academic Year: {data.academicYear.name}</Text>
             </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Section:</Text>
-              <Text style={styles.infoValue}>{data.student.section || 'N/A'}</Text>
-              {data.classRank && (
-                <>
-                  <Text style={[styles.infoLabel, { marginLeft: 40 }]}>Class Rank:</Text>
-                  <Text style={[styles.infoValue, { fontFamily: 'Helvetica-Bold', color: '#7c3aed' }]}>
-                    {data.classRank}
+
+            {/* Student Info (Certificate Style) */}
+            <View style={styles.studentInfoSection}>
+              <View style={styles.infoLine}>
+                <Text style={styles.infoText}>THE GRADE(S) SECURED BY: </Text>
+                <Text style={styles.infoUnderline}>{data.student.name.toUpperCase()}</Text>
+                <Text style={styles.infoText}>  ROLL NO: </Text>
+                <Text style={styles.infoUnderline}>{data.student.rollNumber}</Text>
+                <Text style={styles.infoText}>  GRADE: </Text>
+                <Text style={styles.infoUnderline}>{data.student.gradeLevel}</Text>
+              </View>
+              <View style={styles.infoLine}>
+                <Text style={styles.infoText}>IN THE FINAL EXAMINATION CONDUCTED IN </Text>
+                <Text style={styles.infoUnderline}>2082</Text>
+                <Text style={styles.infoText}> B.S. ( </Text>
+                <Text style={styles.infoUnderline}>2026</Text>
+                <Text style={styles.infoText}> A.D.) ARE GIVEN BELOW.</Text>
+              </View>
+            </View>
+
+            {/* Marks Table */}
+            <View style={styles.table}>
+              <View style={styles.tableHeader}>
+                <Text style={[styles.th, styles.colSn]}>SN</Text>
+                <Text style={[styles.th, styles.colSubject]}>Subject</Text>
+                <Text style={[styles.th, styles.colCH]}>C.H.</Text>
+                <Text style={[styles.th, styles.colWeighted]}>Weighted Marks</Text>
+                <Text style={[styles.th, styles.colPercentage]}>Percentage</Text>
+                <Text style={[styles.th, styles.colGP]}>G.P.</Text>
+                <Text style={[styles.th, styles.colGrade]}>Grade</Text>
+                <Text style={[styles.th, styles.colFinalGrade]}>Final Grade</Text>
+              </View>
+
+              {data.subjectResults.map((subject, index) => (
+                <View key={index} style={index % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
+                  <Text style={[styles.td, styles.colSn]}>{index + 1}</Text>
+                  <Text style={[styles.td, styles.colSubject, { fontFamily: 'Helvetica-Bold' }]}>
+                    {subject.subject}
+                    {subject.isNG && <Text style={{ color: COLORS.red }}> (NG)</Text>}
                   </Text>
-                </>
-              )}
+                  <Text style={[styles.td, styles.colCH]}>{subject.creditHours}</Text>
+                  <Text style={[styles.td, styles.colWeighted]}>
+                    {subject.weightedTotalObtained.toFixed(2)}/{subject.weightedTotalFull.toFixed(2)}
+                  </Text>
+                  <Text style={[styles.td, styles.colPercentage, { fontFamily: 'Helvetica-Bold' }]}>
+                    {subject.percentage.toFixed(2)}%
+                  </Text>
+                  <Text style={[styles.td, styles.colGP, { fontFamily: 'Helvetica-Bold' }]}>
+                    {subject.gradePoint.toFixed(2)}
+                  </Text>
+                  <Text style={[styles.td, styles.colGrade, {
+                    fontFamily: 'Helvetica-Bold',
+                    color: subject.isNG ? COLORS.red : COLORS.green,
+                  }]}>
+                    {subject.grade}
+                  </Text>
+                  <Text style={[styles.td, styles.colFinalGrade, {
+                    fontFamily: 'Helvetica-Bold',
+                    backgroundColor: COLORS.mergedCell,
+                    color: subject.isNG ? COLORS.red : COLORS.green,
+                  }]}>
+                    {subject.grade}
+                  </Text>
+                </View>
+              ))}
             </View>
-          </View>
-          
-          {/* Marks Table */}
-          <View style={styles.table}>
-            {/* Table Header */}
-            <View style={styles.tableHeader}>
-              <Text style={[styles.th, styles.colSn]}>S.N.</Text>
-              <Text style={[styles.th, styles.colSubject]}>Subject</Text>
-              <Text style={[styles.th, styles.colCH]}>Credit Hours</Text>
-              <Text style={[styles.th, styles.colWeightedMarks]}>Weighted Marks</Text>
-              <Text style={[styles.th, styles.colPercentage]}>Percentage</Text>
-              <Text style={[styles.th, styles.colGP]}>G.P.</Text>
-              <Text style={[styles.th, styles.colGrade, { borderRight: 0 }]}>Grade</Text>
-            </View>
-            
-            {/* Table Rows */}
-            {data.subjectResults.map((subject, index) => (
-              <View key={index} style={index % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
-                <Text style={[styles.td, styles.colSn]}>{index + 1}</Text>
-                <Text style={[styles.td, styles.colSubject, { fontFamily: 'Helvetica-Bold' }]}>
-                  {subject.subject}
-                  {subject.isNG && <Text style={{ color: '#dc2626' }}> (NG)</Text>}
-                </Text>
-                <Text style={[styles.td, styles.colCH]}>{subject.creditHours}</Text>
-                <Text style={[styles.td, styles.colWeightedMarks]}>
-                  {subject.weightedTotalObtained.toFixed(2)}/{subject.weightedTotalFull.toFixed(2)}
-                </Text>
-                <Text style={[styles.td, styles.colPercentage, { fontFamily: 'Helvetica-Bold' }]}>
-                  {subject.percentage.toFixed(2)}%
-                </Text>
-                <Text style={[styles.td, styles.colGP, { fontFamily: 'Helvetica-Bold' }]}>
-                  {subject.gradePoint.toFixed(2)}
-                </Text>
-                <Text style={[styles.td, styles.colGrade, { 
-                  borderRight: 0, 
-                  fontFamily: 'Helvetica-Bold',
-                  color: subject.isNG ? '#dc2626' : '#15803d'
-                }]}>
-                  {subject.grade}
+
+            {/* GPA Strip */}
+            <View style={styles.gpaStrip}>
+              <Text style={styles.gpaLabel}>
+                Grade Point Average (GPA): {data.gpa.toFixed(2)}
+                {data.classRank ? `  |  Rank: ${data.classRank}` : ''}
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Text style={styles.gpaSeparator}>|</Text>
+                <Text style={styles.gpaRightValue}>
+                  {data.resultStatus === 'PROMOTED' ? 'PROMOTED' : 'NG BLOCKED'}
                 </Text>
               </View>
-            ))}
-          </View>
-          
-          {/* Summary Section */}
-          <View style={styles.summarySection}>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Total Subjects:</Text>
-              <Text style={styles.summaryValue}>{data.totalSubjects}</Text>
-              <Text style={[styles.summaryLabel, { marginLeft: 30 }]}>Passed:</Text>
-              <Text style={[styles.summaryValue, { color: '#15803d' }]}>{data.passedSubjects}</Text>
-              <Text style={[styles.summaryLabel, { marginLeft: 30 }]}>NG (Not Graded):</Text>
-              <Text style={[styles.summaryValue, { color: '#dc2626' }]}>{data.ngSubjects}</Text>
             </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Total Credit Hours:</Text>
-              <Text style={styles.summaryValue}>{data.totalCreditHours}</Text>
-            </View>
-            <View style={styles.gpaRow}>
-              <Text style={styles.gpaLabel}>Annual Grade Point Average (GPA):</Text>
-              <Text style={styles.gpaValue}>{data.gpa.toFixed(2)}</Text>
-            </View>
-            <View style={{ alignItems: 'center' }}>
-              <View style={[
-                styles.statusBadge, 
-                data.resultStatus === 'PROMOTED' ? styles.statusPromoted : styles.statusNG
-              ]}>
-                <Text>{data.resultStatus === 'PROMOTED' ? 'PROMOTED TO NEXT GRADE' : 'NOT GRADED (NG)'}</Text>
+
+            {/* Remarks */}
+            {data.remarks && (
+              <View style={styles.remarksSection}>
+                <Text style={styles.remarksTitle}>Remarks:</Text>
+                <Text style={styles.remarksText}>{data.remarks}</Text>
+              </View>
+            )}
+
+            {/* Grade Legend */}
+            <View style={styles.legendSection}>
+              <View style={styles.legendLeft}>
+                <Text style={styles.legendTitle}>Notes:</Text>
+                <Text style={styles.legendNote}>ABS: Absent</Text>
+                <Text style={styles.legendNote}>NG: Not Graded (Below 35%)</Text>
+                <Text style={styles.legendNote}>C.H. = Credit Hours</Text>
+                <Text style={styles.legendNote}>G.P. = Grade Point</Text>
+                <Text style={styles.legendNote}>Annual GPA is calculated using</Text>
+                <Text style={styles.legendNote}>term-weighted averages.</Text>
+              </View>
+              <View style={styles.legendRight}>
+                <Text style={styles.legendTitle}>Intervals and Grade:</Text>
+                <GradeIntervalTable />
               </View>
             </View>
-          </View>
-          
-          {/* Remarks */}
-          {data.remarks && (
-            <View style={styles.remarksSection}>
-              <Text style={styles.remarksTitle}>Remarks:</Text>
-              <Text>{data.remarks}</Text>
-            </View>
-          )}
-          
-          {/* Grade Legend */}
-          <View style={styles.gradeLegend}>
-            <Text style={styles.legendTitle}>Grading System (Credit-Hour Based):</Text>
-            <Text>A+ (90-100) = 4.0 | A (80-89) = 3.6 | B+ (70-79) = 3.2 | B (60-69) = 2.8 | C+ (50-59) = 2.4 | C (40-49) = 2.0 | D+ (30-39) = 1.6 | D (20-29) = 1.2 | NG (0-19) = Not Graded</Text>
-            <Text style={{ marginTop: 2 }}>Annual GPA is calculated using term-weighted averages across all subjects.</Text>
-          </View>
-          
-          {/* Footer */}
-          <View style={styles.footer}>
-            <View style={styles.signatureRow}>
-              <View style={styles.signatureBox}>
-                <Text>CLASS TEACHER</Text>
+
+            {/* Footer */}
+            <View style={styles.footer}>
+              <View style={styles.signatureRow}>
+                <View style={styles.signatureBox}>
+                  <Text>CLASS TEACHER</Text>
+                </View>
+                <View style={styles.signatureBox}>
+                  <Text>PRINCIPAL</Text>
+                </View>
               </View>
-              <View style={styles.signatureBox}>
-                <Text>PRINCIPAL</Text>
-              </View>
+              <Text style={styles.issueDate}>Date of Issue: {data.generatedDate}</Text>
             </View>
-            <Text style={styles.issueDate}>Date of Issue: {data.generatedDate}</Text>
           </View>
         </View>
       </Page>

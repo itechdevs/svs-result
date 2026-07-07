@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Sparkles, Calendar, BookOpen, Layers, Award, Printer, CheckCircle, AlertTriangle, Eye, Loader2, ArrowRight, FileDown } from "lucide-react";
 import { toast } from "sonner";
@@ -28,14 +29,32 @@ import {
 } from "@/components/ui/table";
 import SanskarLoader from "@/components/shared/SanskarLoader";
 import { SecondaryMarksheetModal } from "@/components/secondary/SecondaryMarksheetModal";
+import { SecondaryGradeSheetModal } from "@/components/secondary/SecondaryGradeSheetModal";
 
-export default function SecondaryResultCompilationPage() {
-  const [activeTab, setActiveTab] = useState<"term" | "annual">("term");
-  const [selectedYear, setSelectedYear] = useState("");
-  const [selectedGrade, setSelectedGrade] = useState("");
-  const [selectedExamId, setSelectedExamId] = useState("");
+function SecondaryResultCompilationPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const activeTab = (searchParams.get("tab") as "term" | "annual") || "term";
+  const selectedYear = searchParams.get("year") || "";
+  const selectedGrade = searchParams.get("grade") || "";
+  const selectedExamId = searchParams.get("exam") || "";
+
+  const setQueryParam = useCallback((key: string, value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) {
+      params.set(key, value);
+    } else {
+      params.delete(key);
+    }
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [searchParams, router, pathname]);
+
   const [marksheetModalOpen, setMarksheetModalOpen] = useState(false);
   const [selectedMarksheetId, setSelectedMarksheetId] = useState<string | null>(null);
+  const [viewGradeSheetResult, setViewGradeSheetResult] = useState<any>(null);
+  const [viewGradeSheetType, setViewGradeSheetType] = useState<"term" | "annual">("term");
 
   const { data: years, isLoading: isLoadingYears } = useAcademicYears();
   const { data: allGradeLevels, isLoading: isLoadingGrades } = useGradeLevels();
@@ -47,12 +66,19 @@ export default function SecondaryResultCompilationPage() {
     return category === "SECONDARY" || category === "HIGHER_SECONDARY";
   }) || [];
 
-  // Set default current year
+  // Set default current year into query params
   useEffect(() => {
     if (!selectedYear && currentYear) {
-      setSelectedYear(currentYear.id);
+      setQueryParam("year", currentYear.id);
     }
-  }, [currentYear, selectedYear]);
+  }, [currentYear, selectedYear, setQueryParam]);
+
+  // Clear exam param when tab changes to annual
+  useEffect(() => {
+    if (activeTab === "annual" && selectedExamId) {
+      setQueryParam("exam", "");
+    }
+  }, [activeTab, selectedExamId, setQueryParam]);
 
   // Fetch Exams (for Term tab)
   const { data: exams, isLoading: isLoadingExams } = useExams({
@@ -164,6 +190,87 @@ export default function SecondaryResultCompilationPage() {
     generateMarksheetMutation.mutate(body);
   };
 
+  // Flatten results into sub-rows (one per subject per student)
+  const termFlatRows = useMemo(() => {
+    if (!termResults) return [];
+    const rows: Array<{
+      result: any;
+      subject: any;
+      isFirstSubject: boolean;
+      rowSpan: number;
+      isSummaryRow: boolean;
+    }> = [];
+    for (const res of termResults) {
+      const subjects = res.subjectResults || [];
+      if (subjects.length > 0) {
+        subjects.forEach((subject: any, idx: number) => {
+          rows.push({
+            result: res,
+            subject,
+            isFirstSubject: idx === 0,
+            rowSpan: idx === 0 ? subjects.length : 0,
+            isSummaryRow: false,
+          });
+        });
+      } else {
+        // No subject results — show a single summary row per student
+        rows.push({
+          result: res,
+          subject: null,
+          isFirstSubject: true,
+          rowSpan: 1,
+          isSummaryRow: true,
+        });
+      }
+    }
+    return rows;
+  }, [termResults]);
+
+  const annualFlatRows = useMemo(() => {
+    if (!annualResults) return [];
+    const rows: Array<{
+      result: any;
+      subject: any;
+      isFirstSubject: boolean;
+      rowSpan: number;
+      isSummaryRow: boolean;
+    }> = [];
+    for (const res of annualResults) {
+      const subjects = res.subjectResults || [];
+      if (subjects.length > 0) {
+        subjects.forEach((subject: any, idx: number) => {
+          rows.push({
+            result: res,
+            subject,
+            isFirstSubject: idx === 0,
+            rowSpan: idx === 0 ? subjects.length : 0,
+            isSummaryRow: false,
+          });
+        });
+      } else {
+        rows.push({
+          result: res,
+          subject: null,
+          isFirstSubject: true,
+          rowSpan: 1,
+          isSummaryRow: true,
+        });
+      }
+    }
+    return rows;
+  }, [annualResults]);
+
+  const renderSubjectRow = (subject: any) => {
+    const grade = subject?.grade || 'N/A';
+    const gp = Number(subject?.gradePoint || 0).toFixed(2);
+    const ch = subject?.creditHours || subject?.creditHours || 0;
+    const marks = subject?.totalObtained != null
+      ? `${subject.totalObtained}/${subject.totalFullMarks || '—'}`
+      : '—';
+    const isNG = subject?.isNG;
+    return { grade, gp, ch, marks, isNG };
+  };
+
   const isTabLoading = isLoadingYears || isLoadingExams || 
     (activeTab === "term" ? isLoadingTermResults : isLoadingAnnualResults);
 
@@ -187,13 +294,13 @@ export default function SecondaryResultCompilationPage() {
       <div className="flex border-b border-border">
         <button
           className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-all ${activeTab === "term" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-          onClick={() => setActiveTab("term")}
+          onClick={() => setQueryParam("tab", "term")}
         >
           Term Result Compilation
         </button>
         <button
           className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-all ${activeTab === "annual" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-          onClick={() => setActiveTab("annual")}
+          onClick={() => setQueryParam("tab", "annual")}
         >
           Annual Result Compilation
         </button>
@@ -205,7 +312,7 @@ export default function SecondaryResultCompilationPage() {
           <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
             Academic Year
           </label>
-          <Select value={selectedYear} onValueChange={setSelectedYear}>
+          <Select value={selectedYear} onValueChange={(val) => setQueryParam("year", val)}>
             <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
@@ -222,7 +329,7 @@ export default function SecondaryResultCompilationPage() {
           <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
             Grade Level
           </label>
-          <Select value={selectedGrade} onValueChange={setSelectedGrade} disabled={isLoadingGrades || secondaryGrades.length === 0}>
+          <Select value={selectedGrade} onValueChange={(val) => setQueryParam("grade", val)} disabled={isLoadingGrades || secondaryGrades.length === 0}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select Grade" />
             </SelectTrigger>
@@ -241,7 +348,7 @@ export default function SecondaryResultCompilationPage() {
             <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
               Select Term Exam
             </label>
-            <Select value={selectedExamId} onValueChange={setSelectedExamId}>
+            <Select value={selectedExamId} onValueChange={(val) => setQueryParam("exam", val)}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select Exam" />
               </SelectTrigger>
@@ -415,84 +522,126 @@ export default function SecondaryResultCompilationPage() {
           <div className="p-4 border-b border-border/80 bg-muted/20">
             <h3 className="font-bold text-xs uppercase text-muted-foreground">Student compilation records ({termResults?.length || 0})</h3>
           </div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[10%]">Roll</TableHead>
-                <TableHead className="w-[30%]">Student Name</TableHead>
-                <TableHead className="w-[15%] text-center">GPA</TableHead>
-                <TableHead className="w-[15%] text-center">NG Subjects</TableHead>
-                <TableHead className="w-[15%] text-center">Result Status</TableHead>
-                <TableHead className="w-[15%] text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {termResults && termResults.length > 0 ? (
-                termResults.map((res) => (
-                  <TableRow key={res.id} className="hover:bg-muted/10">
-                    <TableCell className="font-mono text-xs">{res.syncedStudent?.rollNumber}</TableCell>
-                    <TableCell className="font-medium text-foreground">
-                      {res.syncedStudent?.name}
-                      <span className="text-[10px] text-muted-foreground block font-normal">
-                        Section: {res.syncedStudent?.section}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-center font-bold text-primary">{Number(res.gpa).toFixed(2)}</TableCell>
-                    <TableCell className="text-center font-semibold">
-                      {res.ngSubjects > 0 ? (
-                        <span className="text-red-500 flex items-center justify-center gap-1">
-                          <AlertTriangle className="w-3.5 h-3.5" />
-                          {res.ngSubjects} NG
-                        </span>
-                      ) : (
-                        <span className="text-emerald-500">None</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold ${res.resultStatus === "PROMOTED" ? "bg-emerald-105/10 text-emerald-600 dark:text-emerald-400" : "bg-red-105/10 text-red-600 dark:text-red-405"}`}>
-                        {res.resultStatus}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1.5">
-                        {res.marksheet ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 text-xs font-semibold text-emerald-600 border-emerald-200"
-                            onClick={() => {
-                              setSelectedMarksheetId(res.marksheet.id);
-                              setMarksheetModalOpen(true);
-                            }}
-                          >
-                            <FileDown className="w-3.5 h-3.5 mr-1" />
-                            Download
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 text-xs font-semibold text-primary"
-                            onClick={() => handleGenerateMarksheet(res.syncedStudentId, res.id)}
-                            disabled={!res.isPublished || generateMarksheetMutation.isPending}
-                          >
-                            <Printer className="w-3.5 h-3.5 mr-1" />
-                            Generate
-                          </Button>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[8%]">Roll</TableHead>
+                  <TableHead className="w-[20%]">Student Name</TableHead>
+                  <TableHead className="w-[18%]">Subject</TableHead>
+                  <TableHead className="w-[8%] text-center">Grade</TableHead>
+                  <TableHead className="w-[8%] text-center">GPA</TableHead>
+                  <TableHead className="w-[8%] text-center">C.H.</TableHead>
+                  <TableHead className="w-[12%] text-center">Marks</TableHead>
+                  <TableHead className="w-[10%] text-center">Result</TableHead>
+                  <TableHead className="w-[8%] text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {termFlatRows.length > 0 ? (
+                  termFlatRows.map(({ result, subject, isFirstSubject, rowSpan, isSummaryRow }) => {
+                    const { grade, gp, ch, marks, isNG } = renderSubjectRow(subject);
+                    const subjectName = subject?.subjectConfig?.syncedSubject?.name || 'Unknown';
+                    return (
+                      <TableRow key={`${result.id}|${subjectName}`} className="hover:bg-muted/10">
+                        {isFirstSubject && (
+                          <>
+                            <TableCell rowSpan={rowSpan} className="font-mono text-xs align-top">
+                              {result.syncedStudent?.rollNumber}
+                            </TableCell>
+                            <TableCell rowSpan={rowSpan} className="font-medium text-foreground align-top">
+                              {result.syncedStudent?.name}
+                              <span className="text-[10px] text-muted-foreground block font-normal">
+                                Section: {result.syncedStudent?.section}
+                              </span>
+                            </TableCell>
+                          </>
                         )}
-                      </div>
+                        {isSummaryRow ? (
+                          <>
+                            <TableCell className="text-xs font-semibold" colSpan={5}>
+                              <span className="text-muted-foreground">Overall — </span>
+                              <span className="text-primary font-bold">GPA: {Number(result.gpa).toFixed(2)}</span>
+                              <span className="text-muted-foreground mx-1">|</span>
+                              <span className={result.ngSubjects > 0 ? 'text-red-500 font-semibold' : 'text-emerald-500 font-semibold'}>
+                                {result.ngSubjects > 0 ? `${result.ngSubjects} NG` : 'No NG'}
+                              </span>
+                            </TableCell>
+                          </>
+                        ) : (
+                          <>
+                            <TableCell className="text-xs">{subjectName}</TableCell>
+                            <TableCell className="text-center font-bold">
+                              <span className={isNG ? 'text-red-600' : 'text-emerald-600'}>{grade}</span>
+                            </TableCell>
+                            <TableCell className="text-center text-xs">{gp}</TableCell>
+                            <TableCell className="text-center text-xs">{ch}</TableCell>
+                            <TableCell className="text-center text-xs font-mono">{marks}</TableCell>
+                          </>
+                        )}
+                        {isFirstSubject && (
+                          <TableCell rowSpan={rowSpan} className="text-center align-middle">
+                            <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold ${result.resultStatus === "PROMOTED" ? "bg-emerald-105/10 text-emerald-600 dark:text-emerald-400" : "bg-red-105/10 text-red-600 dark:text-red-405"}`}>
+                              {result.resultStatus}
+                            </span>
+                          </TableCell>
+                        )}
+                        {isFirstSubject && (
+                          <TableCell rowSpan={rowSpan} className="text-right align-middle">
+                            <div className="flex justify-end gap-1.5">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs font-semibold text-primary"
+                                onClick={() => {
+                                  setViewGradeSheetResult(result);
+                                  setViewGradeSheetType("term");
+                                }}
+                              >
+                                <Eye className="w-3.5 h-3.5 mr-1" />
+                                View
+                              </Button>
+                              {result.marksheet ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-xs font-semibold text-emerald-600 border-emerald-200"
+                                  onClick={() => {
+                                    setSelectedMarksheetId(result.marksheet.id);
+                                    setMarksheetModalOpen(true);
+                                  }}
+                                >
+                                  <FileDown className="w-3.5 h-3.5 mr-1" />
+                                  Download
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-xs font-semibold text-primary"
+                                  onClick={() => handleGenerateMarksheet(result.syncedStudentId, result.id)}
+                                  disabled={!result.isPublished || generateMarksheetMutation.isPending}
+                                >
+                                  <Printer className="w-3.5 h-3.5 mr-1" />
+                                  Generate
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    );
+                  })
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
+                      {!selectedExamId ? "Select an exam plan to display compiled results." : "No compiled results for this exam plan. Click Compile Above."}
                     </TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
-                    {!selectedExamId ? "Select an exam plan to display compiled results." : "No compiled results for this exam plan. Click Compile Above."}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       ) : (
         // Annual results table
@@ -500,86 +649,136 @@ export default function SecondaryResultCompilationPage() {
           <div className="p-4 border-b border-border/80 bg-muted/20">
             <h3 className="font-bold text-xs uppercase text-muted-foreground">Student Annual compilation records ({annualResults?.length || 0})</h3>
           </div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[10%]">Roll</TableHead>
-                <TableHead className="w-[30%]">Student Name</TableHead>
-                <TableHead className="w-[15%] text-center">GPA</TableHead>
-                <TableHead className="w-[15%] text-center">NG Subjects</TableHead>
-                <TableHead className="w-[15%] text-center">Result Status</TableHead>
-                <TableHead className="w-[15%] text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {annualResults && annualResults.length > 0 ? (
-                annualResults.map((res) => (
-                  <TableRow key={res.id} className="hover:bg-muted/10">
-                    <TableCell className="font-mono text-xs">{res.syncedStudent?.rollNumber}</TableCell>
-                    <TableCell className="font-medium text-foreground">
-                      {res.syncedStudent?.name}
-                      <span className="text-[10px] text-muted-foreground block font-normal">
-                        Section: {res.syncedStudent?.section}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-center font-bold text-primary">{Number(res.gpa).toFixed(2)}</TableCell>
-                    <TableCell className="text-center font-semibold">
-                      {res.ngSubjects > 0 ? (
-                        <span className="text-red-500 flex items-center justify-center gap-1">
-                          <AlertTriangle className="w-3.5 h-3.5" />
-                          {res.ngSubjects} NG
-                        </span>
-                      ) : (
-                        <span className="text-emerald-500">None</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold ${res.resultStatus === "PROMOTED" ? "bg-emerald-105/10 text-emerald-600 dark:text-emerald-400" : "bg-red-105/10 text-red-600 dark:text-red-405"}`}>
-                        {res.resultStatus}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1.5">
-                        {res.marksheet ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 text-xs font-semibold text-purple-600 border-purple-200"
-                            onClick={() => {
-                              setSelectedMarksheetId(res.marksheet.id);
-                              setMarksheetModalOpen(true);
-                            }}
-                          >
-                            <FileDown className="w-3.5 h-3.5 mr-1" />
-                            Download
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 text-xs font-semibold text-primary"
-                            onClick={() => handleGenerateMarksheet(res.syncedStudentId, res.id)}
-                            disabled={!res.isPublished || generateMarksheetMutation.isPending}
-                          >
-                            <Printer className="w-3.5 h-3.5 mr-1" />
-                            Generate
-                          </Button>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[8%]">Roll</TableHead>
+                  <TableHead className="w-[20%]">Student Name</TableHead>
+                  <TableHead className="w-[18%]">Subject</TableHead>
+                  <TableHead className="w-[8%] text-center">Grade</TableHead>
+                  <TableHead className="w-[8%] text-center">GPA</TableHead>
+                  <TableHead className="w-[8%] text-center">C.H.</TableHead>
+                  <TableHead className="w-[12%] text-center">Marks</TableHead>
+                  <TableHead className="w-[10%] text-center">Result</TableHead>
+                  <TableHead className="w-[8%] text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {annualFlatRows.length > 0 ? (
+                  annualFlatRows.map(({ result, subject, isFirstSubject, rowSpan, isSummaryRow }) => {
+                    const { grade, gp, ch, marks, isNG } = renderSubjectRow(subject);
+                    const subjectName = subject?.subjectConfig?.syncedSubject?.name || 'Unknown';
+                    return (
+                      <TableRow key={`${result.id}|${subjectName}`} className="hover:bg-muted/10">
+                        {isFirstSubject && (
+                          <>
+                            <TableCell rowSpan={rowSpan} className="font-mono text-xs align-top">
+                              {result.syncedStudent?.rollNumber}
+                            </TableCell>
+                            <TableCell rowSpan={rowSpan} className="font-medium text-foreground align-top">
+                              {result.syncedStudent?.name}
+                              <span className="text-[10px] text-muted-foreground block font-normal">
+                                Section: {result.syncedStudent?.section}
+                              </span>
+                            </TableCell>
+                          </>
                         )}
-                      </div>
+                        {isSummaryRow ? (
+                          <>
+                            <TableCell className="text-xs font-semibold" colSpan={5}>
+                              <span className="text-muted-foreground">Overall — </span>
+                              <span className="text-primary font-bold">GPA: {Number(result.gpa).toFixed(2)}</span>
+                              <span className="text-muted-foreground mx-1">|</span>
+                              <span className={result.ngSubjects > 0 ? 'text-red-500 font-semibold' : 'text-emerald-500 font-semibold'}>
+                                {result.ngSubjects > 0 ? `${result.ngSubjects} NG` : 'No NG'}
+                              </span>
+                            </TableCell>
+                          </>
+                        ) : (
+                          <>
+                            <TableCell className="text-xs">{subjectName}</TableCell>
+                            <TableCell className="text-center font-bold">
+                              <span className={isNG ? 'text-red-600' : 'text-emerald-600'}>{grade}</span>
+                            </TableCell>
+                            <TableCell className="text-center text-xs">{gp}</TableCell>
+                            <TableCell className="text-center text-xs">{ch}</TableCell>
+                            <TableCell className="text-center text-xs font-mono">{marks}</TableCell>
+                          </>
+                        )}
+                        {isFirstSubject && (
+                          <TableCell rowSpan={rowSpan} className="text-center align-middle">
+                            <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold ${result.resultStatus === "PROMOTED" ? "bg-emerald-105/10 text-emerald-600 dark:text-emerald-400" : "bg-red-105/10 text-red-600 dark:text-red-405"}`}>
+                              {result.resultStatus}
+                            </span>
+                          </TableCell>
+                        )}
+                        {isFirstSubject && (
+                          <TableCell rowSpan={rowSpan} className="text-right align-middle">
+                            <div className="flex justify-end gap-1.5">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs font-semibold text-primary"
+                                onClick={() => {
+                                  setViewGradeSheetResult(result);
+                                  setViewGradeSheetType("annual");
+                                }}
+                              >
+                                <Eye className="w-3.5 h-3.5 mr-1" />
+                                View
+                              </Button>
+                              {result.marksheet ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-xs font-semibold text-purple-600 border-purple-200"
+                                  onClick={() => {
+                                    setSelectedMarksheetId(result.marksheet.id);
+                                    setMarksheetModalOpen(true);
+                                  }}
+                                >
+                                  <FileDown className="w-3.5 h-3.5 mr-1" />
+                                  Download
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-xs font-semibold text-primary"
+                                  onClick={() => handleGenerateMarksheet(result.syncedStudentId, result.id)}
+                                  disabled={!result.isPublished || generateMarksheetMutation.isPending}
+                                >
+                                  <Printer className="w-3.5 h-3.5 mr-1" />
+                                  Generate
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    );
+                  })
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
+                      {!selectedGrade ? "Select a grade level to display compiled results." : "No compiled results for this academic year & grade level. Click Compile Above."}
                     </TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
-                    {!selectedGrade ? "Select a grade level to display compiled results." : "No compiled results for this academic year & grade level. Click Compile Above."}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       )}
+
+      {/* Grade Sheet Preview Modal */}
+      <SecondaryGradeSheetModal
+        result={viewGradeSheetResult}
+        type={viewGradeSheetType}
+        open={!!viewGradeSheetResult}
+        onClose={() => setViewGradeSheetResult(null)}
+      />
 
       {/* Marksheet Modal */}
       <SecondaryMarksheetModal
@@ -591,5 +790,13 @@ export default function SecondaryResultCompilationPage() {
         }}
       />
     </motion.div>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<SanskarLoader message="Loading..." />}>
+      <SecondaryResultCompilationPage />
+    </Suspense>
   );
 }
