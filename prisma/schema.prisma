@@ -677,7 +677,41 @@ model TeacherSubjectCompilationResult {
 }
 
 // =============================================================================
-// 13. SYNC LOG
+// 13. OBSERVATION CATEGORIES & ITEMS
+//     Admin-managed lookup data used when writing observations on marksheets.
+//     One category has many items; items belong to exactly one category.
+//     Cascade-delete items when a category is deleted.
+// =============================================================================
+
+model ObservationCategory {
+  id           String   @id @default(cuid())
+  title        String
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  items ObservationItem[]
+
+  @@index([displayOrder])
+  @@map("observation_categories")
+}
+
+model ObservationItem {
+  id                   String   @id @default(cuid())
+  observationCategoryId String
+  description          String
+  displayOrder         Int      @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  category ObservationCategory @relation(fields: [observationCategoryId], references: [id], onDelete: Cascade)
+
+  @@index([observationCategoryId, displayOrder])
+  @@map("observation_items")
+}
+
+// =============================================================================
+// 14. SYNC LOG
 //     Audit trail of every inbound sync from the school management system.
 // =============================================================================
 
