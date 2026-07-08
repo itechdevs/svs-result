@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   GraduationCap, Layers, Library, Search, AlertCircle, Users, Sparkles,
-  History, ChevronRight, ClipboardList, BookOpen,
+  History, ChevronRight, ClipboardList, BookOpen, Mail, Phone, Star,
 } from 'lucide-react';
 import { Input } from '@/components/shared/ui/input';
 import Link from 'next/link';
@@ -33,10 +33,12 @@ function SkeletonRow() {
   return (
     <tr className="animate-pulse">
       <td className="px-5 py-4"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-full bg-muted shrink-0" /><div className="h-3.5 bg-muted rounded w-32" /></div></td>
+      <td className="px-5 py-4"><div className="h-3 bg-muted/60 rounded w-24" /></td>
       <td className="px-5 py-4"><div className="h-3 bg-muted/60 rounded w-20" /></td>
       <td className="px-5 py-4"><div className="h-3 bg-muted/60 rounded w-12" /></td>
       <td className="px-5 py-4"><div className="h-3 bg-muted/60 rounded w-16" /></td>
-      <td className="px-5 py-4"><div className="h-5 bg-muted/60 rounded w-14" /></td>
+      <td className="px-5 py-4"><div className="h-5 bg-muted/60 rounded w-14 mx-auto" /></td>
+      <td className="px-5 py-4"><div className="h-5 bg-muted/60 rounded w-14 ml-auto" /></td>
     </tr>
   );
 }
@@ -172,23 +174,53 @@ export default function AllocationsTab() {
                       <div className="space-y-4">
                         {/* Teacher identity */}
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 shadow-inner">
-                            <span className="text-xs font-extrabold text-primary">{initials}</span>
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 shadow-inner overflow-hidden">
+                            {teacher.imageUrl ? (
+                              <img src={teacher.imageUrl} alt={teacher.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-xs font-extrabold text-primary">{initials}</span>
+                            )}
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="font-bold text-sm text-foreground truncate leading-snug">{teacher.name}</p>
                             <p className="text-[10px] text-muted-foreground font-mono mt-0.5">Synced {syncDate}</p>
                           </div>
-                          {teacher.hasAccount && (
-                            <span className="shrink-0 text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
-                              <Sparkles className="w-2.5 h-2.5" />
-                              Account
-                            </span>
-                          )}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {teacher.classTeacherId && (
+                              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center gap-1">
+                                <Star className="w-2.5 h-2.5" />
+                                {teacher.classTeacherClassName || 'Class Teacher'}
+                              </span>
+                            )}
+                            {teacher.hasAccount && (
+                              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                                <Sparkles className="w-2.5 h-2.5" />
+                                Account
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         {/* Divider */}
                         <div className="border-t border-border/80" />
+
+                        {/* Contact info */}
+                        {(teacher.email || teacher.phone) && (
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-muted-foreground">
+                            {teacher.email && (
+                              <span className="flex items-center gap-1">
+                                <Mail className="w-3 h-3" />
+                                {teacher.email}
+                              </span>
+                            )}
+                            {teacher.phone && (
+                              <span className="flex items-center gap-1">
+                                <Phone className="w-3 h-3" />
+                                {teacher.phone}
+                              </span>
+                            )}
+                          </div>
+                        )}
 
                         {/* Assignments */}
                         <div>
@@ -295,68 +327,108 @@ export default function AllocationsTab() {
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse text-sm">
-                    <thead>
-                      <tr className="bg-muted/20 border-b border-border">
-                        <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Teacher</th>
-                        <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Synced On</th>
-                        <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Subjects</th>
-                        <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Classes</th>
-                        <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">Account</th>
-                        <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-right">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {filtered.map(teacher => {
-                        const initials = teacher.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-                        const syncDate = new Date(teacher.syncedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                        const uniqueClasses = new Set(teacher.subjects.map(s => s.gradeLevel));
+                      <thead>
+                        <tr className="bg-muted/20 border-b border-border">
+                          <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Teacher</th>
+                          <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Contact</th>
+                          <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Synced On</th>
+                          <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Subjects</th>
+                          <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Classes</th>
+                          <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">Status</th>
+                          <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {filtered.map(teacher => {
+                          const initials = teacher.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+                          const syncDate = new Date(teacher.syncedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                          const uniqueClasses = new Set(teacher.subjects.map(s => s.gradeLevel));
 
-                        return (
-                          <tr
-                            key={teacher.id}
-                            className="hover:bg-muted/30 transition-colors group"
-                          >
-                            {/* Teacher */}
-                            <td className="px-5 py-4">
-                              <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20">
-                                  <span className="text-[11px] font-extrabold text-primary">{initials}</span>
+                          return (
+                            <tr
+                              key={teacher.id}
+                              className="hover:bg-muted/30 transition-colors group"
+                            >
+                              {/* Teacher */}
+                              <td className="px-5 py-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 overflow-hidden">
+                                    {teacher.imageUrl ? (
+                                      <img src={teacher.imageUrl} alt={teacher.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                      <span className="text-[11px] font-extrabold text-primary">{initials}</span>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <p className="font-bold text-sm text-foreground">{teacher.name}</p>
+                                      {teacher.classTeacherId && (
+                                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center gap-1">
+                                          <Star className="w-2.5 h-2.5" />
+                                          {teacher.classTeacherClassName || 'CT'}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground font-mono">{teacher.subjects.length} assignment{teacher.subjects.length !== 1 ? 's' : ''}</p>
+                                  </div>
                                 </div>
-                                <div>
-                                  <p className="font-bold text-sm text-foreground">{teacher.name}</p>
-                                  <p className="text-[10px] text-muted-foreground font-mono">{teacher.subjects.length} assignment{teacher.subjects.length !== 1 ? 's' : ''}</p>
+                              </td>
+
+                              {/* Contact */}
+                              <td className="px-5 py-4">
+                                <div className="space-y-1">
+                                  {teacher.email && (
+                                    <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                      <Mail className="w-3 h-3 shrink-0" />
+                                      {teacher.email}
+                                    </p>
+                                  )}
+                                  {teacher.phone && (
+                                    <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                      <Phone className="w-3 h-3 shrink-0" />
+                                      {teacher.phone}
+                                    </p>
+                                  )}
+                                  {!teacher.email && !teacher.phone && (
+                                    <span className="text-[10px] text-muted-foreground italic">—</span>
+                                  )}
                                 </div>
-                              </div>
-                            </td>
+                              </td>
 
-                            {/* Synced Date */}
-                            <td className="px-5 py-4">
-                              <span className="text-xs text-muted-foreground font-mono">{syncDate}</span>
-                            </td>
+                              {/* Synced Date */}
+                              <td className="px-5 py-4">
+                                <span className="text-xs text-muted-foreground font-mono">{syncDate}</span>
+                              </td>
 
-                            {/* Subjects count */}
-                            <td className="px-5 py-4">
-                              <div className="flex items-center gap-1.5 text-xs text-foreground">
-                                <BookOpen className="w-3.5 h-3.5 text-primary/70 shrink-0" />
-                                <span className="font-semibold">{teacher.subjects.length}</span>
-                              </div>
-                            </td>
+                              {/* Subjects count */}
+                              <td className="px-5 py-4">
+                                <div className="flex items-center gap-1.5 text-xs text-foreground">
+                                  <BookOpen className="w-3.5 h-3.5 text-primary/70 shrink-0" />
+                                  <span className="font-semibold">{teacher.subjects.length}</span>
+                                </div>
+                              </td>
 
-                            {/* Classes count */}
-                            <td className="px-5 py-4">
-                              <div className="flex items-center gap-1.5 text-xs text-foreground">
-                                <ClipboardList className="w-3.5 h-3.5 text-purple-500/70 shrink-0" />
-                                <span className="font-semibold">{uniqueClasses.size}</span>
-                              </div>
-                            </td>
+                              {/* Classes count */}
+                              <td className="px-5 py-4">
+                                <div className="flex items-center gap-1.5 text-xs text-foreground">
+                                  <ClipboardList className="w-3.5 h-3.5 text-purple-500/70 shrink-0" />
+                                  <span className="font-semibold">{uniqueClasses.size}</span>
+                                </div>
+                              </td>
 
-                            {/* Account status */}
-                            <td className="px-5 py-4 text-center">
-                              {teacher.hasAccount ? (
-                                <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                                  <Sparkles className="w-2.5 h-2.5" />
-                                  Active
-                                </span>
+                              {/* Status */}
+                              <td className="px-5 py-4 text-center">
+                                {teacher.classTeacherId && (
+                                  <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 mr-1">
+                                    <Star className="w-2.5 h-2.5" />
+                                    {teacher.classTeacherClassName || 'CT'}
+                                  </span>
+                                )}
+                                {teacher.hasAccount ? (
+                                  <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                    <Sparkles className="w-2.5 h-2.5" />
+                                    Active
+                                  </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border">
                                   No Account

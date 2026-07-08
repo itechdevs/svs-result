@@ -50,6 +50,11 @@ export function useTeacherAssignments(filters: ListAssignmentsFilters = {}) {
 export interface SyncedAllocationTeacher {
   id: string;
   name: string;
+  email?: string | null;
+  phone?: string | null;
+  imageUrl?: string | null;
+  classTeacherId?: string | null;
+  classTeacherClassName?: string | null;
   syncedAt: string;
   hasAccount: boolean;
   subjects: { id: string; name: string; gradeLevel: string }[];

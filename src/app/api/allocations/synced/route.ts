@@ -20,6 +20,11 @@ export async function GET() {
       allocations: teachers.map(t => ({
         id: t.id,
         name: t.name,
+        email: t.email,
+        phone: t.phone,
+        imageUrl: t.imageUrl,
+        classTeacherId: t.classTeacherId,
+        classTeacherClassName: t.classTeacherClassName,
         syncedAt: t.syncedAt,
         hasAccount: t.user !== null,
         subjects: t.subjects,

@@ -242,6 +242,13 @@ model SyncedTeacher {
   id        String   @id @default(cuid())
   sourceId  String   @unique // Teacher.id from school DB
   name      String
+  email     String?
+  phone     String?
+  imageUrl  String?
+  /// The classroom sourceId where this teacher is the class teacher
+  classTeacherId String?
+  /// Display name of the class this teacher is class teacher of (e.g. "Penguin - B")
+  classTeacherClassName String?
   isActive  Boolean  @default(true)
   syncedAt  DateTime @default(now())
   updatedAt DateTime @updatedAt
