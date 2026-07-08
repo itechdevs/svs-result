@@ -19,6 +19,8 @@ export const GET = withHandler(async (_req, { user }) => {
           id: true,
           name: true,
           sourceId: true,
+          classTeacherId: true,
+          classTeacherClassName: true,
           subjects: {
             where: { isActive: true },
             select: { id: true, name: true, gradeLevel: true },

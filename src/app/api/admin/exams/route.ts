@@ -24,11 +24,10 @@ export const GET = withHandler(
     const { searchParams } = new URL(req.url);
     const query = listExamsSchema.parse(Object.fromEntries(searchParams));
 
-    const exams = await prisma.exam.findMany({
+    let exams = await prisma.exam.findMany({
       where: {
         isActive: true,
         ...(query.academicYearId && { academicYearId: query.academicYearId }),
-        ...(query.gradeLevel && { gradeLevel: query.gradeLevel }),
         ...(query.isActive !== undefined && { isActive: query.isActive }),
       },
       include: {
@@ -41,6 +40,12 @@ export const GET = withHandler(
       },
       orderBy: [{ gradeLevel: "asc" }, { name: "asc" }],
     });
+
+    // Case-insensitive gradeLevel filter (PostgreSQL is case-sensitive by default)
+    if (query.gradeLevel) {
+      const needle = query.gradeLevel.trim().toLowerCase();
+      exams = exams.filter((e) => e.gradeLevel.trim().toLowerCase() === needle);
+    }
 
     return ok(exams);
   },

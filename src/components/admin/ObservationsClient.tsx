@@ -55,10 +55,54 @@ interface DraftItem {
   /** Temporary local key — never sent to the server */
   key: string;
   description: string;
+  choices: string[];
 }
 
-function makeDraft(description = ""): DraftItem {
-  return { key: crypto.randomUUID(), description };
+function makeDraft(description = "", choices: string[] = []): DraftItem {
+  return { key: crypto.randomUUID(), description, choices };
+}
+
+// ─── Choices Editor (inline option editor for observation items) ──────────────
+
+function ChoicesEditor({
+  choices,
+  onChange,
+}: {
+  choices: string[];
+  onChange: (choices: string[]) => void;
+}) {
+  const addChoice = () => onChange([...choices, ""]);
+  const updateChoice = (idx: number, val: string) =>
+    onChange(choices.map((c, i) => (i === idx ? val : c)));
+  const removeChoice = (idx: number) =>
+    onChange(choices.filter((_, i) => i !== idx));
+
+  return (
+    <div className="flex flex-wrap gap-1.5 mt-1">
+      {choices.map((choice, idx) => (
+        <div key={idx} className="flex items-center gap-1 bg-muted/40 rounded-md px-2 py-0.5">
+          <input
+            value={choice}
+            onChange={(e) => updateChoice(idx, e.target.value)}
+            className="w-20 bg-transparent text-[11px] outline-none border-none"
+            placeholder="Option..."
+          />
+          <button
+            onClick={() => removeChoice(idx)}
+            className="text-muted-foreground hover:text-destructive"
+          >
+            <X className="w-2.5 h-2.5" />
+          </button>
+        </div>
+      ))}
+      <button
+        onClick={addChoice}
+        className="text-[11px] text-primary hover:underline"
+      >
+        + Add option
+      </button>
+    </div>
+  );
 }
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
@@ -100,6 +144,7 @@ function ItemRow({ item }: ItemRowProps) {
   const deleteItem = useDeleteObservationItem();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(item.description);
+  const [choicesDraft, setChoicesDraft] = useState<string[]>(item.choices ?? []);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -108,13 +153,14 @@ function ItemRow({ item }: ItemRowProps) {
 
   const commitEdit = async () => {
     const trimmed = draft.trim();
-    if (!trimmed || trimmed === item.description) {
+    if (!trimmed || (trimmed === item.description && JSON.stringify(choicesDraft) === JSON.stringify(item.choices ?? []))) {
       setDraft(item.description);
+      setChoicesDraft(item.choices ?? []);
       setEditing(false);
       return;
     }
     try {
-      await updateItem.mutateAsync({ id: item.id, data: { description: trimmed } });
+      await updateItem.mutateAsync({ id: item.id, data: { description: trimmed, choices: choicesDraft.length > 0 ? choicesDraft : [] } });
       setEditing(false);
       toast.success("Observation updated");
     } catch (err: any) {
@@ -131,22 +177,44 @@ function ItemRow({ item }: ItemRowProps) {
     }
   };
 
+  const addChoice = () => setChoicesDraft((prev) => [...prev, ""]);
+  const updateChoice = (idx: number, val: string) => setChoicesDraft((prev) => prev.map((c, i) => (i === idx ? val : c)));
+  const removeChoice = (idx: number) => setChoicesDraft((prev) => prev.filter((_, i) => i !== idx));
+
   if (editing) {
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5">
-        <div className="w-1.5 h-1.5 rounded-full bg-primary/50 shrink-0" />
-        <Input
-          ref={inputRef}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          className="h-8 text-sm flex-1"
-          onKeyDown={(e) => {
-            if (e.key === "Enter") commitEdit();
-            if (e.key === "Escape") { setDraft(item.description); setEditing(false); }
-          }}
-          onBlur={commitEdit}
-          disabled={updateItem.isPending}
-        />
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2 px-3 py-1.5">
+          <div className="w-1.5 h-1.5 rounded-full bg-primary/50 shrink-0" />
+          <Input
+            ref={inputRef}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            className="h-8 text-sm flex-1"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commitEdit();
+              if (e.key === "Escape") { setDraft(item.description); setEditing(false); }
+            }}
+            onBlur={commitEdit}
+            disabled={updateItem.isPending}
+          />
+        </div>
+        <div className="flex flex-wrap gap-1.5 px-9">
+          {choicesDraft.map((choice, idx) => (
+            <div key={idx} className="flex items-center gap-1 bg-muted/50 rounded-md px-2 py-1">
+              <input
+                value={choice}
+                onChange={(e) => updateChoice(idx, e.target.value)}
+                className="w-20 bg-transparent text-[11px] outline-none border-none"
+                placeholder="Option..."
+              />
+              <button onClick={() => removeChoice(idx)} className="text-muted-foreground hover:text-destructive">
+                <X className="w-2.5 h-2.5" />
+              </button>
+            </div>
+          ))}
+          <button onClick={addChoice} className="text-[11px] text-primary hover:underline">+ Add option</button>
+        </div>
       </div>
     );
   }
@@ -157,13 +225,18 @@ function ItemRow({ item }: ItemRowProps) {
       <span className="flex-1 text-sm text-foreground/85 leading-snug">
         {item.description}
       </span>
+      {item.choices && item.choices.length > 0 && (
+        <div className="flex items-center gap-1 shrink-0">
+          <span className="text-[10px] text-muted-foreground">[ {item.choices.join(" | ")} ]</span>
+        </div>
+      )}
       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
         <Button
           variant="ghost"
           size="sm"
           className="h-7 w-7 p-0"
           title="Edit"
-          onClick={() => { setDraft(item.description); setEditing(true); }}
+          onClick={() => { setDraft(item.description); setChoicesDraft(item.choices ?? []); setEditing(true); }}
         >
           <Pencil className="w-3 h-3" />
         </Button>
@@ -234,12 +307,6 @@ function CreateCategoryDialog({ open, onOpenChange }: CreateCategoryDialogProps)
     setTimeout(() => lastInputRef.current?.focus(), 0);
   };
 
-  const updateDraft = (key: string, value: string) => {
-    setDrafts((prev) =>
-      prev.map((d) => (d.key === key ? { ...d, description: value } : d))
-    );
-  };
-
   const removeDraft = (key: string) => {
     setDrafts((prev) => {
       const next = prev.filter((d) => d.key !== key);
@@ -266,7 +333,11 @@ function CreateCategoryDialog({ open, onOpenChange }: CreateCategoryDialogProps)
             fetch(`/api/admin/observations/categories/${category.id}/items`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ description: d.description.trim(), displayOrder: idx }),
+              body: JSON.stringify({
+                description: d.description.trim(),
+                displayOrder: idx,
+                choices: d.choices.length > 0 ? d.choices : undefined,
+              }),
             })
           )
         );
@@ -331,23 +402,38 @@ function CreateCategoryDialog({ open, onOpenChange }: CreateCategoryDialogProps)
                       {idx + 1}
                     </span>
                   </div>
-                  <Input
-                    ref={idx === drafts.length - 1 ? lastInputRef : undefined}
-                    value={draft.description}
-                    onChange={(e) => updateDraft(draft.key, e.target.value)}
-                    placeholder="e.g. Pays attention and follows instructions"
-                    className="text-sm flex-1"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addDraft();
-                      }
-                    }}
-                  />
+                  <div className="flex-1 flex flex-col gap-1">
+                    <Input
+                      ref={idx === drafts.length - 1 ? lastInputRef : undefined}
+                      value={draft.description}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setDrafts((prev) =>
+                          prev.map((d) => (d.key === draft.key ? { ...d, description: val } : d))
+                        );
+                      }}
+                      placeholder="e.g. Pays attention and follows instructions"
+                      className="text-sm"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addDraft();
+                        }
+                      }}
+                    />
+                    <ChoicesEditor
+                      choices={draft.choices}
+                      onChange={(newChoices) => {
+                        setDrafts((prev) =>
+                          prev.map((d) => (d.key === draft.key ? { ...d, choices: newChoices } : d))
+                        );
+                      }}
+                    />
+                  </div>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive shrink-0"
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive shrink-0 self-start mt-0.5"
                     onClick={() => removeDraft(draft.key)}
                     title="Remove"
                   >
@@ -418,6 +504,7 @@ function EditCategoryDialog({ open, onOpenChange, category }: EditCategoryDialog
   // Inline-edit state for each saved item: itemId → draft string
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState("");
+  const [editChoices, setEditChoices] = useState<string[]>([]);
   const editInputRef = useRef<HTMLInputElement>(null);
 
   // New drafts to append
@@ -430,6 +517,7 @@ function EditCategoryDialog({ open, onOpenChange, category }: EditCategoryDialog
       setTitle(category.title);
       setEditingId(null);
       setEditDraft("");
+      setEditChoices([]);
       setNewDrafts([]);
     }
   }, [open, category.title]);
@@ -443,14 +531,15 @@ function EditCategoryDialog({ open, onOpenChange, category }: EditCategoryDialog
   const startEdit = (item: ObservationItem) => {
     setEditingId(item.id);
     setEditDraft(item.description);
+    setEditChoices(item.choices ?? []);
   };
 
   const commitEdit = async (item: ObservationItem) => {
     const trimmed = editDraft.trim();
     setEditingId(null);
-    if (!trimmed || trimmed === item.description) return;
+    if (!trimmed || (trimmed === item.description && JSON.stringify(editChoices) === JSON.stringify(item.choices ?? []))) return;
     try {
-      await updateItem.mutateAsync({ id: item.id, data: { description: trimmed } });
+      await updateItem.mutateAsync({ id: item.id, data: { description: trimmed, choices: editChoices.length > 0 ? editChoices : [] } });
       toast.success("Observation updated");
     } catch (err: any) {
       toast.error(err.message || "Failed to update observation");
@@ -471,12 +560,6 @@ function EditCategoryDialog({ open, onOpenChange, category }: EditCategoryDialog
   const addNewDraft = () => {
     setNewDrafts((prev) => [...prev, makeDraft()]);
     setTimeout(() => lastNewRef.current?.focus(), 0);
-  };
-
-  const updateNewDraft = (key: string, value: string) => {
-    setNewDrafts((prev) =>
-      prev.map((d) => (d.key === key ? { ...d, description: value } : d))
-    );
   };
 
   const removeNewDraft = (key: string) => {
@@ -511,6 +594,7 @@ function EditCategoryDialog({ open, onOpenChange, category }: EditCategoryDialog
               body: JSON.stringify({
                 description: d.description.trim(),
                 displayOrder: base + idx,
+                choices: d.choices.length > 0 ? d.choices : undefined,
               }),
             })
           )
@@ -572,17 +656,23 @@ function EditCategoryDialog({ open, onOpenChange, category }: EditCategoryDialog
                     </div>
 
                     {editingId === item.id ? (
-                      <Input
-                        ref={editInputRef}
-                        value={editDraft}
-                        onChange={(e) => setEditDraft(e.target.value)}
-                        className="text-sm flex-1 h-8"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") commitEdit(item);
-                          if (e.key === "Escape") setEditingId(null);
-                        }}
-                        onBlur={() => commitEdit(item)}
-                      />
+                      <div className="flex-1 flex flex-col gap-1">
+                        <Input
+                          ref={editInputRef}
+                          value={editDraft}
+                          onChange={(e) => setEditDraft(e.target.value)}
+                          className="text-sm h-8"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") commitEdit(item);
+                            if (e.key === "Escape") { setEditingId(null); }
+                          }}
+                          onBlur={() => commitEdit(item)}
+                        />
+                        <ChoicesEditor
+                          choices={editChoices}
+                          onChange={setEditChoices}
+                        />
+                      </div>
                     ) : (
                       <span
                         className="flex-1 text-sm text-foreground/85 leading-snug cursor-pointer py-1 rounded hover:text-foreground transition-colors"
@@ -641,26 +731,44 @@ function EditCategoryDialog({ open, onOpenChange, category }: EditCategoryDialog
 
                 {/* New draft rows */}
                 {newDrafts.map((draft, idx) => (
-                  <div key={draft.key} className="flex items-center gap-2">
-                    <div className="w-5 h-5 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+                  <div key={draft.key} className="flex items-start gap-2">
+                    <div className="w-5 h-5 rounded-full bg-primary/15 flex items-center justify-center shrink-0 mt-0.5">
                       <span className="text-[10px] font-semibold text-primary">
                         {savedItems.length + idx + 1}
                       </span>
                     </div>
-                    <Input
-                      ref={idx === newDrafts.length - 1 ? lastNewRef : undefined}
-                      value={draft.description}
-                      onChange={(e) => updateNewDraft(draft.key, e.target.value)}
-                      placeholder="New observation…"
-                      className="text-sm flex-1 h-8"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") { e.preventDefault(); addNewDraft(); }
-                      }}
-                    />
+                    <div className="flex-1 flex flex-col gap-1">
+                      <Input
+                        ref={idx === newDrafts.length - 1 ? lastNewRef : undefined}
+                        value={draft.description}
+                        onChange={(e) =>
+                          setNewDrafts((prev) =>
+                            prev.map((d) =>
+                              d.key === draft.key ? { ...d, description: e.target.value } : d
+                            )
+                          )
+                        }
+                        placeholder="New observation…"
+                        className="text-sm h-8"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") { e.preventDefault(); addNewDraft(); }
+                        }}
+                      />
+                      <ChoicesEditor
+                        choices={draft.choices}
+                        onChange={(newChoices) =>
+                          setNewDrafts((prev) =>
+                            prev.map((d) =>
+                              d.key === draft.key ? { ...d, choices: newChoices } : d
+                            )
+                          )
+                        }
+                      />
+                    </div>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive shrink-0"
+                      className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive shrink-0 mt-0.5"
                       onClick={() => removeNewDraft(draft.key)}
                       title="Remove"
                     >
@@ -719,10 +827,11 @@ interface AddObservationDialogProps {
 function AddObservationDialog({ open, onOpenChange, category }: AddObservationDialogProps) {
   const queryClient = useQueryClient();
   const [description, setDescription] = useState("");
+  const [choices, setChoices] = useState<string[]>([]);
   const [isPending, setIsPending] = useState(false);
 
   useEffect(() => {
-    if (open) setDescription("");
+    if (open) { setDescription(""); setChoices([]); }
   }, [open]);
 
   const handleSubmit = async () => {
@@ -733,7 +842,10 @@ function AddObservationDialog({ open, onOpenChange, category }: AddObservationDi
       await fetch(`/api/admin/observations/categories/${category.id}/items`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description: trimmed }),
+        body: JSON.stringify({
+          description: trimmed,
+          choices: choices.length > 0 ? choices : undefined,
+        }),
       });
       await queryClient.invalidateQueries({ queryKey: ["observation-categories"] });
       onOpenChange(false);
@@ -751,20 +863,28 @@ function AddObservationDialog({ open, onOpenChange, category }: AddObservationDi
         <DialogHeader>
           <DialogTitle>Add Observation — {category.title}</DialogTitle>
         </DialogHeader>
-        <div className="py-2">
-          <label className="text-xs font-bold text-muted-foreground uppercase block mb-1.5">
-            Observation Description
-          </label>
-          <Input
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="e.g. Pays attention and follows instructions"
-            className="w-full text-sm"
-            autoFocus
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && description.trim()) handleSubmit();
-            }}
-          />
+        <div className="py-2 space-y-4">
+          <div>
+            <label className="text-xs font-bold text-muted-foreground uppercase block mb-1.5">
+              Observation Description
+            </label>
+            <Input
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="e.g. Pays attention and follows instructions"
+              className="w-full text-sm"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && description.trim()) handleSubmit();
+              }}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-muted-foreground uppercase block mb-1.5">
+              Rating Options (optional)
+            </label>
+            <ChoicesEditor choices={choices} onChange={setChoices} />
+          </div>
         </div>
         <div className="flex justify-end gap-3">
           <Button variant="outline" onClick={() => onOpenChange(false)} className="text-xs" disabled={isPending}>

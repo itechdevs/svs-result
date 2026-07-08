@@ -19,6 +19,8 @@ export interface UserProfile {
     id: string;
     name: string;
     sourceId: string;
+    classTeacherId?: string | null;
+    classTeacherClassName?: string | null;
     subjects: AssignedSubject[];
   } | null;
 }

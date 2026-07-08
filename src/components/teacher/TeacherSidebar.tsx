@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutGrid, ClipboardList, ClipboardX, ChevronDown, X } from "lucide-react";
+import { LayoutGrid, ClipboardList, ClipboardX, ChevronDown, X, MessageSquareText } from "lucide-react";
 import { ROUTES } from "@/lib/constants";
 import { useSidebar } from "@/components/shared/ui/sidebar";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/shared/ui/sheet";
@@ -14,11 +14,17 @@ import { signOut } from "next-auth/react";
 import { toast } from "sonner";
 import { LogOut } from "lucide-react";
 
-const NAV_ITEMS: { label: string; href: string; icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>; hasSubMenu?: boolean }[] = [
-  { label: "Teacher Dashboard", href: ROUTES.TEACHER_DASHBOARD, icon: LayoutGrid },
-  { label: "Evaluation Plan", href: ROUTES.TEACHER_EVALUATIONS, icon: ClipboardList, hasSubMenu: true },
-  { label: "Re-Exam Panel", href: ROUTES.TEACHER_RE_EXAM, icon: ClipboardX },
-];
+function getNavItems(isClassTeacher: boolean): { label: string; href: string; icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>; hasSubMenu?: boolean }[] {
+  const items: { label: string; href: string; icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>; hasSubMenu?: boolean }[] = [
+    { label: "Teacher Dashboard", href: ROUTES.TEACHER_DASHBOARD, icon: LayoutGrid },
+    { label: "Evaluation Plan", href: ROUTES.TEACHER_EVALUATIONS, icon: ClipboardList, hasSubMenu: true },
+  ];
+  if (isClassTeacher) {
+    items.push({ label: "Observations", href: ROUTES.TEACHER_OBSERVATIONS, icon: MessageSquareText });
+  }
+  items.push({ label: "Re-Exam Panel", href: ROUTES.TEACHER_RE_EXAM, icon: ClipboardX });
+  return items;
+}
 
 export function TeacherSidebar() {
   const pathname = usePathname();
@@ -29,6 +35,9 @@ export function TeacherSidebar() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const { data: profile } = useProfile();
+
+  const isClassTeacher = !!profile?.syncedTeacher?.classTeacherId;
+  const NAV_ITEMS = useMemo(() => getNavItems(isClassTeacher), [isClassTeacher]);
 
   const assignedPairs = useMemo(() => {
     const subjects = profile?.syncedTeacher?.subjects ?? [];
