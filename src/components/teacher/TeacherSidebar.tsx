@@ -39,7 +39,11 @@ export function TeacherSidebar() {
         'subjects count:', subjects.length,
       );
     }
-    return subjects.map(s => ({ className: s.gradeLevel, subject: s.name }));
+    return subjects
+      .map(s => ({ className: s.gradeLevel, subject: s.name }))
+      .filter((pair, i, arr) =>
+        arr.findIndex(p => p.className === pair.className && p.subject === pair.subject) === i
+      );
   }, [profile]);
 
   const SidebarContent = (
@@ -151,7 +155,7 @@ export function TeacherSidebar() {
               {/* Submenu for Evaluations */}
               {item.hasSubMenu && !isCollapsed && evaluationsExpanded && (
                 <div className="mt-1 ml-11 space-y-1">
-                  {assignedPairs.map(({ className, subject }) => {
+                  {assignedPairs.map(({ className, subject }, idx) => {
                     const params = new URLSearchParams({ class: className, subject });
                     const href = `${ROUTES.TEACHER_EVALUATIONS}?${params}`;
                     const isSubActive =
@@ -166,7 +170,7 @@ export function TeacherSidebar() {
                       );
                     return (
                       <Link
-                        key={`${className}-${subject}`}
+                        key={`${className}-${subject}-${idx}`}
                         href={href}
                         onClick={() => isMobile && setOpenMobile(false)}
                         className={cn(
