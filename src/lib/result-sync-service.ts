@@ -80,7 +80,7 @@ const syncStudent = async (action: SyncAction, rawPayload: Record<string, unknow
         entity: "student",
         sourceId: payload.sourceStudentId,
         action: "DEACTIVATE",
-        payload: rawPayload,
+        payload: rawPayload as Prisma.InputJsonValue,
         status: "success",
       },
     });
@@ -115,7 +115,7 @@ const syncStudent = async (action: SyncAction, rawPayload: Record<string, unknow
       entity: "student",
       sourceId: payload.sourceStudentId,
       action: "UPSERT",
-      payload: rawPayload,
+      payload: rawPayload as Prisma.InputJsonValue,
       status: "success",
     },
   });
@@ -157,7 +157,7 @@ const syncTeacher = async (action: SyncAction, rawPayload: Record<string, unknow
         entity: "teacher",
         sourceId: payload.sourceTeacherId,
         action: "DEACTIVATE",
-        payload: rawPayload,
+        payload: rawPayload as Prisma.InputJsonValue,
         status: "success",
       },
     });
@@ -247,7 +247,7 @@ const syncTeacher = async (action: SyncAction, rawPayload: Record<string, unknow
       entity: "teacher",
       sourceId: payload.sourceTeacherId,
       action: "UPSERT",
-      payload: rawPayload,
+      payload: rawPayload as Prisma.InputJsonValue,
       status: "success",
     },
   });
@@ -275,7 +275,7 @@ const syncSubject = async (action: SyncAction, rawPayload: Record<string, unknow
         entity: "subject",
         sourceId: payload.sourceSubjectId,
         action: "DEACTIVATE",
-        payload: rawPayload,
+        payload: rawPayload as Prisma.InputJsonValue,
         status: "success",
       },
     });
@@ -328,7 +328,7 @@ const syncSubject = async (action: SyncAction, rawPayload: Record<string, unknow
       entity: "subject",
       sourceId: payload.sourceSubjectId,
       action: "UPSERT",
-      payload: rawPayload,
+      payload: rawPayload as Prisma.InputJsonValue,
       status: "success",
     },
   });
@@ -375,7 +375,7 @@ const syncTeacherSubjectLink = async (
         entity: "teacher_subject_link",
         sourceId: `${payload.sourceTeacherId}:${payload.sourceSubjectId}`,
         action: "DEACTIVATE",
-        payload: rawPayload,
+        payload: rawPayload as Prisma.InputJsonValue,
         status: "success",
       },
     });
@@ -397,7 +397,7 @@ const syncTeacherSubjectLink = async (
       entity: "teacher_subject_link",
       sourceId: `${payload.sourceTeacherId}:${payload.sourceSubjectId}`,
       action: "UPSERT",
-      payload: rawPayload,
+      payload: rawPayload as Prisma.InputJsonValue,
       status: "success",
     },
   });
