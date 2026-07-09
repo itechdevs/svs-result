@@ -132,6 +132,11 @@ export interface Allocation {
   teacher: string;
   title: string;
   avatar: string;
+  email?: string | null;
+  phone?: string | null;
+  imageUrl?: string | null;
+  classTeacherId?: string | null;
+  classTeacherClassName?: string | null;
   classes: string[];
   subjects: string[];
   status: string;

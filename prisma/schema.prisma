@@ -76,6 +76,25 @@ enum CompilationStatus {
   SUBMITTED
 }
 
+enum SyncEntityType {
+  STUDENT
+  TEACHER
+  SUBJECT
+  TEACHER_SUBJECT_LINK
+}
+
+enum SyncAction {
+  UPSERT
+  DEACTIVATE
+}
+
+enum SyncEventStatus {
+  PENDING
+  PROCESSED
+  FAILED
+  IGNORED
+}
+
 // =============================================================================
 // 1. USER & AUTH
 //    Users are LOCAL to the result system — not synced from school management.
@@ -124,6 +143,9 @@ model User {
 
   // Teacher compilations
   teacherCompilations  TeacherSubjectCompilation[]
+
+  // Observation results entered by this teacher
+  observationResults StudentObservationResult[]
 
   @@index([role, isActive])
   @@index([email])
@@ -230,6 +252,7 @@ model SyncedStudent {
   finalResults      FinalResult[]
   marksheets        Marksheet[]
   compilationResults TeacherSubjectCompilationResult[]
+  observationResults StudentObservationResult[]
 
   @@index([class, section])
   @@index([isActive])
@@ -242,6 +265,13 @@ model SyncedTeacher {
   id        String   @id @default(cuid())
   sourceId  String   @unique // Teacher.id from school DB
   name      String
+  email     String?
+  phone     String?
+  imageUrl  String?
+  /// The classroom sourceId where this teacher is the class teacher
+  classTeacherId String?
+  /// Display name of the class this teacher is class teacher of (e.g. "Penguin - B")
+  classTeacherClassName String?
   isActive  Boolean  @default(true)
   syncedAt  DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -293,6 +323,7 @@ model Exam {
 
   academicYear         AcademicYear         @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
   evaluationTemplates  EvaluationTemplate[]
+  observationResults   StudentObservationResult[]
 
   @@unique([academicYearId, gradeLevel, name])
   @@index([academicYearId, gradeLevel])
@@ -670,15 +701,100 @@ model TeacherSubjectCompilationResult {
 }
 
 // =============================================================================
-// 13. SYNC LOG
-//     Audit trail of every inbound sync from the school management system.
+// 13. OBSERVATION CATEGORIES & ITEMS
+//     Admin-managed lookup data used when writing observations on marksheets.
+//     One category has many items; items belong to exactly one category.
+//     Cascade-delete items when a category is deleted.
+// =============================================================================
+
+model ObservationCategory {
+  id           String   @id @default(cuid())
+  title        String
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  items ObservationItem[]
+
+  @@index([displayOrder])
+  @@map("observation_categories")
+}
+
+model ObservationItem {
+  id                   String   @id @default(cuid())
+  observationCategoryId String
+  description          String
+  /// JSON array of descriptive options, e.g. ["Pays attention", "Easily distracted"]
+  choices              Json?
+  displayOrder         Int      @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  category ObservationCategory @relation(fields: [observationCategoryId], references: [id], onDelete: Cascade)
+  results StudentObservationResult[]
+
+  @@index([observationCategoryId, displayOrder])
+  @@map("observation_items")
+}
+
+/// Teacher records observation results for a student per item per exam
+model StudentObservationResult {
+  id                String   @id @default(cuid())
+  syncedStudentId   String
+  observationItemId String
+  examId            String
+  enteredById       String
+  /// The selected option text from ObservationItem.choices
+  selectedOption    String
+  remarks           String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  syncedStudent   SyncedStudent   @relation(fields: [syncedStudentId], references: [id], onDelete: Cascade)
+  observationItem ObservationItem @relation(fields: [observationItemId], references: [id], onDelete: Cascade)
+  exam            Exam            @relation(fields: [examId], references: [id], onDelete: Cascade)
+  enteredBy       User            @relation(fields: [enteredById], references: [id])
+
+  @@unique([syncedStudentId, observationItemId, examId])
+  @@index([examId])
+  @@index([syncedStudentId])
+  @@map("student_observation_results")
+}
+
+// =============================================================================
+// 14. SYNC EVENT INBOX
+//     Durable queue of push events from the school management system
+//     (single source of truth). Idempotent by eventId.
+// =============================================================================
+
+model SyncEvent {
+  id          String          @id @default(cuid())
+  eventId     String          @unique
+  entityType  SyncEntityType
+  action      SyncAction
+  entityId    String
+  payload     Json
+  status      SyncEventStatus @default(PENDING)
+  attempts    Int             @default(0)
+  lastError   String?
+  receivedAt  DateTime        @default(now())
+  processedAt DateTime?
+
+  @@index([status, receivedAt])
+  @@index([entityType, entityId])
+  @@map("sync_events")
+}
+
+// =============================================================================
+// 15. SYNC LOG
+//     Audit trail of every applied sync mutation from the school system.
 // =============================================================================
 
 model SyncLog {
   id       String   @id @default(cuid())
-  entity   String // "student" | "teacher" | "subject"
+  entity   String // "student" | "teacher" | "subject" | "teacher_subject_link"
   sourceId String
-  action   String // "create" | "update" | "deactivate"
+  action   String // "UPSERT" | "DEACTIVATE"
   payload  Json?
   status   String   @default("success")
   error    String?

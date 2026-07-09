@@ -33,6 +33,7 @@ export const ROUTES = {
   TEACHER_EVALUATIONS: "/teacher/evaluations",
   TEACHER_MARK_ENTRY: "/teacher/mark-entry",
   TEACHER_RE_EXAM: "/teacher/re-exam-portal",
+  TEACHER_OBSERVATIONS: "/teacher/observations",
 } as const;
 
 // ── Pagination ───────────────────────────────────────────────
