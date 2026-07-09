@@ -76,6 +76,25 @@ enum CompilationStatus {
   SUBMITTED
 }
 
+enum SyncEntityType {
+  STUDENT
+  TEACHER
+  SUBJECT
+  TEACHER_SUBJECT_LINK
+}
+
+enum SyncAction {
+  UPSERT
+  DEACTIVATE
+}
+
+enum SyncEventStatus {
+  PENDING
+  PROCESSED
+  FAILED
+  IGNORED
+}
+
 // =============================================================================
 // 1. USER & AUTH
 //    Users are LOCAL to the result system — not synced from school management.
@@ -743,15 +762,39 @@ model StudentObservationResult {
 }
 
 // =============================================================================
-// 14. SYNC LOG
-//     Audit trail of every inbound sync from the school management system.
+// 14. SYNC EVENT INBOX
+//     Durable queue of push events from the school management system
+//     (single source of truth). Idempotent by eventId.
+// =============================================================================
+
+model SyncEvent {
+  id          String          @id @default(cuid())
+  eventId     String          @unique
+  entityType  SyncEntityType
+  action      SyncAction
+  entityId    String
+  payload     Json
+  status      SyncEventStatus @default(PENDING)
+  attempts    Int             @default(0)
+  lastError   String?
+  receivedAt  DateTime        @default(now())
+  processedAt DateTime?
+
+  @@index([status, receivedAt])
+  @@index([entityType, entityId])
+  @@map("sync_events")
+}
+
+// =============================================================================
+// 15. SYNC LOG
+//     Audit trail of every applied sync mutation from the school system.
 // =============================================================================
 
 model SyncLog {
   id       String   @id @default(cuid())
-  entity   String // "student" | "teacher" | "subject"
+  entity   String // "student" | "teacher" | "subject" | "teacher_subject_link"
   sourceId String
-  action   String // "create" | "update" | "deactivate"
+  action   String // "UPSERT" | "DEACTIVATE"
   payload  Json?
   status   String   @default("success")
   error    String?
