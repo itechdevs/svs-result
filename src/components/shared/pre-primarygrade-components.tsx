@@ -484,11 +484,10 @@ export function ObservationSection({ data }: { data: PrePrimaryGradeSheetData })
 
   // ── Dynamic path: render rawObservations from the DB directly ────────────
   if (data.rawObservations && data.rawObservations.length > 0) {
-    // Build rows: "CategoryTitle — ItemDescription: SelectedOption"
-    // Group by category so same-category items are visually adjacent
+    // Build rows: left = categoryTitle, right = itemDescription
     const rows: Array<{ label: string; value: string }> = data.rawObservations.map((r) => ({
-      label: r.itemDescription ? `${r.itemDescription}:` : `${r.categoryTitle}:`,
-      value: r.selectedOption,
+      label: r.categoryTitle,
+      value: r.itemDescription,
     }));
 
     return (
