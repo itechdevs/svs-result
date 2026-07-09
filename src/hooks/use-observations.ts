@@ -35,13 +35,11 @@ export interface UpdateObservationCategoryInput {
 export interface CreateObservationItemInput {
   description: string;
   displayOrder?: number;
-  choices?: string[];
 }
 
 export interface UpdateObservationItemInput {
   description?: string;
   displayOrder?: number;
-  choices?: string[];
 }
 
 // ─── Category hooks ───────────────────────────────────────────────────────────
