@@ -11,6 +11,7 @@ import {
   FileText,
   CheckSquare,
   X,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -34,6 +35,8 @@ import { apiClient } from "@/lib/api-client";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import ExamResultCompilationSkeleton from "./ExamResultCompilationSkeleton";
+import type { PrePrimaryStudentData } from "@/components/shared/PrePrimaryTranscriptModal";
+import type { StudentObservationEntry } from "@/components/shared/pre-primarygrade";
 
 const TranscriptModal = dynamic(
   () => import("@/components/shared/TranscriptModal"),
@@ -41,6 +44,14 @@ const TranscriptModal = dynamic(
 );
 const BulkGradeSheetsModal = dynamic(
   () => import("@/components/shared/BulkGradeSheetsModal"),
+  { ssr: false },
+);
+const PrePrimaryTranscriptModal = dynamic(
+  () => import("@/components/shared/PrePrimaryTranscriptModal"),
+  { ssr: false },
+);
+const PrePrimaryBulkGradeSheetsModal = dynamic(
+  () => import("@/components/shared/PrePrimaryBulkGradeSheetsModal"),
   { ssr: false },
 );
 
@@ -84,6 +95,9 @@ interface Props {
     } | null;
   }>;
 }
+
+/** Observation data keyed by syncedStudentId */
+type ObservationMap = Record<string, StudentObservationEntry[]>;
 
 function toStudentObj(
   result: CompiledResult,
@@ -145,6 +159,17 @@ export default function ExamResultCompilation({
     "rank" | "rollNo" | "studentName"
   >("rank");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  // ── Observation toggle ──────────────────────────────────────────────────────
+  // null = not yet decided; true = include (use PrePrimary gradesheet);
+  // false = don't include (use standard gradesheet)
+  const [includeObservation, setIncludeObservation] = useState<boolean | null>(null);
+  const [observationMap, setObservationMap] = useState<ObservationMap>({});
+  const [isLoadingObservations, setIsLoadingObservations] = useState(false);
+  // For pre-primary single modal
+  const [prePrimaryModal, setPrePrimaryModal] = useState<PrePrimaryStudentData | null>(null);
+  // For pre-primary bulk modal
+  const [prePrimaryBulk, setPrePrimaryBulk] = useState<PrePrimaryStudentData[] | null>(null);
 
   const { data: studentsData, isLoading: studentsLoading } = useStudents({
     class: gradeLevel,
@@ -486,6 +511,74 @@ export default function ExamResultCompilation({
     setBulkGradeSheets(studentObjs);
   };
 
+  // ── Observation helpers ─────────────────────────────────────────────────────
+
+  /** Fetch observation data from the DB for the current exam + grade level */
+  const loadObservations = async (): Promise<ObservationMap> => {
+    try {
+      setIsLoadingObservations(true);
+      const res = await apiClient.get(
+        `/admin/observations/results?examId=${examId}&class=${encodeURIComponent(gradeLevel)}`,
+      ) as { students: Array<{ syncedStudentId: string; results: StudentObservationEntry[] }> };
+      const map: ObservationMap = {};
+      for (const s of res.students ?? []) {
+        map[s.syncedStudentId] = s.results;
+      }
+      setObservationMap(map);
+      return map;
+    } catch {
+      toast.error("Could not load observation data");
+      return {};
+    } finally {
+      setIsLoadingObservations(false);
+    }
+  };
+
+  /**
+   * Build a PrePrimaryStudentData object for a single compiled result.
+   * obsMap defaults to the current observationMap state.
+   */
+  const toPrePrimaryData = (
+    result: CompiledResult,
+    obsMap: ObservationMap = observationMap,
+  ): PrePrimaryStudentData => ({
+    studentId: result.studentId,
+    studentName: result.studentName,
+    rollNo: result.rollNo,
+    className: gradeLevel,
+    section: "",
+    subjects: Object.values(result.subjects).map((s) => ({
+      subjectName: s.subjectName,
+      grade: s.grade,
+      gradePoint: null,
+      remarks: null,
+    })),
+    gpa: null,
+    rank: result.rank ?? null,
+    attendance: "",
+    observationResults: obsMap[result.studentId] ?? [],
+    examName,
+    academicYear: "",
+  });
+
+  /** Called when admin clicks "View Grade Sheet" in observation mode */
+  const handleViewPrePrimaryGradeSheet = async (result: CompiledResult) => {
+    let obs = observationMap;
+    if (Object.keys(obs).length === 0) {
+      obs = await loadObservations();
+    }
+    setPrePrimaryModal(toPrePrimaryData(result, obs));
+  };
+
+  /** Called when admin clicks "View All Grade Sheets" in observation mode */
+  const handleViewAllPrePrimaryGradeSheets = async () => {
+    let obs = observationMap;
+    if (Object.keys(obs).length === 0) {
+      obs = await loadObservations();
+    }
+    setPrePrimaryBulk(compiledResults.map((r) => toPrePrimaryData(r, obs)));
+  };
+
   if (isLoading) {
     return <ExamResultCompilationSkeleton />;
   }
@@ -548,6 +641,67 @@ export default function ExamResultCompilation({
           </div>
         )}
       </div>
+
+      {/* ── Observation toggle card ──────────────────────────────────────── */}
+      {(showResultsTable || hasSavedResults) && !isCompiling && includeObservation === null && (
+        <div className="bg-card rounded-xl border border-primary/30 shadow-sm p-5">
+          <div className="flex items-start gap-3 mb-4">
+            <ClipboardList className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-bold text-foreground">
+                Include Observation in Grade Sheet?
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                If the class teacher has entered observations for this exam,
+                you can include them in the grade sheet (Pre-Primary format).
+                Otherwise the standard marksheet template will be used.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={async () => {
+                setIncludeObservation(true);
+                await loadObservations();
+              }}
+              className="flex items-center gap-2 bg-primary text-primary-foreground"
+            >
+              <ClipboardList className="w-4 h-4" />
+              Yes, include observation
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setIncludeObservation(false)}
+              className="flex items-center gap-2"
+            >
+              No, use standard template
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Observation mode active banner */}
+      {(showResultsTable || hasSavedResults) && !isCompiling && includeObservation !== null && (
+        <div className={cn(
+          "rounded-xl border p-4 flex items-center gap-3",
+          includeObservation
+            ? "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800"
+            : "bg-muted/40 border-border",
+        )}>
+          <ClipboardList className={cn("w-4 h-4 shrink-0", includeObservation ? "text-blue-600 dark:text-blue-400" : "text-muted-foreground")} />
+          <p className="text-xs font-semibold text-foreground flex-1">
+            {includeObservation
+              ? "Pre-Primary grade sheet with observation data will be used."
+              : "Standard marksheet template will be used (no observation)."}
+          </p>
+          <button
+            onClick={() => { setIncludeObservation(null); setObservationMap({}); }}
+            className="text-[10px] font-semibold text-muted-foreground hover:text-foreground underline"
+          >
+            Change
+          </button>
+        </div>
+      )}
 
       {totalSubjectsInTemplates.length > 0 && (
         <div className="bg-card rounded-xl border border-border shadow-sm p-5">
@@ -693,11 +847,16 @@ export default function ExamResultCompilation({
                   </Button>
                 )}
                 <Button
-                  onClick={handleViewAllGradeSheets}
+                  onClick={includeObservation ? handleViewAllPrePrimaryGradeSheets : handleViewAllGradeSheets}
+                  disabled={isLoadingObservations}
                   variant="outline"
                   className="flex items-center gap-2 h-9 py-2 text-xs font-semibold cursor-pointer"
                 >
-                  <FileText className="w-4 h-4" />
+                  {isLoadingObservations ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <FileText className="w-4 h-4" />
+                  )}
                   View All Grade Sheets
                 </Button>
                 <Button
@@ -852,9 +1011,11 @@ export default function ExamResultCompilation({
                       <TableCell className="border border-border px-3 py-2 text-center">
                         <button
                           onClick={() =>
-                            setShowTranscriptModal(
-                              toStudentObj(result, gradeLevel, students),
-                            )
+                            includeObservation
+                              ? handleViewPrePrimaryGradeSheet(result)
+                              : setShowTranscriptModal(
+                                  toStudentObj(result, gradeLevel, students),
+                                )
                           }
                           className="px-2.5 py-1 bg-primary hover:bg-primary/90 text-primary-foreground rounded text-[11px] font-bold cursor-pointer transition-colors"
                         >
@@ -870,6 +1031,7 @@ export default function ExamResultCompilation({
         )}
       </AnimatePresence>
 
+      {/* Standard grade sheet modals (no observation) */}
       <TranscriptModal
         showTranscriptModal={showTranscriptModal}
         setShowTranscriptModal={setShowTranscriptModal}
@@ -878,6 +1040,18 @@ export default function ExamResultCompilation({
         <BulkGradeSheetsModal
           students={bulkGradeSheets}
           onClose={() => setBulkGradeSheets(null)}
+        />
+      )}
+
+      {/* Pre-primary grade sheet modals (with observation) */}
+      <PrePrimaryTranscriptModal
+        student={prePrimaryModal}
+        onClose={() => setPrePrimaryModal(null)}
+      />
+      {prePrimaryBulk && (
+        <PrePrimaryBulkGradeSheetsModal
+          students={prePrimaryBulk}
+          onClose={() => setPrePrimaryBulk(null)}
         />
       )}
     </motion.div>

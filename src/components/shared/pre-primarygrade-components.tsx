@@ -481,6 +481,71 @@ export function SummarySection({
 // "OBSERVATION" bold header, then single-column full-width rows with label + underline value
 
 export function ObservationSection({ data }: { data: PrePrimaryGradeSheetData }) {
+
+  // ── Dynamic path: render rawObservations from the DB directly ────────────
+  if (data.rawObservations && data.rawObservations.length > 0) {
+    // Build rows: "CategoryTitle — ItemDescription: SelectedOption"
+    // Group by category so same-category items are visually adjacent
+    const rows: Array<{ label: string; value: string }> = data.rawObservations.map((r) => ({
+      label: r.itemDescription ? `${r.itemDescription}:` : `${r.categoryTitle}:`,
+      value: r.selectedOption,
+    }));
+
+    return (
+      <div style={{ marginBottom: '8px', fontFamily: FONT }}>
+        <div
+          style={{
+            fontSize: '9px',
+            fontWeight: 900,
+            color: textColor,
+            textDecoration: 'underline',
+            marginBottom: '2px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+          }}
+        >
+          OBSERVATION
+        </div>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: FONT }}>
+          <tbody>
+            {rows.map((row, idx) => (
+              <tr key={idx}>
+                <td
+                  style={{
+                    border: `1px solid ${borderColor}`,
+                    padding: '3px 8px',
+                    fontSize: '8.5px',
+                    fontWeight: 700,
+                    color: textColor,
+                    width: '35%',
+                    height: '22px',
+                    verticalAlign: 'middle',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {row.label}
+                </td>
+                <td
+                  style={{
+                    border: `1px solid ${borderColor}`,
+                    padding: '3px 8px',
+                    fontSize: '8.5px',
+                    color: textColor,
+                    height: '22px',
+                    verticalAlign: 'middle',
+                  }}
+                >
+                  {row.value}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  // ── Static fallback: original hardcoded rows ──────────────────────────────
   const observationRows: Array<{ label: string; value: string }> = [
     { label: 'Attention:', value: data.attention },
     { label: 'Cocurricular Activities:', value: data.coCurricularActivities },

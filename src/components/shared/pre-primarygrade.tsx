@@ -68,6 +68,12 @@ export interface PrePrimaryGradeSheetData {
     principal: string;
     dateOfIssue: string;
     dateOfIssueAD: string;
+    /**
+     * Raw observation entries from the DB, grouped by category.
+     * When present these are rendered directly in ObservationSection
+     * instead of the fixed attention/homework/… fields.
+     */
+    rawObservations?: StudentObservationEntry[];
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -117,6 +123,15 @@ export const EMPTY_DATA: PrePrimaryGradeSheetData = {
     dateOfIssueAD: '',
 };
 
+// ─── Observation Result type ─────────────────────────────────────────────────
+
+export interface StudentObservationEntry {
+    categoryTitle: string;
+    itemDescription: string;
+    selectedOption: string;
+    remarks: string | null;
+}
+
 // ─── Data Transformer ────────────────────────────────────────────────────────
 
 export function buildPrePrimaryData(params: {
@@ -165,6 +180,8 @@ export function buildPrePrimaryData(params: {
         description?: string | null;
     }>;
     attendance?: string;
+    /** Observation results for this specific student from the DB */
+    observationResults?: StudentObservationEntry[];
 }): PrePrimaryGradeSheetData {
     const {
         syncedStudent,
@@ -176,7 +193,12 @@ export function buildPrePrimaryData(params: {
         finalResult,
         gradeScales = [],
         attendance = '',
+        observationResults = [],
     } = params;
+
+    // ── Pass observation results straight through — no keyword mapping ────────
+    // ObservationSection renders rawObservations directly when present,
+    // so we don't need to match descriptions to fixed grade-sheet fields.
 
     let subjects: PrePrimarySubjectResult[] = [];
 
@@ -263,6 +285,7 @@ export function buildPrePrimaryData(params: {
         principal: '',
         dateOfIssue: '',
         dateOfIssueAD: '',
+        rawObservations: observationResults.length > 0 ? observationResults : undefined,
     };
 }
 

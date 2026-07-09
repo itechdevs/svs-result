@@ -1,6 +1,8 @@
 'use client';
+'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   BookOpen,
@@ -10,6 +12,7 @@ import {
   ArrowLeft,
   ChevronDown,
   ChevronRight,
+  ClipboardCheck,
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -415,6 +418,30 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
         </div>
       </div>
 
+      {/* Observation reminder banner — only visible to class teachers */}
+      {profile?.syncedTeacher?.classTeacherId && selectedExam && (
+        <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 flex items-start gap-3">
+          <ClipboardCheck className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">
+              Observation entry available
+            </p>
+            <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
+              As a class teacher of{' '}
+              <span className="font-bold">{profile.syncedTeacher.classTeacherClassName}</span>,
+              you can enter observations for each student for this exam. The admin will
+              include these when generating grade sheets.
+            </p>
+          </div>
+          <Link
+            href="/teacher/observations"
+            className="shrink-0 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors"
+          >
+            Enter Observations
+          </Link>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="bg-card rounded-xl border border-border shadow-sm p-5">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -639,9 +666,21 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
       {activeGroups.length > 0 && compiledResults.length > 0 && (
         <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-border">
-            <h3 className="text-sm font-bold text-foreground">
-              Compiled Results ({compiledResults.length} students)
-            </h3>
+            <div>
+              <h3 className="text-sm font-bold text-foreground">
+                Compiled Results ({compiledResults.length} students)
+              </h3>
+              {profile?.syncedTeacher?.classTeacherId && (
+                <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                  <ClipboardCheck className="w-3 h-3" />
+                  Remember to also fill{' '}
+                  <Link href="/teacher/observations" className="text-primary underline font-semibold">
+                    observations
+                  </Link>{' '}
+                  for this class.
+                </p>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               <Button
                 onClick={handleSaveDraft}
