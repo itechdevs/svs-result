@@ -421,11 +421,9 @@ export const listObservationCategoriesSchema = z.object({
 export const createObservationItemSchema = z.object({
   description: z.string().min(1, "Description is required").max(500).trim(),
   displayOrder: z.number().int().min(0).default(0),
-  choices: z.array(z.string().min(1).max(200)).optional(),
 });
 
 export const updateObservationItemSchema = z.object({
   description: z.string().min(1, "Description is required").max(500).trim().optional(),
   displayOrder: z.number().int().min(0).optional(),
-  choices: z.array(z.string().min(1).max(200)).optional(),
 });
