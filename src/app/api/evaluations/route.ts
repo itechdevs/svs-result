@@ -24,7 +24,7 @@ export const GET = withHandler(async (req: NextRequest, { user }) => {
     Object.fromEntries(searchParams),
   );
 
-  // Teachers can only see results for their assigned subjects
+  // Teachers can only see results for their own assigned subjects.
   let allowedTemplateIds: string[] | undefined;
   if (user.role === "TEACHER") {
     const currentUser = await prisma.user.findUnique({
@@ -43,28 +43,46 @@ export const GET = withHandler(async (req: NextRequest, { user }) => {
       });
       allowedTemplateIds = templates.map((t) => t.id);
     } else {
+      // Teacher has no linked syncedTeacher — return nothing
       allowedTemplateIds = [];
     }
   }
 
-  const evaluationTemplateIds = Array.isArray(query.evaluationTemplateIds)
-    ? query.evaluationTemplateIds
-    : undefined;
+
+  let effectiveTemplateIds: string[] | undefined;
+
+  if (allowedTemplateIds !== undefined) {
+    const queryIds = query.evaluationTemplateId
+      ? [query.evaluationTemplateId]
+      : Array.isArray(query.evaluationTemplateIds)
+        ? query.evaluationTemplateIds
+        : undefined;
+
+    if (queryIds) {
+      // Intersect: only IDs that are both requested and allowed
+      effectiveTemplateIds = allowedTemplateIds.filter((id) =>
+        queryIds.includes(id),
+      );
+    } else {
+      effectiveTemplateIds = allowedTemplateIds;
+    }
+  } else {
+    // Admin path: use caller filter directly
+    if (query.evaluationTemplateId) {
+      effectiveTemplateIds = [query.evaluationTemplateId];
+    } else if (Array.isArray(query.evaluationTemplateIds)) {
+      effectiveTemplateIds = query.evaluationTemplateIds;
+    }
+  }
 
   const results = await prisma.studentEvaluationResult.findMany({
     where: {
       deletedAt: null,
-      ...(query.evaluationTemplateId && {
-        evaluationTemplateId: query.evaluationTemplateId,
-      }),
-      ...(evaluationTemplateIds && {
-        evaluationTemplateId: { in: evaluationTemplateIds },
+      ...(effectiveTemplateIds !== undefined && {
+        evaluationTemplateId: { in: effectiveTemplateIds },
       }),
       ...(query.syncedStudentId && { syncedStudentId: query.syncedStudentId }),
       ...(query.status && { status: query.status }),
-      ...(allowedTemplateIds && {
-        evaluationTemplateId: { in: allowedTemplateIds },
-      }),
     },
     include: {
       syncedStudent: {
