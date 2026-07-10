@@ -280,49 +280,47 @@ export function TeacherSidebar() {
               {/* Submenu for Evaluations */}
               {item.hasSubMenu && !isCollapsed && evaluationsExpanded && (
                 <div className="mt-1 ml-11 space-y-1">
-                  {assignedPairs.map(
-                    ({ className, section, subject }, idx, idx) => {
-                      const params = new URLSearchParams({
-                        class: className,
-                        subject,
-                      });
-                      if (section) params.set("section", section);
-                      const href = `${ROUTES.TEACHER_EVALUATIONS}?${params}`;
-                      const isSubActive =
-                        searchParams.get("class") === className &&
-                        searchParams.get("subject") === subject &&
-                        (!section || searchParams.get("section") === section) &&
-                        (pathname === ROUTES.TEACHER_EVALUATIONS ||
-                          pathname === "/teacher/create-evaluation" ||
-                          pathname.startsWith("/teacher/edit-evaluation") ||
-                          pathname.startsWith(ROUTES.TEACHER_MARK_ENTRY) ||
-                          pathname.startsWith("/teacher/result-compilation"));
-                      return (
-                        <Link
-                          key={`${className}-${section ?? ""}-${subject}-${idx}`}
-                          href={href}
-                          onClick={() => isMobile && setOpenMobile(false)}
-                          className={cn(
-                            "block relative py-1.5 px-3 text-[11px] rounded transition-colors pr-6",
-                            isSubActive
-                              ? "bg-sidebar-accent/60 text-sidebar-foreground"
-                              : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40",
-                          )}
-                        >
-                          <div className="font-medium">
-                            {className}
-                            {section ? ` (${section})` : ""}
-                          </div>
-                          <div className="text-[10px] text-sidebar-foreground/40">
-                            {subject}
-                          </div>
-                          {isSubActive && (
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-sidebar-primary" />
-                          )}
-                        </Link>
-                      );
-                    },
-                  )}
+                  {assignedPairs.map(({ className, section, subject }, idx) => {
+                    const params = new URLSearchParams({
+                      class: className,
+                      subject,
+                    });
+                    if (section) params.set("section", section);
+                    const href = `${ROUTES.TEACHER_EVALUATIONS}?${params}`;
+                    const isSubActive =
+                      searchParams.get("class") === className &&
+                      searchParams.get("subject") === subject &&
+                      (!section || searchParams.get("section") === section) &&
+                      (pathname === ROUTES.TEACHER_EVALUATIONS ||
+                        pathname === "/teacher/create-evaluation" ||
+                        pathname.startsWith("/teacher/edit-evaluation") ||
+                        pathname.startsWith(ROUTES.TEACHER_MARK_ENTRY) ||
+                        pathname.startsWith("/teacher/result-compilation"));
+                    return (
+                      <Link
+                        key={`${className}-${section ?? ""}-${subject}-${idx}`}
+                        href={href}
+                        onClick={() => isMobile && setOpenMobile(false)}
+                        className={cn(
+                          "block relative py-1.5 px-3 text-[11px] rounded transition-colors pr-6",
+                          isSubActive
+                            ? "bg-sidebar-accent/60 text-sidebar-foreground"
+                            : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40",
+                        )}
+                      >
+                        <div className="font-medium">
+                          {className}
+                          {section ? ` (${section})` : ""}
+                        </div>
+                        <div className="text-[10px] text-sidebar-foreground/40">
+                          {subject}
+                        </div>
+                        {isSubActive && (
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-sidebar-primary" />
+                        )}
+                      </Link>
+                    );
+                  })}
                 </div>
               )}
             </div>

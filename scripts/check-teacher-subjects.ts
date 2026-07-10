@@ -5,9 +5,7 @@ async function main() {
   const teacher = await prisma.syncedTeacher.findFirst({
     where: { sourceId: "cmra6bev70002u05wo8lahza8" },
     include: {
-      subjects: {
-        select: { id: true, sourceId: true, name: true, gradeLevel: true, section: true },
-      },
+      subjects: true,
     },
   });
   console.log("Teacher subjects (linked):", JSON.stringify(teacher?.subjects, null, 2));
@@ -15,7 +13,6 @@ async function main() {
   // Also show what the sourceId-based records look like
   const bySourceId = await prisma.syncedSubject.findMany({
     where: { sourceId: { in: ["cmra5frye0001u0ssba0levlm", "cmra5i5a80004u0ss7yaj505r"] } },
-    select: { id: true, sourceId: true, name: true, gradeLevel: true, section: true },
   });
   console.log("\nSubjects by sourceId (patched):", JSON.stringify(bySourceId, null, 2));
 }

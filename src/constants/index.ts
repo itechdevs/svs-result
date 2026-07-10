@@ -24,6 +24,7 @@ export const ROUTES = {
   ADMIN_EXAMS: "/admin/exams",
   ADMIN_EXAM_DETAIL: "/admin/exams/[id]",
   ADMIN_ALLOCATIONS: "/admin/allocations",
+  ADMIN_OBSERVATIONS: "/admin/observations",
   ADMIN_RE_EXAM: "/admin/re-exam-portal",
   ADMIN_MARK_ENTRY: "/admin/mark-entry",
   ADMIN_RESULT_COMPILATION: "/admin/result-compilation",

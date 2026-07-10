@@ -55,6 +55,11 @@ const NAV_ITEMS = [
     href: ROUTES.ADMIN_ALLOCATIONS,
     icon: Grid2X2,
   },
+  {
+    label: "Observations & Feedback",
+    href: ROUTES.ADMIN_OBSERVATIONS,
+    icon: MessageSquareText,
+  },
 ] as const;
 
 export function AdminSidebar() {

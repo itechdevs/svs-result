@@ -55,7 +55,10 @@ async function main() {
         }
       }
 
-      const existing = await prisma.syncedSubject.findUnique({ where: { sourceId: sub.id } });
+      const existing = await prisma.syncedSubject.findUnique({ 
+        where: { sourceId: sub.id },
+        select: { id: true, gradeLevel: true, section: true, name: true }
+      });
       if (!existing) continue;
 
       if (existing.gradeLevel === gradeLevel && existing.section === section) {
