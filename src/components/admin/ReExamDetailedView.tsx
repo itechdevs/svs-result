@@ -52,7 +52,7 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
       const r = lo.templateId ? byTemplateId.get(lo.templateId) : undefined;
       outcomeMarks[lo.name] = {
         regularMark: r?.marksObtained ?? null,
-      regularDate: lo.regularDate || "",
+        regularDate: lo.regularDate || "",
         supportMark: null,
         supportDate: "",
         reExamMark: r?.reExamResult?.marksObtained ?? null,

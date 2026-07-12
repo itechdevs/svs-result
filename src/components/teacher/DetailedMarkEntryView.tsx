@@ -186,7 +186,7 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
           )}>
             {status}
           </span>
-          <span className="font-bold text-sm text-foreground">{obtained} / {fullTotal}</span>
+          <span className="font-bold text-sm text-foreground">{Number(obtained.toFixed(1))} / {fullTotal}</span>
           {!readOnly && (
             <button
               onClick={async () => {
