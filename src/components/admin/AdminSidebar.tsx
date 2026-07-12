@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutGrid, Grid2X2, BookOpen, Calendar, X, LogOut } from "lucide-react";
+import { LayoutGrid, Grid2X2, BookOpen, Calendar, X, LogOut, MessageSquareText } from "lucide-react";
 import { ROUTES } from "@/lib/constants";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -17,6 +17,7 @@ const NAV_ITEMS = [
   { label: "Academic Years", href: "/admin/academic-years", icon: Calendar },
   { label: "Exam Plan", href: ROUTES.ADMIN_EXAMS, icon: BookOpen },
   { label: "Teacher Allocation", href: ROUTES.ADMIN_ALLOCATIONS, icon: Grid2X2 },
+  { label: "Observations", href: "/admin/observations", icon: MessageSquareText },
 ] as const;
 
 export function AdminSidebar() {

@@ -10,6 +10,11 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
+  // Allow API sync routes (they have their own secret-based auth)
+  if (pathname.startsWith("/api/sync")) {
+    return NextResponse.next();
+  }
+
   // Root route
   if (pathname === "/") {
     if (user) {

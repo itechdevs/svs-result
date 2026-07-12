@@ -45,8 +45,32 @@ export class UnifiedSyncService {
           // Upsert synced teacher
           const syncedTeacher = await prisma.syncedTeacher.upsert({
             where: { sourceId: teacher.id },
-            update: { name: teacher.user.name, syncedAt: new Date() },
-            create: { sourceId: teacher.id, name: teacher.user.name },
+            update: {
+              name: teacher.user.name,
+              email: teacher.user.email,
+              phone: teacher.phone || null,
+              imageUrl: teacher.imageUrl || null,
+              classTeacherId: teacher.classTeacher || null,
+              classTeacherClassName: teacher.classTeacherDetails?.name
+                || (teacher.classTeacher && teacher.assignedClassroomsDetails?.length > 0
+                  ? teacher.assignedClassroomsDetails.find((c: any) => c.id === teacher.classTeacher)?.name
+                  : null)
+                || null,
+              syncedAt: new Date(),
+            },
+            create: {
+              sourceId: teacher.id,
+              name: teacher.user.name,
+              email: teacher.user.email,
+              phone: teacher.phone || null,
+              imageUrl: teacher.imageUrl || null,
+              classTeacherId: teacher.classTeacher || null,
+              classTeacherClassName: teacher.classTeacherDetails?.name
+                || (teacher.classTeacher && teacher.assignedClassroomsDetails?.length > 0
+                  ? teacher.assignedClassroomsDetails.find((c: any) => c.id === teacher.classTeacher)?.name
+                  : null)
+                || null,
+            },
           });
 
           // Auto-create or update user account

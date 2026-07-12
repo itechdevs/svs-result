@@ -396,3 +396,34 @@ export const listTeacherCompilationsSchema = z.object({
   gradeLevel: z.string().optional(),
   status: z.enum(["DRAFT", "SUBMITTED"]).optional(),
 });
+
+// ─── Observation Categories ───────────────────────────────────────────────────
+
+export const createObservationCategorySchema = z.object({
+  title: z.string().min(1, "Title is required").max(200).trim(),
+  displayOrder: z.number().int().min(0).default(0),
+});
+
+export const updateObservationCategorySchema = z.object({
+  title: z.string().min(1, "Title is required").max(200).trim().optional(),
+  displayOrder: z.number().int().min(0).optional(),
+});
+
+export const listObservationCategoriesSchema = z.object({
+  includeItems: z
+    .string()
+    .transform((v) => v === "true")
+    .optional(),
+});
+
+// ─── Observation Items ────────────────────────────────────────────────────────
+
+export const createObservationItemSchema = z.object({
+  description: z.string().min(1, "Description is required").max(500).trim(),
+  displayOrder: z.number().int().min(0).default(0),
+});
+
+export const updateObservationItemSchema = z.object({
+  description: z.string().min(1, "Description is required").max(500).trim().optional(),
+  displayOrder: z.number().int().min(0).optional(),
+});

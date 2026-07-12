@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutGrid, ClipboardList, ClipboardX, ChevronDown, X } from "lucide-react";
+import { LayoutGrid, ClipboardList, ClipboardX, ChevronDown, X, MessageSquareText } from "lucide-react";
 import { ROUTES } from "@/lib/constants";
 import { useSidebar } from "@/components/shared/ui/sidebar";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/shared/ui/sheet";
@@ -14,11 +14,17 @@ import { signOut } from "next-auth/react";
 import { toast } from "sonner";
 import { LogOut } from "lucide-react";
 
-const NAV_ITEMS: { label: string; href: string; icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>; hasSubMenu?: boolean }[] = [
-  { label: "Teacher Dashboard", href: ROUTES.TEACHER_DASHBOARD, icon: LayoutGrid },
-  { label: "Evaluation Plan", href: ROUTES.TEACHER_EVALUATIONS, icon: ClipboardList, hasSubMenu: true },
-  { label: "Re-Exam Panel", href: ROUTES.TEACHER_RE_EXAM, icon: ClipboardX },
-];
+function getNavItems(isClassTeacher: boolean): { label: string; href: string; icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>; hasSubMenu?: boolean }[] {
+  const items: { label: string; href: string; icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>; hasSubMenu?: boolean }[] = [
+    { label: "Teacher Dashboard", href: ROUTES.TEACHER_DASHBOARD, icon: LayoutGrid },
+    { label: "Evaluation Plan", href: ROUTES.TEACHER_EVALUATIONS, icon: ClipboardList, hasSubMenu: true },
+  ];
+  if (isClassTeacher) {
+    items.push({ label: "Observations", href: ROUTES.TEACHER_OBSERVATIONS, icon: MessageSquareText });
+  }
+  items.push({ label: "Re-Exam Panel", href: ROUTES.TEACHER_RE_EXAM, icon: ClipboardX });
+  return items;
+}
 
 export function TeacherSidebar() {
   const pathname = usePathname();
@@ -30,6 +36,9 @@ export function TeacherSidebar() {
 
   const { data: profile } = useProfile();
 
+  const isClassTeacher = !!profile?.syncedTeacher?.classTeacherId;
+  const NAV_ITEMS = useMemo(() => getNavItems(isClassTeacher), [isClassTeacher]);
+
   const assignedPairs = useMemo(() => {
     const subjects = profile?.syncedTeacher?.subjects ?? [];
     if (process.env.NODE_ENV === 'development' && subjects.length === 0 && profile?.role === 'TEACHER') {
@@ -39,7 +48,11 @@ export function TeacherSidebar() {
         'subjects count:', subjects.length,
       );
     }
-    return subjects.map(s => ({ className: s.gradeLevel, subject: s.name }));
+    return subjects
+      .map(s => ({ className: s.gradeLevel, subject: s.name }))
+      .filter((pair, i, arr) =>
+        arr.findIndex(p => p.className === pair.className && p.subject === pair.subject) === i
+      );
   }, [profile]);
 
   const SidebarContent = (
@@ -151,7 +164,7 @@ export function TeacherSidebar() {
               {/* Submenu for Evaluations */}
               {item.hasSubMenu && !isCollapsed && evaluationsExpanded && (
                 <div className="mt-1 ml-11 space-y-1">
-                  {assignedPairs.map(({ className, subject }) => {
+                  {assignedPairs.map(({ className, subject }, idx) => {
                     const params = new URLSearchParams({ class: className, subject });
                     const href = `${ROUTES.TEACHER_EVALUATIONS}?${params}`;
                     const isSubActive =
@@ -166,7 +179,7 @@ export function TeacherSidebar() {
                       );
                     return (
                       <Link
-                        key={`${className}-${subject}`}
+                        key={`${className}-${subject}-${idx}`}
                         href={href}
                         onClick={() => isMobile && setOpenMobile(false)}
                         className={cn(

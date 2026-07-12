@@ -560,7 +560,9 @@ export default function MarkEntryOverviewTable() {
 
                           {/* ── Total ── */}
                           <td className="px-4 py-3 text-center font-bold text-sm text-[#002045] dark:text-white whitespace-nowrap">
-                            {hasMarks ? `${totalObtained} / ${totalFull}` : "—"}
+                            {hasMarks
+                              ? `${Number(totalObtained.toFixed(1))} / ${totalFull}`
+                              : "—"}
                           </td>
 
                           {/* ── Percentage ── */}

@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { motion } from 'motion/react';
-import { ArrowLeft, BookOpen, ClipboardList, Eye, ClipboardX } from 'lucide-react';
+import { ArrowLeft, BookOpen, ClipboardList, Eye, ClipboardX, Mail, Phone, Star } from 'lucide-react';
 import { Allocation, EvaluationPlan } from '@/types/academic';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/shared/ui/select';
 import { cn } from '@/lib/utils';
@@ -81,12 +81,40 @@ export default function TeacherEvaluationsViewTab({ teacher, evaluations, onView
       {/* Teacher Info Card */}
       <div className="bg-card text-card-foreground border border-border rounded-xl p-5 shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center shrink-0 border-2 border-primary/20">
-            <span className="text-base font-extrabold text-primary">{initials}</span>
+          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center shrink-0 border-2 border-primary/20 overflow-hidden">
+            {teacher.imageUrl ? (
+              <img src={teacher.imageUrl} alt={teacher.teacher} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-base font-extrabold text-primary">{initials}</span>
+            )}
           </div>
           <div className="flex-1">
-            <h3 className="font-bold text-sm text-foreground">{teacher.teacher}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-sm text-foreground">{teacher.teacher}</h3>
+              {teacher.classTeacherId && (
+                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center gap-1">
+                  <Star className="w-2.5 h-2.5" />
+                  {teacher.classTeacherClassName || 'Class Teacher'}
+                </span>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground mt-0.5">{teacher.title}</p>
+            {(teacher.email || teacher.phone) && (
+              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-[10px] text-muted-foreground">
+                {teacher.email && (
+                  <span className="flex items-center gap-1">
+                    <Mail className="w-3 h-3" />
+                    {teacher.email}
+                  </span>
+                )}
+                {teacher.phone && (
+                  <span className="flex items-center gap-1">
+                    <Phone className="w-3 h-3" />
+                    {teacher.phone}
+                  </span>
+                )}
+              </div>
+            )}
             <div className="flex flex-wrap gap-3 mt-2">
               <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                 <BookOpen className="w-3 h-3 text-primary/70" />

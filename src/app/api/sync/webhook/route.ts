@@ -80,6 +80,11 @@ export const POST = withPublicHandler(async (req: NextRequest) => {
       const data = event.payload as {
         sourceId: string;
         name: string;
+        email?: string;
+        phone?: string;
+        imageUrl?: string;
+        classTeacherId?: string;
+        classTeacherClassName?: string;
         isActive: boolean;
       };
 
@@ -91,9 +96,22 @@ export const POST = withPublicHandler(async (req: NextRequest) => {
       } else {
         await prisma.syncedTeacher.upsert({
           where: { sourceId: data.sourceId },
-          create: { sourceId: data.sourceId, name: data.name },
+          create: {
+            sourceId: data.sourceId,
+            name: data.name,
+            email: data.email || null,
+            phone: data.phone || null,
+            imageUrl: data.imageUrl || null,
+            classTeacherId: data.classTeacherId || null,
+            classTeacherClassName: data.classTeacherClassName || null,
+          },
           update: {
             name: data.name,
+            email: data.email || null,
+            phone: data.phone || null,
+            imageUrl: data.imageUrl || null,
+            classTeacherId: data.classTeacherId || null,
+            classTeacherClassName: data.classTeacherClassName || null,
             isActive: data.isActive,
             syncedAt: new Date(),
           },
