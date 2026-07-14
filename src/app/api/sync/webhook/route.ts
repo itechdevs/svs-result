@@ -74,6 +74,7 @@ export const POST = withPublicHandler(async (req: NextRequest) => {
             rollNumber: data.rollNumber || "",
             class: className,
             section: data.section || "A",
+            dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
             isActive: data.isActive ?? true,
           },
           update: {
@@ -81,6 +82,7 @@ export const POST = withPublicHandler(async (req: NextRequest) => {
             rollNumber: data.rollNumber || "",
             class: className,
             section: data.section || "A",
+            dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
             isActive: data.isActive ?? true,
             syncedAt: new Date(),
           },

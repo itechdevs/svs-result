@@ -258,15 +258,16 @@ model AuditLog {
 
 /// Mirror of school management → Student
 model SyncedStudent {
-  id         String   @id @default(cuid())
-  sourceId   String   @unique // Student.id from school DB
-  name       String
-  rollNumber String
-  class      String // "Rabbit (Playgroup)", "Panda (L.K.G.)", etc.
-  section    String
-  isActive   Boolean  @default(true)
-  syncedAt   DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id          String    @id @default(cuid())
+  sourceId    String    @unique // Student.id from school DB
+  name        String
+  rollNumber  String
+  class       String // "Rabbit (Playgroup)", "Panda (L.K.G.)", etc.
+  section     String
+  dateOfBirth DateTime?
+  isActive    Boolean   @default(true)
+  syncedAt    DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   evaluationResults  StudentEvaluationResult[]
   subjectResults     SubjectResult[]

@@ -22,6 +22,7 @@ type StudentPayload = {
   class: string;
   section: string;
   grade: string;
+  dateOfBirth?: string | null;
   updatedAt: string;
 };
 
@@ -110,6 +111,7 @@ const syncStudent = async (action: SyncAction, rawPayload: Record<string, unknow
       rollNumber: payload.rollNumber || "",
       class: payload.class || "",
       section: payload.section || "A",
+      dateOfBirth: payload.dateOfBirth ? new Date(payload.dateOfBirth) : null,
       isActive: true,
     },
     update: {
@@ -117,6 +119,7 @@ const syncStudent = async (action: SyncAction, rawPayload: Record<string, unknow
       rollNumber: payload.rollNumber || "",
       class: payload.class || "",
       section: payload.section || "A",
+      dateOfBirth: payload.dateOfBirth ? new Date(payload.dateOfBirth) : null,
       isActive: true,
     },
   });

@@ -276,6 +276,7 @@ export class UnifiedSyncService {
               rollNumber: student.rollNumber || "",
               class: classroomName,
               section: student.section || "A",
+              dateOfBirth: student.dateOfBirth ? new Date(student.dateOfBirth) : null,
               syncedAt: new Date(),
             },
             create: {
@@ -284,6 +285,7 @@ export class UnifiedSyncService {
               rollNumber: student.rollNumber || "",
               class: classroomName,
               section: student.section || "A",
+              dateOfBirth: student.dateOfBirth ? new Date(student.dateOfBirth) : null,
             },
           });
 
