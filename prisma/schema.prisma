@@ -102,6 +102,13 @@ enum SyncEventStatus {
   IGNORED
 }
 
+enum SchoolLevel {
+  PRE_PRIMARY
+  PRIMARY
+  SECONDARY
+  HIGHER
+}
+
 // =============================================================================
 // 1. USER & AUTH
 //    Users are LOCAL to the result system — not synced from school management.
@@ -435,6 +442,21 @@ model GradeScale {
   @@unique([gradeConfigId, minPercent, maxPercent])
   @@index([gradeConfigId])
   @@map("grade_scales")
+}
+
+// =============================================================================
+// 6B. GRADE LEVEL CATEGORY
+//    Maps each gradeLevel string to a SchoolLevel (PRE_PRIMARY, PRIMARY, etc.)
+//    so result calculation logic can differ per level.
+// =============================================================================
+
+model GradeLevelCategory {
+  id          String      @id @default(cuid())
+  gradeLevel  String      @unique
+  schoolLevel SchoolLevel
+  updatedAt   DateTime    @updatedAt
+
+  @@map("grade_level_categories")
 }
 
 // =============================================================================

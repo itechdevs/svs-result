@@ -39,7 +39,7 @@ export default function SecondaryTermWeightsPage() {
   // Filter to only secondary and higher secondary grades
   const secondaryGrades = allGradeLevels?.filter((grade) => {
     const category = categorizeGradeLevel(grade);
-    return category === "SECONDARY" || category === "HIGHER_SECONDARY";
+    return category === "SECONDARY" || category === "HIGHER";
   }) || [];
 
   // Set default current year

@@ -12,6 +12,7 @@ import {
   LogOut,
   ChevronDown,
   MessageSquareText,
+  Layers,
 } from "lucide-react";
 import { ROUTES } from "@/lib/constants";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -59,6 +60,11 @@ const NAV_ITEMS = [
     label: "Observations & Feedback",
     href: ROUTES.ADMIN_OBSERVATIONS,
     icon: MessageSquareText,
+  },
+  {
+    label: "Grade Levels",
+    href: "/admin/grade-levels",
+    icon: Layers,
   },
 ] as const;
 

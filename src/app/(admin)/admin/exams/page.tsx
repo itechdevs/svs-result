@@ -434,13 +434,13 @@ export default function ExamsPage() {
                         )}
 
                         {/* Higher Secondary Section */}
-                        {groupedGrades.HIGHER_SECONDARY.length > 0 && (
+                        {groupedGrades.HIGHER.length > 0 && (
                           <>
                             <div className="h-px bg-border my-1 mx-1" />
                             <div className="px-2 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                               Higher Secondary (11-12)
                             </div>
-                            {groupedGrades.HIGHER_SECONDARY.map((level) => {
+                            {groupedGrades.HIGHER.map((level) => {
                               const isChecked = selectedGrades.includes(level);
                               return (
                                 <DropdownMenuItem

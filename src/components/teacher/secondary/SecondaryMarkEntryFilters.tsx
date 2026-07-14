@@ -49,7 +49,7 @@ export function SecondaryMarkEntryFilters({
   // Filter to only secondary and higher secondary grades
   const secondaryGrades = allGradeLevels?.filter((grade) => {
     const category = categorizeGradeLevel(grade);
-    return category === "SECONDARY" || category === "HIGHER_SECONDARY";
+    return category === "SECONDARY" || category === "HIGHER";
   }) || [];
 
   const currentYear = academicYears?.find((y) => y.isCurrent);

@@ -30,10 +30,10 @@ export const gradeLevels = [
   "12",
 ] as const;
 
-// Grade level classification helper
+// Grade level classification helper (fallback — overridden by GradeLevelCategory DB records)
 export function categorizeGradeLevel(
   gradeLevel: string,
-): "PRE_PRIMARY" | "PRIMARY" | "SECONDARY" | "HIGHER_SECONDARY" {
+): "PRE_PRIMARY" | "PRIMARY" | "SECONDARY" | "HIGHER" {
   // Pre-primary: Contains animal names or nursery-related keywords
   if (
     gradeLevel.toLowerCase().includes("rabbit") ||
@@ -54,13 +54,13 @@ export function categorizeGradeLevel(
     const grade = parseInt(numericMatch[0]);
     if (grade >= 1 && grade <= 5) return "PRIMARY";
     if (grade >= 6 && grade <= 10) return "SECONDARY";
-    if (grade >= 11 && grade <= 12) return "HIGHER_SECONDARY";
+    if (grade >= 11 && grade <= 12) return "HIGHER";
   }
 
   // Default fallback based on common patterns
   if (gradeLevel.match(/^[1-5]$/)) return "PRIMARY";
   if (gradeLevel.match(/^([6-9]|10)$/)) return "SECONDARY";
-  if (gradeLevel.match(/^(11|12)$/)) return "HIGHER_SECONDARY";
+  if (gradeLevel.match(/^(11|12)$/)) return "HIGHER";
 
   // Default to primary if uncertain
   return "PRIMARY";
@@ -72,7 +72,7 @@ export function groupGradeLevelsByCategory(gradeLevels: string[]) {
     PRE_PRIMARY: [] as string[],
     PRIMARY: [] as string[],
     SECONDARY: [] as string[],
-    HIGHER_SECONDARY: [] as string[],
+    HIGHER: [] as string[],
   };
 
   gradeLevels.forEach((level) => {
@@ -183,6 +183,17 @@ export const createAcademicYearSchema = z.object({
 });
 
 export const updateAcademicYearSchema = createAcademicYearSchema.partial();
+
+// ─── Grade Level Categories ──────────────────────────────────────────────────
+
+export const batchUpsertGradeLevelCategoriesSchema = z.object({
+  mappings: z.array(
+    z.object({
+      gradeLevel: z.string().min(1),
+      schoolLevel: z.enum(["PRE_PRIMARY", "PRIMARY", "SECONDARY", "HIGHER"]),
+    }),
+  ),
+});
 
 // ─── Grade Config ─────────────────────────────────────────────────────────────
 
