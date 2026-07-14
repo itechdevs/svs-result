@@ -5,15 +5,13 @@ import { batchUpsertGradeLevelCategoriesSchema } from "@/lib/schemas";
 import { withHandler } from "@/lib/handlers";
 
 // GET /api/admin/grade-level-categories
-export const GET = withHandler(
-  async () => {
-    const categories = await prisma.gradeLevelCategory.findMany({
-      orderBy: { gradeLevel: "asc" },
-    });
-    return ok(categories);
-  },
-  ["ADMIN"],
-);
+// Public to any authenticated user — teachers use this for sidebar grouping
+export const GET = withHandler(async () => {
+  const categories = await prisma.gradeLevelCategory.findMany({
+    orderBy: { gradeLevel: "asc" },
+  });
+  return ok(categories);
+});
 
 // PATCH /api/admin/grade-level-categories
 export const PATCH = withHandler(
