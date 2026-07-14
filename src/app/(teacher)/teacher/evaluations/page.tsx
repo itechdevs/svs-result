@@ -20,17 +20,21 @@ export default function TeacherEvaluationsPage() {
   const searchParams = useSearchParams();
   const selectedClass = searchParams.get("class") ?? "";
   const selectedSubject = searchParams.get("subject") ?? "";
+  const selectedSection = searchParams.get("section") ?? "";
   const hasSubject = !!(selectedClass && selectedSubject);
 
   const { data: profile, isLoading: isProfileLoading } = useProfile();
 
-  // Find the teacher's subject object matching the URL params
+  // Find the teacher's subject object matching the URL params — section must match too
   const matchedSubject = useMemo(() => {
     if (!hasSubject || !profile?.syncedTeacher?.subjects) return null;
     return profile.syncedTeacher.subjects.find(
-      (s) => s.name === selectedSubject && s.gradeLevel === selectedClass,
+      (s) =>
+        s.name === selectedSubject &&
+        s.gradeLevel === selectedClass &&
+        (selectedSection ? s.section === selectedSection : true),
     );
-  }, [hasSubject, selectedSubject, selectedClass, profile]);
+  }, [hasSubject, selectedSubject, selectedClass, selectedSection, profile]);
 
   // Only fetch templates when a specific subject is selected
   const { data: templatesData = [], isLoading: isTemplatesLoading } =
@@ -211,6 +215,7 @@ export default function TeacherEvaluationsPage() {
     const params = new URLSearchParams();
     if (selectedClass) params.set("class", selectedClass);
     if (selectedSubject) params.set("subject", selectedSubject);
+    if (selectedSection) params.set("section", selectedSection);
     if (extraParams) {
       Object.entries(extraParams).forEach(([k, v]) => params.set(k, v));
     }
@@ -256,6 +261,7 @@ export default function TeacherEvaluationsPage() {
           newEvalSubject={newEvalSubject}
           selectedClass={selectedClass}
           selectedSubject={selectedSubject}
+          selectedSection={selectedSection}
           onDelete={async (id) => {
             const plan = evaluations.find((e) => e.id === id);
             const ids = plan?.templateIds ?? [id];

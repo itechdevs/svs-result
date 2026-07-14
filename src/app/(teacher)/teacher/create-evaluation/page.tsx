@@ -17,6 +17,7 @@ export default function CreateEvaluationPage() {
   const searchParams = useSearchParams();
   const selectedClass = searchParams.get('class') ?? '';
   const selectedSubject = searchParams.get('subject') ?? '';
+  const selectedSection = searchParams.get('section') ?? '';
   const [selectedExamId, setSelectedExamId] = useState(searchParams.get('examId') ?? '');
 
   const [newEvalTitle, setNewEvalTitle] = useState('');
@@ -38,6 +39,7 @@ export default function CreateEvaluationPage() {
   const qs = new URLSearchParams();
   if (selectedClass) qs.set('class', selectedClass);
   if (selectedSubject) qs.set('subject', selectedSubject);
+  if (selectedSection) qs.set('section', selectedSection);
   const suffix = qs.toString() ? `?${qs}` : '';
 
   const setCurrentTab = (tab: string) => {
@@ -53,7 +55,9 @@ export default function CreateEvaluationPage() {
     }
 
     const subject = profile?.syncedTeacher?.subjects.find(
-      s => s.name === (newEvalSubject || selectedSubject) && s.gradeLevel === selectedClass
+      s => s.name === (newEvalSubject || selectedSubject) &&
+           s.gradeLevel === selectedClass &&
+           (selectedSection ? s.section === selectedSection : true)
     );
     if (!subject) {
       toast.error(`Subject "${newEvalSubject || selectedSubject}" not found for ${selectedClass}`);

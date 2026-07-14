@@ -101,7 +101,10 @@ export function TeacherSidebar() {
       .filter(
         (pair, i, arr) =>
           arr.findIndex(
-            (p) => p.className === pair.className && p.subject === pair.subject,
+            (p) =>
+              p.className === pair.className &&
+              p.subject === pair.subject &&
+              p.section === pair.section,
           ) === i,
       );
   }, [profile]);
@@ -137,12 +140,14 @@ export function TeacherSidebar() {
     pathname === ROUTES.TEACHER_RE_EXAM ||
     pathname.startsWith(ROUTES.TEACHER_RE_EXAM);
 
-  const isEvalActive = (className: string, subject: string) => {
+  const isEvalActive = (className: string, section: string | null, subject: string) => {
     const currentClass = searchParams.get("class");
+    const currentSection = searchParams.get("section");
     const currentSubject = searchParams.get("subject");
     return (
       currentClass === className &&
       currentSubject === subject &&
+      (section ? currentSection === section : !currentSection) &&
       (pathname === ROUTES.TEACHER_EVALUATIONS ||
         pathname === "/teacher/create-evaluation" ||
         pathname.startsWith("/teacher/edit-evaluation") ||
@@ -155,7 +160,7 @@ export function TeacherSidebar() {
     if (linkType === "secondary") {
       return pathname.startsWith(ROUTES.TEACHER_SECONDARY_MARK_ENTRY);
     }
-    return pairs.some((p) => isEvalActive(p.className, p.subject)) || reExamActive;
+    return pairs.some((p) => isEvalActive(p.className, p.section, p.subject)) || reExamActive;
   };
 
   const renderSection = (
@@ -256,7 +261,7 @@ export function TeacherSidebar() {
               const isSubActive =
                 linkType === "secondary"
                   ? false
-                  : isEvalActive(pair.className, pair.subject);
+                  : isEvalActive(pair.className, pair.section, pair.subject);
 
               return (
                 <Link
