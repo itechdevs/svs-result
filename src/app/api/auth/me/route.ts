@@ -23,7 +23,7 @@ export const GET = withHandler(async (_req, { user }) => {
           classTeacherClassName: true,
           subjects: {
             where: { isActive: true },
-            select: { id: true, name: true, gradeLevel: true },
+            select: { id: true, name: true, gradeLevel: true, section: true },
             orderBy: [{ gradeLevel: "asc" }, { name: "asc" }],
           },
         },

@@ -10,14 +10,78 @@ export const paginationSchema = z.object({
 });
 
 export const gradeLevels = [
-  "Playgroup",
-  "KG",
-  "Grade 1",
-  "Grade 2",
-  "Grade 3",
-  "Grade 4",
-  "Grade 5",
+  "Rabbit (Playgroup)",
+  "Penguin (Nursery)",
+  "Panda (L.K.G.)",
+  "Panda - B",
+  "Giraffe (U.K.G.)",
+  "Giraffe - A",
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "10",
+  "11",
+  "12",
 ] as const;
+
+// Grade level classification helper
+export function categorizeGradeLevel(
+  gradeLevel: string,
+): "PRE_PRIMARY" | "PRIMARY" | "SECONDARY" | "HIGHER_SECONDARY" {
+  // Pre-primary: Contains animal names or nursery-related keywords
+  if (
+    gradeLevel.toLowerCase().includes("rabbit") ||
+    gradeLevel.toLowerCase().includes("penguin") ||
+    gradeLevel.toLowerCase().includes("panda") ||
+    gradeLevel.toLowerCase().includes("giraffe") ||
+    gradeLevel.toLowerCase().includes("playgroup") ||
+    gradeLevel.toLowerCase().includes("nursery") ||
+    gradeLevel.toLowerCase().includes("kg") ||
+    gradeLevel.toLowerCase().includes("k.g")
+  ) {
+    return "PRE_PRIMARY";
+  }
+
+  // Extract numeric grade if present
+  const numericMatch = gradeLevel.match(/\d+/);
+  if (numericMatch) {
+    const grade = parseInt(numericMatch[0]);
+    if (grade >= 1 && grade <= 5) return "PRIMARY";
+    if (grade >= 6 && grade <= 10) return "SECONDARY";
+    if (grade >= 11 && grade <= 12) return "HIGHER_SECONDARY";
+  }
+
+  // Default fallback based on common patterns
+  if (gradeLevel.match(/^[1-5]$/)) return "PRIMARY";
+  if (gradeLevel.match(/^([6-9]|10)$/)) return "SECONDARY";
+  if (gradeLevel.match(/^(11|12)$/)) return "HIGHER_SECONDARY";
+
+  // Default to primary if uncertain
+  return "PRIMARY";
+}
+
+// Group grade levels by category
+export function groupGradeLevelsByCategory(gradeLevels: string[]) {
+  const groups = {
+    PRE_PRIMARY: [] as string[],
+    PRIMARY: [] as string[],
+    SECONDARY: [] as string[],
+    HIGHER_SECONDARY: [] as string[],
+  };
+
+  gradeLevels.forEach((level) => {
+    const category = categorizeGradeLevel(level);
+    groups[category].push(level);
+  });
+
+  return groups;
+}
 
 export const gradeLevelSchema = z.string();
 
@@ -238,23 +302,28 @@ const upsertEvaluationResultBaseSchema = z.object({
   remarks: z.string().max(500).optional(),
 });
 
-export const upsertEvaluationResultSchema = upsertEvaluationResultBaseSchema
-  .refine((d) => d.isAbsent || d.marksObtained !== undefined, {
-    message: "marksObtained is required unless student is absent",
-    path: ["marksObtained"],
-  });
+export const upsertEvaluationResultSchema =
+  upsertEvaluationResultBaseSchema.refine(
+    (d) => d.isAbsent || d.marksObtained !== undefined,
+    {
+      message: "marksObtained is required unless student is absent",
+      path: ["marksObtained"],
+    },
+  );
 
 export const bulkUpsertEvaluationResultsSchema = z.object({
   evaluationTemplateId: z.string().cuid(),
   submit: z.boolean().optional(), // if true, save as SUBMITTED (publish)
   results: z
     .array(
-      upsertEvaluationResultBaseSchema.extend({
-        syncedStudentId: z.string().cuid(),
-      }).refine((d) => d.isAbsent || d.marksObtained !== undefined, {
-        message: "marksObtained is required unless student is absent",
-        path: ["marksObtained"],
-      }),
+      upsertEvaluationResultBaseSchema
+        .extend({
+          syncedStudentId: z.string().cuid(),
+        })
+        .refine((d) => d.isAbsent || d.marksObtained !== undefined, {
+          message: "marksObtained is required unless student is absent",
+          path: ["marksObtained"],
+        }),
     )
     .min(1),
 });
@@ -265,21 +334,24 @@ export const verifyEvaluationResultSchema = z.object({
 
 export const listEvaluationResultsSchema = paginationSchema.extend({
   evaluationTemplateId: z.string().cuid().optional(),
-  evaluationTemplateIds: z.string().transform((val, ctx) => {
-    if (!val) return undefined;
-    const ids = val.split(',');
-    for (const id of ids) {
-      const result = z.string().cuid().safeParse(id);
-      if (!result.success) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `Invalid CUID format: ${id}`,
-        });
-        return z.NEVER;
+  evaluationTemplateIds: z
+    .string()
+    .transform((val, ctx) => {
+      if (!val) return undefined;
+      const ids = val.split(",");
+      for (const id of ids) {
+        const result = z.string().cuid().safeParse(id);
+        if (!result.success) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Invalid CUID format: ${id}`,
+          });
+          return z.NEVER;
+        }
       }
-    }
-    return ids;
-  }).optional(),
+      return ids;
+    })
+    .optional(),
   syncedStudentId: z.string().cuid().optional(),
   status: z.enum(["DRAFT", "SUBMITTED", "VERIFIED", "LOCKED"]).optional(),
 });
@@ -316,7 +388,11 @@ export const reExamAssessmentSchema = z.object({
   scheduledDate: z.coerce.date().refine((d) => !isNaN(d.getTime()), {
     message: "Invalid scheduled date",
   }),
-  remarks: z.string().max(500).optional().transform(val => val || undefined),
+  remarks: z
+    .string()
+    .max(500)
+    .optional()
+    .transform((val) => val || undefined),
 });
 
 // ─── Aggregation ──────────────────────────────────────────────────────────────
@@ -344,16 +420,18 @@ export const generateMarksheetSchema = z.object({
 
 // ─── Sync ─────────────────────────────────────────────────────────────────────
 
-export const syncStudentSchema = z.object({
-  sourceId: z.string(),
-  name: z.string().min(1),
-  rollNumber: z.string().min(1),
-  grade: z.string().min(1),
-  section: z.string().min(1),
-  isActive: z.boolean().default(true),
-  class: z.string().optional(),
-  classroom: z.object({ name: z.string() }).optional(),
-}).passthrough();
+export const syncStudentSchema = z
+  .object({
+    sourceId: z.string(),
+    name: z.string().min(1),
+    rollNumber: z.string().min(1),
+    grade: z.string().min(1),
+    section: z.string().min(1),
+    isActive: z.boolean().default(true),
+    class: z.string().optional(),
+    classroom: z.object({ name: z.string() }).optional(),
+  })
+  .passthrough();
 
 export const syncTeacherSchema = z.object({
   sourceId: z.string(),
@@ -387,7 +465,9 @@ export const createTeacherCompilationSchema = z.object({
   syncedSubjectId: z.string().min(1, "Subject is required"),
   academicYearId: z.string().min(1, "Academic year is required"),
   gradeLevel: z.string().min(1, "Grade level is required"),
-  evaluationTemplateIds: z.array(z.string()).min(1, "At least one evaluation template is required"),
+  evaluationTemplateIds: z
+    .array(z.string())
+    .min(1, "At least one evaluation template is required"),
 });
 
 export const listTeacherCompilationsSchema = z.object({
@@ -396,6 +476,134 @@ export const listTeacherCompilationsSchema = z.object({
   gradeLevel: z.string().optional(),
   status: z.enum(["DRAFT", "SUBMITTED"]).optional(),
 });
+
+// ─── Secondary Level (Grades 6-10) ─────────────────────────────────────────────
+
+export const secondaryPracticalHeadingSchema = z.object({
+  id: z.string().cuid().optional(),
+  name: z.string().min(1),
+  fullMarks: z.number().positive(),
+  passMarks: z.number().nonnegative().optional(), // Adding passMarks to align with component (though maybe not required by schema, user mentioned it in prompt)
+  displayOrder: z.number().int().min(0).default(0),
+});
+
+export const secondaryComponentTypeSchema = z.enum([
+  "INTERNAL",
+  "THEORY",
+  "PRACTICAL",
+]);
+
+export const secondarySubjectComponentSchema = z.object({
+  id: z.string().cuid().optional(), // optional for creates, required for updates
+  type: secondaryComponentTypeSchema,
+  fullMarks: z.number().positive(),
+  passMarks: z.number().nonnegative(),
+  displayOrder: z.number().int().min(0).default(0),
+  practicalHeadings: z.array(secondaryPracticalHeadingSchema).optional(),
+});
+
+export const createSecondarySubjectConfigSchema = z.object({
+  syncedSubjectId: z.string().cuid(),
+  academicYearId: z.string().cuid(),
+  gradeLevel: z.string(),
+  creditHours: z.number().int().positive(),
+  components: z.array(secondarySubjectComponentSchema).min(1),
+});
+
+export const updateSecondarySubjectConfigSchema =
+  createSecondarySubjectConfigSchema
+    .extend({
+      isActive: z.boolean().optional(),
+    })
+    .partial();
+
+export const createSecondaryPracticalHeadingSchema = z.object({
+  headings: z.array(secondaryPracticalHeadingSchema).min(1),
+});
+
+export const secondaryTermWeightSchema = z.object({
+  academicYearId: z.string().cuid(),
+  gradeLevel: z.string(),
+  examId: z.string().cuid(),
+  termName: z.string().min(1),
+  weightPercent: z.number().positive().max(100),
+  displayOrder: z.number().int().min(0).default(0),
+});
+
+export const setSecondaryTermWeightsSchema = z.object({
+  gradeLevel: z.string(),
+  academicYearId: z.string().cuid(),
+  weights: z
+    .array(secondaryTermWeightSchema)
+    .min(1)
+    .refine(
+      (weights) => {
+        const sum = weights.reduce((acc, curr) => acc + curr.weightPercent, 0);
+        // Allow small floating point inaccuracies but generally should equal 100
+        return Math.abs(sum - 100) < 0.01;
+      },
+      {
+        message: "Term weights must sum to exactly 100",
+      },
+    ),
+});
+
+export const secondaryComponentMarkSchema = z.object({
+  syncedStudentId: z.string().cuid(),
+  marksObtained: z.number().min(0).optional(),
+  isAbsent: z.boolean().default(false),
+  remarks: z.string().max(500).optional(),
+});
+
+export const upsertSecondaryMarksSchema = z.object({
+  componentId: z.string().cuid(),
+  examId: z.string().cuid(), // Term exam
+  marks: z
+    .array(secondaryComponentMarkSchema)
+    .min(1)
+    .refine(
+      (marks) =>
+        marks.every((m) => m.isAbsent || m.marksObtained !== undefined),
+      {
+        message: "marksObtained is required unless student is absent",
+        path: ["marksObtained"],
+      },
+    ),
+});
+
+export const secondaryHeadingMarkSchema = z.object({
+  syncedStudentId: z.string().cuid(),
+  headingId: z.string().cuid(),
+  marksObtained: z.number().min(0),
+});
+
+export const upsertSecondaryPracticalMarksSchema = z.object({
+  componentId: z.string().cuid(),
+  examId: z.string().cuid(),
+  marks: z.array(secondaryHeadingMarkSchema).min(1),
+});
+
+export const compileSecondaryTermSchema = z.object({
+  examId: z.string().cuid(),
+});
+
+export const publishSecondaryTermSchema = z.object({
+  examId: z.string().cuid(),
+});
+
+export const compileSecondaryAnnualSchema = z.object({
+  academicYearId: z.string().cuid(),
+  gradeLevel: z.string(),
+});
+
+export const secondaryMarksheetSchema = z
+  .object({
+    termResultId: z.string().cuid().optional(),
+    annualResultId: z.string().cuid().optional(),
+  })
+  .refine((d) => d.termResultId || d.annualResultId, {
+    message: "Must provide either termResultId or annualResultId",
+  });
 
 // ─── Observation Categories ───────────────────────────────────────────────────
 
@@ -424,6 +632,11 @@ export const createObservationItemSchema = z.object({
 });
 
 export const updateObservationItemSchema = z.object({
-  description: z.string().min(1, "Description is required").max(500).trim().optional(),
+  description: z
+    .string()
+    .min(1, "Description is required")
+    .max(500)
+    .trim()
+    .optional(),
   displayOrder: z.number().int().min(0).optional(),
 });

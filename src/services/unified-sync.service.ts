@@ -14,6 +14,24 @@ export class UnifiedSyncService {
     this.apiUrl = process.env.EXTERNAL_API_URL || "http://localhost:4000";
   }
 
+  /**
+   * Splits a combined gradeLevel string like "7-A" into { gradeLevel: "7", section: "A" }.
+   * If the source already sends them separately (section field present), those take priority.
+   * If there is no dash-suffix (e.g. "Grade 5"), section is null.
+   */
+  private parseGradeLevel(raw: string | undefined | null, explicitSection?: string | null): { gradeLevel: string; section: string | null } {
+    if (explicitSection != null) {
+      return { gradeLevel: raw || "General", section: explicitSection || null };
+    }
+    if (!raw) return { gradeLevel: "General", section: null };
+    // Match trailing "-<single-or-two-char>" e.g. "7-A", "Grade 7-B", "10-AB"
+    const match = raw.match(/^(.+)-([A-Za-z]{1,2})$/);
+    if (match) {
+      return { gradeLevel: match[1].trim(), section: match[2].toUpperCase() };
+    }
+    return { gradeLevel: raw, section: null };
+  }
+
   private async fetchData<T>(endpoint: string): Promise<T[]> {
     const response = await fetch(`${this.apiUrl}${endpoint}`, {
       headers: { "Content-Type": "application/json" },
@@ -95,31 +113,62 @@ export class UnifiedSyncService {
 
             // Update subjects assigned to this teacher
             // Teacher API has the correct gradeLevel; create/update subjects as needed
-            const teacherSubjects: { id: string; name: string; code?: string; gradeLevel?: string }[] = teacher.subjects ?? [];
+            const teacherSubjects: { id: string; name: string; code?: string; gradeLevel?: string; section?: string }[] = teacher.subjects ?? [];
             if (teacherSubjects.length > 0) {
               const subjectIds = teacherSubjects.map(s => s.id);
               const existingSubjects = await prisma.syncedSubject.findMany({
                 where: { sourceId: { in: subjectIds } },
               });
 
+              // Build a lookup: grade → ordered list of sections from assigned classrooms
+              // e.g. classrooms [{grade:"7", section:"A"}, {grade:"7", section:"B"}]
+              // → { "7": ["A", "B"] }
+              const classrooms: { grade?: string; section?: string }[] =
+                teacher.assignedClassroomsDetails ?? teacher.classrooms ?? [];
+              const gradeSectionMap = new Map<string, string[]>();
+              for (const cls of classrooms) {
+                const g = cls.grade?.trim();
+                const s = cls.section?.trim();
+                if (!g || !s) continue;
+                if (!gradeSectionMap.has(g)) gradeSectionMap.set(g, []);
+                gradeSectionMap.get(g)!.push(s.toUpperCase());
+              }
+              // Counter to cycle through sections per grade as we process subjects
+              const gradeSectionCursor = new Map<string, number>();
+
               const existingMap = new Map(existingSubjects.map(s => [s.sourceId, s]));
               const allSyncedSubjects: typeof existingSubjects = [];
 
               for (const sub of teacherSubjects) {
                 const existing = existingMap.get(sub.id);
+                let { gradeLevel: parsedGrade, section: parsedSection } = this.parseGradeLevel(sub.gradeLevel, sub.section);
+
+                // If section not embedded in gradeLevel, try to derive from classrooms
+                if (!parsedSection) {
+                  const sections = gradeSectionMap.get(parsedGrade);
+                  if (sections && sections.length > 0) {
+                    const cursor = gradeSectionCursor.get(parsedGrade) ?? 0;
+                    parsedSection = sections[cursor % sections.length];
+                    gradeSectionCursor.set(parsedGrade, cursor + 1);
+                  }
+                }
+
                 if (existing) {
-                  // Update gradeLevel from teacher data (teacher API has correct names)
-                  if (sub.gradeLevel && sub.gradeLevel !== existing.gradeLevel) {
+                  // If source provides no section, preserve whatever is already stored
+                  const effectiveSection = parsedSection ?? existing.section;
+                  // Update gradeLevel/section from teacher data
+                  if (parsedGrade !== existing.gradeLevel || effectiveSection !== existing.section) {
                     await prisma.syncedSubject.update({
                       where: { id: existing.id },
                       data: {
-                        gradeLevel: sub.gradeLevel,
+                        gradeLevel: parsedGrade,
+                        section: effectiveSection,
                         name: sub.name,
                         code: sub.code || sub.name.toUpperCase().substring(0, 6),
                       },
                     });
                   }
-                  allSyncedSubjects.push({ ...existing, gradeLevel: sub.gradeLevel || existing.gradeLevel });
+                  allSyncedSubjects.push({ ...existing, gradeLevel: parsedGrade });
                 } else {
                   // Create missing subject from teacher data
                   const created = await prisma.syncedSubject.create({
@@ -127,7 +176,8 @@ export class UnifiedSyncService {
                       sourceId: sub.id,
                       name: sub.name,
                       code: sub.code || sub.name.toUpperCase().substring(0, 6),
-                      gradeLevel: sub.gradeLevel || "General",
+                      gradeLevel: parsedGrade,
+                      section: parsedSection,
                     },
                   });
                   allSyncedSubjects.push(created);
@@ -297,12 +347,19 @@ export class UnifiedSyncService {
             }
           }
 
+          const { gradeLevel: parsedGrade, section: parsedSection } = this.parseGradeLevel(subject.gradeLevel, subject.section);
+
+          // Preserve existing section if source provides none
+          const existingSubject = await prisma.syncedSubject.findUnique({ where: { sourceId: subject.id } });
+          const effectiveSection = parsedSection ?? existingSubject?.section ?? null;
+
           await prisma.syncedSubject.upsert({
             where: { sourceId: subject.id },
             update: {
               name: subject.name,
               code: subject.code || subject.name.toUpperCase().substring(0, 6),
-              gradeLevel: subject.gradeLevel || "General",
+              gradeLevel: parsedGrade,
+              section: effectiveSection,
               ...(teachersConnect.length > 0 && {
                 teachers: { connect: teachersConnect },
               }),
@@ -312,7 +369,8 @@ export class UnifiedSyncService {
               sourceId: subject.id,
               name: subject.name,
               code: subject.code || subject.name.toUpperCase().substring(0, 6),
-              gradeLevel: subject.gradeLevel || "General",
+              gradeLevel: parsedGrade,
+              section: parsedSection,
               teachers: { connect: teachersConnect },
             },
           });

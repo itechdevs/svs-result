@@ -28,6 +28,7 @@ const NAV_ITEMS = [
   { label: "Dashboard Overview", tab: "dashboard", icon: LayoutGrid, adminOnly: false },
   { label: "Evaluations Plan", tab: "evaluations", icon: ClipboardList, adminOnly: false },
   { label: "Marking Center", tab: "mark-entry", icon: PenLine, adminOnly: false, teacherOnly: true },
+  { label: "Sec. Mark Entry", tab: "teacher/secondary/mark-entry", icon: PenLine, adminOnly: false, teacherOnly: true },
   { label: "Student Records", tab: "student-records", icon: Users, adminOnly: false },
   { label: "Re-Exam Panel", tab: "re-exam-portal", icon: ClipboardX, adminOnly: false, teacherOnly: true },
   { label: "Teacher Allocations", tab: "allocations", icon: Grid2X2, adminOnly: true },
@@ -81,6 +82,7 @@ export function Sidebar({ role = "teacher" }: SidebarProps) {
           const Icon = item.icon;
           const isActive =
             currentTab === item.tab ||
+            pathname === `/${item.tab}` ||
             (item.tab === "evaluations" && currentTab === "create-evaluation");
           const isFirstAdminItem = item.tab === "allocations";
 

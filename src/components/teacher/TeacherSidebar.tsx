@@ -4,25 +4,78 @@ import React from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutGrid, ClipboardList, ClipboardX, ChevronDown, X, MessageSquareText } from "lucide-react";
+import {
+  LayoutGrid,
+  ClipboardList,
+  ClipboardX,
+  ChevronDown,
+  X,
+  PenLine,
+  MessageSquareText,
+} from "lucide-react";
 import { ROUTES } from "@/lib/constants";
 import { useSidebar } from "@/components/shared/ui/sidebar";
-import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/shared/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/shared/ui/sheet";
 import { useState, useMemo } from "react";
 import { useProfile } from "@/hooks/use-profile";
 import { signOut } from "next-auth/react";
 import { toast } from "sonner";
 import { LogOut } from "lucide-react";
 
-function getNavItems(isClassTeacher: boolean): { label: string; href: string; icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>; hasSubMenu?: boolean }[] {
-  const items: { label: string; href: string; icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>; hasSubMenu?: boolean }[] = [
-    { label: "Teacher Dashboard", href: ROUTES.TEACHER_DASHBOARD, icon: LayoutGrid },
-    { label: "Evaluation Plan", href: ROUTES.TEACHER_EVALUATIONS, icon: ClipboardList, hasSubMenu: true },
+function getNavItems(isClassTeacher: boolean): {
+  label: string;
+  href: string;
+  icon: React.ComponentType<{
+    size?: number;
+    strokeWidth?: number;
+    className?: string;
+  }>;
+  hasSubMenu?: boolean;
+}[] {
+  const items: {
+    label: string;
+    href: string;
+    icon: React.ComponentType<{
+      size?: number;
+      strokeWidth?: number;
+      className?: string;
+    }>;
+    hasSubMenu?: boolean;
+  }[] = [
+    {
+      label: "Teacher Dashboard",
+      href: ROUTES.TEACHER_DASHBOARD,
+      icon: LayoutGrid,
+    },
+    {
+      label: "Evaluation Plan",
+      href: ROUTES.TEACHER_EVALUATIONS,
+      icon: ClipboardList,
+      hasSubMenu: true,
+    },
+    {
+      label: "Sec. Mark Entry",
+      href: "/teacher/secondary/mark-entry",
+      icon: PenLine,
+    },
   ];
   if (isClassTeacher) {
-    items.push({ label: "Observations", href: ROUTES.TEACHER_OBSERVATIONS, icon: MessageSquareText });
+    items.push({
+      label: "Observations",
+      href: ROUTES.TEACHER_OBSERVATIONS,
+      icon: MessageSquareText,
+    });
   }
-  items.push({ label: "Re-Exam Panel", href: ROUTES.TEACHER_RE_EXAM, icon: ClipboardX });
+  items.push({
+    label: "Re-Exam Panel",
+    href: ROUTES.TEACHER_RE_EXAM,
+    icon: ClipboardX,
+  });
   return items;
 }
 
@@ -37,21 +90,37 @@ export function TeacherSidebar() {
   const { data: profile } = useProfile();
 
   const isClassTeacher = !!profile?.syncedTeacher?.classTeacherId;
-  const NAV_ITEMS = useMemo(() => getNavItems(isClassTeacher), [isClassTeacher]);
+  const NAV_ITEMS = useMemo(
+    () => getNavItems(isClassTeacher),
+    [isClassTeacher],
+  );
 
   const assignedPairs = useMemo(() => {
     const subjects = profile?.syncedTeacher?.subjects ?? [];
-    if (process.env.NODE_ENV === 'development' && subjects.length === 0 && profile?.role === 'TEACHER') {
+    if (
+      process.env.NODE_ENV === "development" &&
+      subjects.length === 0 &&
+      profile?.role === "TEACHER"
+    ) {
       console.warn(
-        '[TeacherSidebar] No subjects found for teacher.',
-        'syncedTeacher:', profile?.syncedTeacher ? 'present' : 'null',
-        'subjects count:', subjects.length,
+        "[TeacherSidebar] No subjects found for teacher.",
+        "syncedTeacher:",
+        profile?.syncedTeacher ? "present" : "null",
+        "subjects count:",
+        subjects.length,
       );
     }
     return subjects
-      .map(s => ({ className: s.gradeLevel, subject: s.name }))
-      .filter((pair, i, arr) =>
-        arr.findIndex(p => p.className === pair.className && p.subject === pair.subject) === i
+      .map((s) => ({
+        className: s.gradeLevel,
+        section: s.section,
+        subject: s.name,
+      }))
+      .filter(
+        (pair, i, arr) =>
+          arr.findIndex(
+            (p) => p.className === pair.className && p.subject === pair.subject,
+          ) === i,
       );
   }, [profile]);
 
@@ -60,10 +129,15 @@ export function TeacherSidebar() {
       className={cn(
         "h-full flex flex-col shrink-0 select-none transition-all duration-300",
         "bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-md",
-        isCollapsed ? "w-[72px]" : "w-[260px]"
+        isCollapsed ? "w-[72px]" : "w-[260px]",
       )}
     >
-      <div className={cn("pt-6 pb-3 border-b border-sidebar-border flex items-center justify-between", isCollapsed ? "px-2 text-center" : "px-6")}>
+      <div
+        className={cn(
+          "pt-6 pb-3 border-b border-sidebar-border flex items-center justify-between",
+          isCollapsed ? "px-2 text-center" : "px-6",
+        )}
+      >
         <p className="text-[9.5px] font-semibold text-sidebar-foreground/40 uppercase tracking-[0.12em] whitespace-nowrap overflow-hidden">
           {isCollapsed ? "TP" : "Teacher Portal"}
         </p>
@@ -78,18 +152,24 @@ export function TeacherSidebar() {
         )}
       </div>
 
-      <nav className={cn("flex-1 py-3 flex flex-col gap-0.5 overflow-y-auto", isCollapsed ? "px-2" : "px-3")} aria-label="Teacher navigation">
+      <nav
+        className={cn(
+          "flex-1 py-3 flex flex-col gap-0.5 overflow-y-auto",
+          isCollapsed ? "px-2" : "px-3",
+        )}
+        aria-label="Teacher navigation"
+      >
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive =
             pathname === item.href ||
-            (item.href === ROUTES.TEACHER_EVALUATIONS && (
-              pathname === "/teacher/create-evaluation" ||
-              pathname.startsWith("/teacher/edit-evaluation") ||
-              pathname.startsWith(ROUTES.TEACHER_MARK_ENTRY) ||
-              pathname.startsWith("/teacher/result-compilation")
-            )) ||
-            (item.href === ROUTES.TEACHER_RE_EXAM && pathname.startsWith(ROUTES.TEACHER_RE_EXAM));
+            (item.href === ROUTES.TEACHER_EVALUATIONS &&
+              (pathname === "/teacher/create-evaluation" ||
+                pathname.startsWith("/teacher/edit-evaluation") ||
+                pathname.startsWith(ROUTES.TEACHER_MARK_ENTRY) ||
+                pathname.startsWith("/teacher/result-compilation"))) ||
+            (item.href === ROUTES.TEACHER_RE_EXAM &&
+              pathname.startsWith(ROUTES.TEACHER_RE_EXAM));
 
           const isSubMenu = item.hasSubMenu;
 
@@ -106,26 +186,47 @@ export function TeacherSidebar() {
                     isActive
                       ? "bg-sidebar-accent border-sidebar-border text-sidebar-accent-foreground"
                       : "border-transparent hover:bg-sidebar-accent/60 hover:border-sidebar-border/50 text-sidebar-foreground/70 hover:text-sidebar-foreground",
-                    isCollapsed ? "px-2 justify-center" : "px-3"
+                    isCollapsed ? "px-2 justify-center" : "px-3",
                   )}
                   title={item.label}
                 >
-                  <div className={cn(
-                    "w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-all duration-200",
-                    isActive ? "bg-sidebar-primary/20" : "bg-sidebar-foreground/5 group-hover:bg-sidebar-primary/10"
-                  )}>
-                    <Icon size={16} strokeWidth={1.8} className={cn(
-                      "transition-colors duration-200",
-                      isActive ? "text-sidebar-primary" : "text-sidebar-foreground/50 group-hover:text-sidebar-primary/80"
-                    )} />
+                  <div
+                    className={cn(
+                      "w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-all duration-200",
+                      isActive
+                        ? "bg-sidebar-primary/20"
+                        : "bg-sidebar-foreground/5 group-hover:bg-sidebar-primary/10",
+                    )}
+                  >
+                    <Icon
+                      size={16}
+                      strokeWidth={1.8}
+                      className={cn(
+                        "transition-colors duration-200",
+                        isActive
+                          ? "text-sidebar-primary"
+                          : "text-sidebar-foreground/50 group-hover:text-sidebar-primary/80",
+                      )}
+                    />
                   </div>
                   {!isCollapsed && (
-                    <span className={cn("text-[13px] transition-colors duration-200 whitespace-nowrap", isActive ? "font-semibold" : "font-medium")}>
+                    <span
+                      className={cn(
+                        "text-[13px] transition-colors duration-200 whitespace-nowrap",
+                        isActive ? "font-semibold" : "font-medium",
+                      )}
+                    >
                       {item.label}
                     </span>
                   )}
                   {!isCollapsed && (
-                    <ChevronDown size={14} className={cn("ml-auto transition-transform", evaluationsExpanded && "rotate-180")} />
+                    <ChevronDown
+                      size={14}
+                      className={cn(
+                        "ml-auto transition-transform",
+                        evaluationsExpanded && "rotate-180",
+                      )}
+                    />
                   )}
                 </button>
               ) : (
@@ -137,21 +238,36 @@ export function TeacherSidebar() {
                     isActive
                       ? "bg-sidebar-accent border-sidebar-border text-sidebar-accent-foreground"
                       : "border-transparent hover:bg-sidebar-accent/60 hover:border-sidebar-border/50 text-sidebar-foreground/70 hover:text-sidebar-foreground",
-                    isCollapsed ? "px-2 justify-center" : "px-3"
+                    isCollapsed ? "px-2 justify-center" : "px-3",
                   )}
                   title={item.label}
                 >
-                  <div className={cn(
-                    "w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-all duration-200",
-                    isActive ? "bg-sidebar-primary/20" : "bg-sidebar-foreground/5 group-hover:bg-sidebar-primary/10"
-                  )}>
-                    <Icon size={16} strokeWidth={1.8} className={cn(
-                      "transition-colors duration-200",
-                      isActive ? "text-sidebar-primary" : "text-sidebar-foreground/50 group-hover:text-sidebar-primary/80"
-                    )} />
+                  <div
+                    className={cn(
+                      "w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-all duration-200",
+                      isActive
+                        ? "bg-sidebar-primary/20"
+                        : "bg-sidebar-foreground/5 group-hover:bg-sidebar-primary/10",
+                    )}
+                  >
+                    <Icon
+                      size={16}
+                      strokeWidth={1.8}
+                      className={cn(
+                        "transition-colors duration-200",
+                        isActive
+                          ? "text-sidebar-primary"
+                          : "text-sidebar-foreground/50 group-hover:text-sidebar-primary/80",
+                      )}
+                    />
                   </div>
                   {!isCollapsed && (
-                    <span className={cn("text-[13px] transition-colors duration-200 whitespace-nowrap", isActive ? "font-semibold" : "font-medium")}>
+                    <span
+                      className={cn(
+                        "text-[13px] transition-colors duration-200 whitespace-nowrap",
+                        isActive ? "font-semibold" : "font-medium",
+                      )}
+                    >
                       {item.label}
                     </span>
                   )}
@@ -164,33 +280,41 @@ export function TeacherSidebar() {
               {/* Submenu for Evaluations */}
               {item.hasSubMenu && !isCollapsed && evaluationsExpanded && (
                 <div className="mt-1 ml-11 space-y-1">
-                  {assignedPairs.map(({ className, subject }, idx) => {
-                    const params = new URLSearchParams({ class: className, subject });
+                  {assignedPairs.map(({ className, section, subject }, idx) => {
+                    const params = new URLSearchParams({
+                      class: className,
+                      subject,
+                    });
+                    if (section) params.set("section", section);
                     const href = `${ROUTES.TEACHER_EVALUATIONS}?${params}`;
                     const isSubActive =
-                      searchParams.get('class') === className &&
-                      searchParams.get('subject') === subject &&
-                      (
-                        pathname === ROUTES.TEACHER_EVALUATIONS ||
+                      searchParams.get("class") === className &&
+                      searchParams.get("subject") === subject &&
+                      (!section || searchParams.get("section") === section) &&
+                      (pathname === ROUTES.TEACHER_EVALUATIONS ||
                         pathname === "/teacher/create-evaluation" ||
                         pathname.startsWith("/teacher/edit-evaluation") ||
                         pathname.startsWith(ROUTES.TEACHER_MARK_ENTRY) ||
-                        pathname.startsWith("/teacher/result-compilation")
-                      );
+                        pathname.startsWith("/teacher/result-compilation"));
                     return (
                       <Link
-                        key={`${className}-${subject}-${idx}`}
+                        key={`${className}-${section ?? ""}-${subject}-${idx}`}
                         href={href}
                         onClick={() => isMobile && setOpenMobile(false)}
                         className={cn(
                           "block relative py-1.5 px-3 text-[11px] rounded transition-colors pr-6",
                           isSubActive
                             ? "bg-sidebar-accent/60 text-sidebar-foreground"
-                            : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40"
+                            : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40",
                         )}
                       >
-                        <div className="font-medium">{className}</div>
-                        <div className="text-[10px] text-sidebar-foreground/40">{subject}</div>
+                        <div className="font-medium">
+                          {className}
+                          {section ? ` (${section})` : ""}
+                        </div>
+                        <div className="text-[10px] text-sidebar-foreground/40">
+                          {subject}
+                        </div>
                         {isSubActive && (
                           <span className="absolute right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-sidebar-primary" />
                         )}
@@ -207,11 +331,16 @@ export function TeacherSidebar() {
       <div className="relative border-t border-sidebar-border">
         {userMenuOpen && (
           <>
-            <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
-            <div className={cn(
-              "absolute bottom-[110%] z-50 rounded-md border border-border bg-popover p-1 shadow-md",
-              isCollapsed ? "left-2 w-12" : "left-3 right-3"
-            )}>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setUserMenuOpen(false)}
+            />
+            <div
+              className={cn(
+                "absolute bottom-[110%] z-50 rounded-md border border-border bg-popover p-1 shadow-md",
+                isCollapsed ? "left-2 w-12" : "left-3 right-3",
+              )}
+            >
               <button
                 onClick={async () => {
                   toast.success("Signed out successfully");
@@ -219,7 +348,7 @@ export function TeacherSidebar() {
                 }}
                 className={cn(
                   "flex w-full items-center gap-2 rounded-sm py-2 text-sm text-destructive hover:bg-accent transition-colors",
-                  isCollapsed ? "justify-center px-0" : "px-3"
+                  isCollapsed ? "justify-center px-0" : "px-3",
                 )}
                 title="Sign out"
               >
@@ -233,7 +362,7 @@ export function TeacherSidebar() {
           onClick={() => setUserMenuOpen(!userMenuOpen)}
           className={cn(
             "w-full flex items-center gap-2.5 px-3 py-3 hover:bg-sidebar-accent transition-colors text-left",
-            isCollapsed ? "justify-center" : ""
+            isCollapsed ? "justify-center" : "",
           )}
         >
           <div className="w-8 h-8 rounded-full overflow-hidden border border-sidebar-border shrink-0 bg-primary text-primary-foreground flex items-center justify-center font-semibold text-xs">
@@ -245,7 +374,9 @@ export function TeacherSidebar() {
                 {profile?.name || "Teacher"}
               </p>
               <p className="text-[10px] font-medium text-sidebar-foreground/50 uppercase tracking-[0.05em] truncate mt-0.5">
-                {profile?.role === "ADMIN" ? "Administrator" : "Faculty Teacher"}
+                {profile?.role === "ADMIN"
+                  ? "Administrator"
+                  : "Faculty Teacher"}
               </p>
             </div>
           )}
@@ -257,9 +388,14 @@ export function TeacherSidebar() {
   if (isMobile) {
     return (
       <Sheet open={openMobile} onOpenChange={setOpenMobile}>
-        <SheetContent side="left" className="p-0 border-none bg-transparent w-[260px] [&>button]:hidden">
+        <SheetContent
+          side="left"
+          className="p-0 border-none bg-transparent w-[260px] [&>button]:hidden"
+        >
           <SheetTitle className="sr-only">Teacher Sidebar</SheetTitle>
-          <SheetDescription className="sr-only">Teacher navigation sidebar</SheetDescription>
+          <SheetDescription className="sr-only">
+            Teacher navigation sidebar
+          </SheetDescription>
           {SidebarContent}
         </SheetContent>
       </Sheet>
