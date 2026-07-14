@@ -23,60 +23,46 @@ import {
 } from "@/components/shared/ui/sheet";
 import { useState, useMemo } from "react";
 import { useProfile } from "@/hooks/use-profile";
+import { useGradeLevelCategories } from "@/hooks/use-grade-level-categories";
+import { categorizeGradeLevel } from "@/lib/schemas";
 import { signOut } from "next-auth/react";
 import { toast } from "sonner";
 import { LogOut } from "lucide-react";
 
-function getNavItems(isClassTeacher: boolean): {
-  label: string;
-  href: string;
-  icon: React.ComponentType<{
-    size?: number;
-    strokeWidth?: number;
-    className?: string;
-  }>;
-  hasSubMenu?: boolean;
-}[] {
-  const items: {
-    label: string;
-    href: string;
-    icon: React.ComponentType<{
-      size?: number;
-      strokeWidth?: number;
-      className?: string;
-    }>;
-    hasSubMenu?: boolean;
-  }[] = [
-    {
-      label: "Teacher Dashboard",
-      href: ROUTES.TEACHER_DASHBOARD,
-      icon: LayoutGrid,
-    },
-    {
-      label: "Evaluation Plan",
-      href: ROUTES.TEACHER_EVALUATIONS,
-      icon: ClipboardList,
-      hasSubMenu: true,
-    },
-    {
-      label: "Sec. Mark Entry",
-      href: "/teacher/secondary/mark-entry",
-      icon: PenLine,
-    },
-  ];
-  if (isClassTeacher) {
-    items.push({
-      label: "Observations",
-      href: ROUTES.TEACHER_OBSERVATIONS,
-      icon: MessageSquareText,
-    });
+type SchoolLevelKey = "PRE_PRIMARY" | "PRIMARY" | "SECONDARY" | "HIGHER";
+
+const LEVEL_LABELS: Record<SchoolLevelKey, string> = {
+  PRE_PRIMARY: "Pre-Primary Evaluation",
+  PRIMARY: "Primary Evaluation",
+  SECONDARY: "Secondary Marks Entry",
+  HIGHER: "Secondary Marks Entry",
+};
+
+type SubjectPair = {
+  className: string;
+  section: string | null;
+  subject: string;
+  syncedSubjectId: string;
+};
+
+function buildSchoolLevelMap(
+  categories: { gradeLevel: string; schoolLevel: string }[],
+): Map<string, SchoolLevelKey> {
+  const map = new Map<string, SchoolLevelKey>();
+  for (const c of categories) {
+    map.set(c.gradeLevel, c.schoolLevel as SchoolLevelKey);
   }
-  items.push({
-    label: "Re-Exam Panel",
-    href: ROUTES.TEACHER_RE_EXAM,
-    icon: ClipboardX,
-  });
-  return items;
+  return map;
+}
+
+function getSchoolLevel(
+  gradeLevel: string,
+  dbMap: Map<string, SchoolLevelKey>,
+): SchoolLevelKey {
+  if (dbMap.has(gradeLevel)) return dbMap.get(gradeLevel)!;
+  const fallback = categorizeGradeLevel(gradeLevel);
+  if (fallback === "HIGHER") return "HIGHER";
+  return fallback as SchoolLevelKey;
 }
 
 export function TeacherSidebar() {
@@ -84,37 +70,33 @@ export function TeacherSidebar() {
   const searchParams = useSearchParams();
   const { state, isMobile, openMobile, setOpenMobile } = useSidebar();
   const isCollapsed = state === "collapsed" && !isMobile;
-  const [evaluationsExpanded, setEvaluationsExpanded] = useState(true);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<
+    Record<string, boolean>
+  >({
+    "pre-primary": true,
+    primary: true,
+    secondary: true,
+  });
 
   const { data: profile } = useProfile();
+  const { data: categories } = useGradeLevelCategories();
 
   const isClassTeacher = !!profile?.syncedTeacher?.classTeacherId;
-  const NAV_ITEMS = useMemo(
-    () => getNavItems(isClassTeacher),
-    [isClassTeacher],
+
+  const dbMap = useMemo(
+    () => buildSchoolLevelMap(categories ?? []),
+    [categories],
   );
 
-  const assignedPairs = useMemo(() => {
+  const subjectPairs: SubjectPair[] = useMemo(() => {
     const subjects = profile?.syncedTeacher?.subjects ?? [];
-    if (
-      process.env.NODE_ENV === "development" &&
-      subjects.length === 0 &&
-      profile?.role === "TEACHER"
-    ) {
-      console.warn(
-        "[TeacherSidebar] No subjects found for teacher.",
-        "syncedTeacher:",
-        profile?.syncedTeacher ? "present" : "null",
-        "subjects count:",
-        subjects.length,
-      );
-    }
     return subjects
       .map((s) => ({
         className: s.gradeLevel,
         section: s.section,
         subject: s.name,
+        syncedSubjectId: s.id,
       }))
       .filter(
         (pair, i, arr) =>
@@ -123,6 +105,231 @@ export function TeacherSidebar() {
           ) === i,
       );
   }, [profile]);
+
+  const groupedPairs = useMemo(() => {
+    const groups: Record<SchoolLevelKey, SubjectPair[]> = {
+      PRE_PRIMARY: [],
+      PRIMARY: [],
+      SECONDARY: [],
+      HIGHER: [],
+    };
+    for (const pair of subjectPairs) {
+      const level = getSchoolLevel(pair.className, dbMap);
+      if (level === "HIGHER") {
+        groups.SECONDARY.push(pair);
+      } else {
+        groups[level].push(pair);
+      }
+    }
+    return groups;
+  }, [subjectPairs, dbMap]);
+
+  const hasPrePrimary = groupedPairs.PRE_PRIMARY.length > 0;
+  const hasPrimary = groupedPairs.PRIMARY.length > 0;
+  const hasSecondary =
+    groupedPairs.SECONDARY.length > 0 || groupedPairs.HIGHER.length > 0;
+
+  const toggleSection = (key: string) => {
+    setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const reExamActive =
+    pathname === ROUTES.TEACHER_RE_EXAM ||
+    pathname.startsWith(ROUTES.TEACHER_RE_EXAM);
+
+  const isEvalActive = (className: string, subject: string) => {
+    const currentClass = searchParams.get("class");
+    const currentSubject = searchParams.get("subject");
+    return (
+      currentClass === className &&
+      currentSubject === subject &&
+      (pathname === ROUTES.TEACHER_EVALUATIONS ||
+        pathname === "/teacher/create-evaluation" ||
+        pathname.startsWith("/teacher/edit-evaluation") ||
+        pathname.startsWith(ROUTES.TEACHER_MARK_ENTRY) ||
+        pathname.startsWith("/teacher/result-compilation"))
+    );
+  };
+
+  const isSectionActive = (pairs: SubjectPair[], linkType: "eval" | "secondary") => {
+    if (linkType === "secondary") {
+      return pathname.startsWith(ROUTES.TEACHER_SECONDARY_MARK_ENTRY);
+    }
+    return pairs.some((p) => isEvalActive(p.className, p.subject)) || reExamActive;
+  };
+
+  const renderSection = (
+    key: string,
+    label: string,
+    icon: React.ComponentType<{
+      size?: number;
+      strokeWidth?: number;
+      className?: string;
+    }>,
+    pairs: SubjectPair[],
+    linkType: "eval" | "secondary",
+    showObservations: boolean,
+    showReExam: boolean,
+  ) => {
+    const isExpanded = expandedSections[key];
+    const active = isSectionActive(pairs, linkType);
+
+    const SectionIcon = icon;
+
+    const buildHref = (pair: SubjectPair) => {
+      if (linkType === "secondary") {
+        const params = new URLSearchParams({
+          gradeLevel: pair.className,
+          syncedSubjectId: pair.syncedSubjectId,
+        });
+        return `${ROUTES.TEACHER_SECONDARY_MARK_ENTRY}?${params}`;
+      }
+      const params = new URLSearchParams({
+        class: pair.className,
+        subject: pair.subject,
+      });
+      if (pair.section) params.set("section", pair.section);
+      return `${ROUTES.TEACHER_EVALUATIONS}?${params}`;
+    };
+
+    const reExamActive =
+      pathname === ROUTES.TEACHER_RE_EXAM ||
+      pathname.startsWith(ROUTES.TEACHER_RE_EXAM);
+
+    return (
+      <div key={key}>
+        <button
+          onClick={() => toggleSection(key)}
+          className={cn(
+            "w-full group relative flex items-center gap-3 py-2.5 rounded-lg border transition-all duration-200 overflow-hidden text-left",
+            active
+              ? "bg-sidebar-accent border-sidebar-border text-sidebar-accent-foreground"
+              : "border-transparent hover:bg-sidebar-accent/60 hover:border-sidebar-border/50 text-sidebar-foreground/70 hover:text-sidebar-foreground",
+            isCollapsed ? "px-2 justify-center" : "px-3",
+          )}
+          title={label}
+        >
+          <div
+            className={cn(
+              "w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-all duration-200",
+              active
+                ? "bg-sidebar-primary/20"
+                : "bg-sidebar-foreground/5 group-hover:bg-sidebar-primary/10",
+            )}
+          >
+            <SectionIcon
+              size={16}
+              strokeWidth={1.8}
+              className={cn(
+                "transition-colors duration-200",
+                active
+                  ? "text-sidebar-primary"
+                  : "text-sidebar-foreground/50 group-hover:text-sidebar-primary/80",
+              )}
+            />
+          </div>
+          {!isCollapsed && (
+            <>
+              <span
+                className={cn(
+                  "text-[13px] transition-colors duration-200 whitespace-nowrap flex-1",
+                  active ? "font-semibold" : "font-medium",
+                )}
+              >
+                {label}
+              </span>
+              <ChevronDown
+                size={14}
+                className={cn(
+                  "transition-transform",
+                  isExpanded && "rotate-180",
+                )}
+              />
+            </>
+          )}
+        </button>
+
+        {!isCollapsed && isExpanded && (
+          <div className="mt-1 ml-11 space-y-1">
+            {pairs.map((pair, idx) => {
+              const href = buildHref(pair);
+              const isSubActive =
+                linkType === "secondary"
+                  ? false
+                  : isEvalActive(pair.className, pair.subject);
+
+              return (
+                <Link
+                  key={`${key}-${pair.className}-${pair.section ?? ""}-${pair.subject}-${idx}`}
+                  href={href}
+                  onClick={() => isMobile && setOpenMobile(false)}
+                  className={cn(
+                    "block relative py-1.5 px-3 text-[11px] rounded transition-colors pr-6",
+                    isSubActive
+                      ? "bg-sidebar-accent/60 text-sidebar-foreground"
+                      : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40",
+                  )}
+                >
+                  <div className="font-medium">
+                    {pair.className}
+                    {pair.section ? ` (${pair.section})` : ""}
+                  </div>
+                  <div className="text-[10px] text-sidebar-foreground/40">
+                    {pair.subject}
+                  </div>
+                  {isSubActive && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-sidebar-primary" />
+                  )}
+                </Link>
+              );
+            })}
+
+            {showReExam && (
+              <Link
+                href={ROUTES.TEACHER_RE_EXAM}
+                onClick={() => isMobile && setOpenMobile(false)}
+                className={cn(
+                  "block relative py-1.5 px-3 text-[11px] rounded transition-colors pr-6",
+                  reExamActive
+                    ? "bg-sidebar-accent/60 text-sidebar-foreground"
+                    : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40",
+                )}
+              >
+                <div className="font-medium flex items-center gap-1.5">
+                  <ClipboardX size={12} />
+                  Re-Exam Panel
+                </div>
+                {reExamActive && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-sidebar-primary" />
+                )}
+              </Link>
+            )}
+
+            {showObservations && isClassTeacher && (
+              <Link
+                href={ROUTES.TEACHER_OBSERVATIONS}
+                onClick={() => isMobile && setOpenMobile(false)}
+                className={cn(
+                  "block relative py-1.5 px-3 text-[11px] rounded transition-colors pr-6",
+                  pathname === ROUTES.TEACHER_OBSERVATIONS
+                    ? "bg-sidebar-accent/60 text-sidebar-foreground"
+                    : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40",
+                )}
+              >
+                <div className="font-medium flex items-center gap-1.5">
+                  <MessageSquareText size={12} />
+                  Observations
+                </div>
+                {pathname === ROUTES.TEACHER_OBSERVATIONS && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-sidebar-primary" />
+                )}
+              </Link>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const SidebarContent = (
     <aside
@@ -159,173 +366,87 @@ export function TeacherSidebar() {
         )}
         aria-label="Teacher navigation"
       >
-        {NAV_ITEMS.map((item) => {
-          const Icon = item.icon;
-          const isActive =
-            pathname === item.href ||
-            (item.href === ROUTES.TEACHER_EVALUATIONS &&
-              (pathname === "/teacher/create-evaluation" ||
-                pathname.startsWith("/teacher/edit-evaluation") ||
-                pathname.startsWith(ROUTES.TEACHER_MARK_ENTRY) ||
-                pathname.startsWith("/teacher/result-compilation"))) ||
-            (item.href === ROUTES.TEACHER_RE_EXAM &&
-              pathname.startsWith(ROUTES.TEACHER_RE_EXAM));
-
-          const isSubMenu = item.hasSubMenu;
-
-          return (
-            <div key={item.href}>
-              {isSubMenu ? (
-                <button
-                  onClick={() => {
-                    setEvaluationsExpanded(!evaluationsExpanded);
-                    if (isMobile) setOpenMobile(false);
-                  }}
-                  className={cn(
-                    "w-full group relative flex items-center gap-3 py-2.5 rounded-lg border transition-all duration-200 overflow-hidden text-left",
-                    isActive
-                      ? "bg-sidebar-accent border-sidebar-border text-sidebar-accent-foreground"
-                      : "border-transparent hover:bg-sidebar-accent/60 hover:border-sidebar-border/50 text-sidebar-foreground/70 hover:text-sidebar-foreground",
-                    isCollapsed ? "px-2 justify-center" : "px-3",
-                  )}
-                  title={item.label}
-                >
-                  <div
-                    className={cn(
-                      "w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-all duration-200",
-                      isActive
-                        ? "bg-sidebar-primary/20"
-                        : "bg-sidebar-foreground/5 group-hover:bg-sidebar-primary/10",
-                    )}
-                  >
-                    <Icon
-                      size={16}
-                      strokeWidth={1.8}
-                      className={cn(
-                        "transition-colors duration-200",
-                        isActive
-                          ? "text-sidebar-primary"
-                          : "text-sidebar-foreground/50 group-hover:text-sidebar-primary/80",
-                      )}
-                    />
-                  </div>
-                  {!isCollapsed && (
-                    <span
-                      className={cn(
-                        "text-[13px] transition-colors duration-200 whitespace-nowrap",
-                        isActive ? "font-semibold" : "font-medium",
-                      )}
-                    >
-                      {item.label}
-                    </span>
-                  )}
-                  {!isCollapsed && (
-                    <ChevronDown
-                      size={14}
-                      className={cn(
-                        "ml-auto transition-transform",
-                        evaluationsExpanded && "rotate-180",
-                      )}
-                    />
-                  )}
-                </button>
-              ) : (
-                <Link
-                  href={item.href}
-                  onClick={() => isMobile && setOpenMobile(false)}
-                  className={cn(
-                    "group relative flex items-center gap-3 py-2.5 rounded-lg border transition-all duration-200 overflow-hidden",
-                    isActive
-                      ? "bg-sidebar-accent border-sidebar-border text-sidebar-accent-foreground"
-                      : "border-transparent hover:bg-sidebar-accent/60 hover:border-sidebar-border/50 text-sidebar-foreground/70 hover:text-sidebar-foreground",
-                    isCollapsed ? "px-2 justify-center" : "px-3",
-                  )}
-                  title={item.label}
-                >
-                  <div
-                    className={cn(
-                      "w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-all duration-200",
-                      isActive
-                        ? "bg-sidebar-primary/20"
-                        : "bg-sidebar-foreground/5 group-hover:bg-sidebar-primary/10",
-                    )}
-                  >
-                    <Icon
-                      size={16}
-                      strokeWidth={1.8}
-                      className={cn(
-                        "transition-colors duration-200",
-                        isActive
-                          ? "text-sidebar-primary"
-                          : "text-sidebar-foreground/50 group-hover:text-sidebar-primary/80",
-                      )}
-                    />
-                  </div>
-                  {!isCollapsed && (
-                    <span
-                      className={cn(
-                        "text-[13px] transition-colors duration-200 whitespace-nowrap",
-                        isActive ? "font-semibold" : "font-medium",
-                      )}
-                    >
-                      {item.label}
-                    </span>
-                  )}
-                  {/* {isActive && !isCollapsed && (
-                    <span className="absolute right-3 w-1.5 h-1.5 rounded-full bg-sidebar-primary" />
-                  )} */}
-                </Link>
+        {/* Dashboard */}
+        <Link
+          href={ROUTES.TEACHER_DASHBOARD}
+          onClick={() => isMobile && setOpenMobile(false)}
+          className={cn(
+            "group relative flex items-center gap-3 py-2.5 rounded-lg border transition-all duration-200 overflow-hidden",
+            pathname === ROUTES.TEACHER_DASHBOARD
+              ? "bg-sidebar-accent border-sidebar-border text-sidebar-accent-foreground"
+              : "border-transparent hover:bg-sidebar-accent/60 hover:border-sidebar-border/50 text-sidebar-foreground/70 hover:text-sidebar-foreground",
+            isCollapsed ? "px-2 justify-center" : "px-3",
+          )}
+          title="Teacher Dashboard"
+        >
+          <div
+            className={cn(
+              "w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-all duration-200",
+              pathname === ROUTES.TEACHER_DASHBOARD
+                ? "bg-sidebar-primary/20"
+                : "bg-sidebar-foreground/5 group-hover:bg-sidebar-primary/10",
+            )}
+          >
+            <LayoutGrid
+              size={16}
+              strokeWidth={1.8}
+              className={cn(
+                "transition-colors duration-200",
+                pathname === ROUTES.TEACHER_DASHBOARD
+                  ? "text-sidebar-primary"
+                  : "text-sidebar-foreground/50 group-hover:text-sidebar-primary/80",
               )}
-
-              {/* Submenu for Evaluations */}
-              {item.hasSubMenu && !isCollapsed && evaluationsExpanded && (
-                <div className="mt-1 ml-11 space-y-1">
-                  {assignedPairs.map(({ className, section, subject }, idx) => {
-                    const params = new URLSearchParams({
-                      class: className,
-                      subject,
-                    });
-                    if (section) params.set("section", section);
-                    const href = `${ROUTES.TEACHER_EVALUATIONS}?${params}`;
-                    const isSubActive =
-                      searchParams.get("class") === className &&
-                      searchParams.get("subject") === subject &&
-                      (!section || searchParams.get("section") === section) &&
-                      (pathname === ROUTES.TEACHER_EVALUATIONS ||
-                        pathname === "/teacher/create-evaluation" ||
-                        pathname.startsWith("/teacher/edit-evaluation") ||
-                        pathname.startsWith(ROUTES.TEACHER_MARK_ENTRY) ||
-                        pathname.startsWith("/teacher/result-compilation"));
-                    return (
-                      <Link
-                        key={`${className}-${section ?? ""}-${subject}-${idx}`}
-                        href={href}
-                        onClick={() => isMobile && setOpenMobile(false)}
-                        className={cn(
-                          "block relative py-1.5 px-3 text-[11px] rounded transition-colors pr-6",
-                          isSubActive
-                            ? "bg-sidebar-accent/60 text-sidebar-foreground"
-                            : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40",
-                        )}
-                      >
-                        <div className="font-medium">
-                          {className}
-                          {section ? ` (${section})` : ""}
-                        </div>
-                        <div className="text-[10px] text-sidebar-foreground/40">
-                          {subject}
-                        </div>
-                        {isSubActive && (
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-sidebar-primary" />
-                        )}
-                      </Link>
-                    );
-                  })}
-                </div>
+            />
+          </div>
+          {!isCollapsed && (
+            <span
+              className={cn(
+                "text-[13px] transition-colors duration-200 whitespace-nowrap",
+                pathname === ROUTES.TEACHER_DASHBOARD
+                  ? "font-semibold"
+                  : "font-medium",
               )}
-            </div>
-          );
-        })}
+            >
+              Teacher Dashboard
+            </span>
+          )}
+        </Link>
+
+        {/* Pre-Primary Evaluation */}
+        {hasPrePrimary &&
+          renderSection(
+            "pre-primary",
+            "Pre-Primary Evaluation",
+            ClipboardList,
+            groupedPairs.PRE_PRIMARY,
+            "eval",
+            true,
+            true,
+          )}
+
+        {/* Primary Evaluation */}
+        {hasPrimary &&
+          renderSection(
+            "primary",
+            "Primary Evaluation",
+            ClipboardList,
+            groupedPairs.PRIMARY,
+            "eval",
+            false,
+            true,
+          )}
+
+        {/* Secondary Marks Entry */}
+        {hasSecondary &&
+          renderSection(
+            "secondary",
+            "Secondary Marks Entry",
+            PenLine,
+            [...groupedPairs.SECONDARY, ...groupedPairs.HIGHER],
+            "secondary",
+            false,
+            false,
+          )}
       </nav>
 
       <div className="relative border-t border-sidebar-border">
