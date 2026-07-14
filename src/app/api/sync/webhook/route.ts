@@ -17,7 +17,7 @@ function parseGradeLevel(raw: string | undefined | null, explicitSection?: strin
     return { gradeLevel: raw || "General", section: explicitSection || null };
   }
   if (!raw) return { gradeLevel: "General", section: null };
-  const match = raw.match(/^(.+)-([A-Za-z]{1,2})$/);
+  const match = raw.match(/^(.+?)\s*-\s*([A-Za-z]{1,2})$/);
   if (match) return { gradeLevel: match[1].trim(), section: match[2].toUpperCase() };
   return { gradeLevel: raw, section: null };
 }
@@ -74,6 +74,7 @@ export const POST = withPublicHandler(async (req: NextRequest) => {
             rollNumber: data.rollNumber || "",
             class: className,
             section: data.section || "A",
+            dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
             isActive: data.isActive ?? true,
           },
           update: {
@@ -81,6 +82,7 @@ export const POST = withPublicHandler(async (req: NextRequest) => {
             rollNumber: data.rollNumber || "",
             class: className,
             section: data.section || "A",
+            dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
             isActive: data.isActive ?? true,
             syncedAt: new Date(),
           },

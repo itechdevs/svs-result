@@ -25,7 +25,7 @@ export class UnifiedSyncService {
     }
     if (!raw) return { gradeLevel: "General", section: null };
     // Match trailing "-<single-or-two-char>" e.g. "7-A", "Grade 7-B", "10-AB"
-    const match = raw.match(/^(.+)-([A-Za-z]{1,2})$/);
+    const match = raw.match(/^(.+?)\s*-\s*([A-Za-z]{1,2})$/);
     if (match) {
       return { gradeLevel: match[1].trim(), section: match[2].toUpperCase() };
     }
@@ -276,6 +276,7 @@ export class UnifiedSyncService {
               rollNumber: student.rollNumber || "",
               class: classroomName,
               section: student.section || "A",
+              dateOfBirth: student.dateOfBirth ? new Date(student.dateOfBirth) : null,
               syncedAt: new Date(),
             },
             create: {
@@ -284,6 +285,7 @@ export class UnifiedSyncService {
               rollNumber: student.rollNumber || "",
               class: classroomName,
               section: student.section || "A",
+              dateOfBirth: student.dateOfBirth ? new Date(student.dateOfBirth) : null,
             },
           });
 
@@ -418,6 +420,10 @@ export class UnifiedSyncService {
    * Second pass: assign subjects to teachers based on teacher.subjects from the
    * dhalpa-school API. This runs AFTER both teachers and subjects are synced so
    * the SyncedSubject records already exist in the database.
+   *
+   * Uses the same cursor-cycling section logic as syncTeachers() so that when a
+   * teacher is assigned the same subject for multiple sections (e.g. 1Subject 1-A
+   * and 1Subject 1-B), each gets its own SyncedSubject row with the correct section.
    */
   async assignSubjectsToTeachers(): Promise<SyncResult> {
     const result: SyncResult = {
@@ -437,38 +443,87 @@ export class UnifiedSyncService {
           });
           if (!syncedTeacher) continue;
 
-          const teacherSubjects: { id: string; name: string; code?: string; gradeLevel?: string }[] = teacher.subjects ?? [];
+          const teacherSubjects: { id: string; name: string; code?: string; gradeLevel?: string; section?: string }[] = teacher.subjects ?? [];
           if (teacherSubjects.length === 0) continue;
 
-          const subjectIds = teacherSubjects.map(s => s.id);
+          // Build grade→sections map from assigned classrooms (same as syncTeachers)
+          const classrooms: { grade?: string; section?: string }[] =
+            teacher.assignedClassroomsDetails ?? teacher.classrooms ?? [];
+          const gradeSectionMap = new Map<string, string[]>();
+          for (const cls of classrooms) {
+            const g = cls.grade?.trim();
+            const s = cls.section?.trim();
+            if (!g || !s) continue;
+            if (!gradeSectionMap.has(g)) gradeSectionMap.set(g, []);
+            gradeSectionMap.get(g)!.push(s.toUpperCase());
+          }
+          const gradeSectionCursor = new Map<string, number>();
+
+          // Fetch ALL existing subjects for these sourceIds — there may be multiple
+          // rows per sourceId when the same subject was created for different sections.
+          const subjectSourceIds = teacherSubjects.map(s => s.id);
           const existingSubjects = await prisma.syncedSubject.findMany({
-            where: { sourceId: { in: subjectIds } },
+            where: { sourceId: { in: subjectSourceIds } },
           });
 
-          const existingMap = new Map(existingSubjects.map(s => [s.sourceId, s]));
+          // Group existing subjects by sourceId so we can match them positionally
+          // (first occurrence → first section, second → second section, etc.)
+          const existingBySourceId = new Map<string, typeof existingSubjects>();
+          for (const sub of existingSubjects) {
+            if (!existingBySourceId.has(sub.sourceId)) existingBySourceId.set(sub.sourceId, []);
+            existingBySourceId.get(sub.sourceId)!.push(sub);
+          }
+          // Track how many times we've consumed each sourceId so positional matching works
+          const sourceIdCursor = new Map<string, number>();
+
           const allSyncedSubjects: typeof existingSubjects = [];
 
           for (const sub of teacherSubjects) {
-            const existing = existingMap.get(sub.id);
+            let { gradeLevel: parsedGrade, section: parsedSection } = this.parseGradeLevel(sub.gradeLevel, sub.section);
+
+            // If section not embedded in gradeLevel/section field, derive from classrooms
+            if (!parsedSection) {
+              const sections = gradeSectionMap.get(parsedGrade);
+              if (sections && sections.length > 0) {
+                const cursor = gradeSectionCursor.get(parsedGrade) ?? 0;
+                parsedSection = sections[cursor % sections.length];
+                gradeSectionCursor.set(parsedGrade, cursor + 1);
+              }
+            }
+
+            // Pick the matching existing row for this occurrence of sourceId
+            const existingList = existingBySourceId.get(sub.id) ?? [];
+            const idx = sourceIdCursor.get(sub.id) ?? 0;
+            sourceIdCursor.set(sub.id, idx + 1);
+            const existing = existingList[idx] ?? null;
+
             if (existing) {
-              if (sub.gradeLevel && sub.gradeLevel !== existing.gradeLevel) {
+              const effectiveSection = parsedSection ?? existing.section;
+              if (
+                parsedGrade !== existing.gradeLevel ||
+                effectiveSection !== existing.section ||
+                sub.name !== existing.name
+              ) {
                 await prisma.syncedSubject.update({
                   where: { id: existing.id },
                   data: {
-                    gradeLevel: sub.gradeLevel,
+                    gradeLevel: parsedGrade,
+                    section: effectiveSection,
                     name: sub.name,
                     code: sub.code || sub.name.toUpperCase().substring(0, 6),
                   },
                 });
               }
-              allSyncedSubjects.push({ ...existing, gradeLevel: sub.gradeLevel || existing.gradeLevel });
+              allSyncedSubjects.push({ ...existing, gradeLevel: parsedGrade, section: effectiveSection });
             } else {
+              // No existing row for this occurrence — create a new one
               const created = await prisma.syncedSubject.create({
                 data: {
                   sourceId: sub.id,
                   name: sub.name,
                   code: sub.code || sub.name.toUpperCase().substring(0, 6),
-                  gradeLevel: sub.gradeLevel || "General",
+                  gradeLevel: parsedGrade,
+                  section: parsedSection,
                 },
               });
               allSyncedSubjects.push(created);

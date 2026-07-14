@@ -36,6 +36,7 @@ interface EvaluationsTabProps {
   newEvalSubject: string;
   selectedClass?: string;
   selectedSubject?: string;
+  selectedSection?: string;
   onDelete?: (id: string) => void;
 }
 
@@ -48,11 +49,13 @@ export default function EvaluationsTab({
   newEvalSubject,
   selectedClass = '',
   selectedSubject = '',
+  selectedSection = '',
   onDelete,
 }: EvaluationsTabProps) {
   const qs = new URLSearchParams();
   if (selectedClass) qs.set('class', selectedClass);
   if (selectedSubject) qs.set('subject', selectedSubject);
+  if (selectedSection) qs.set('section', selectedSection);
   const suffix = qs.toString() ? `?${qs.toString()}` : '';
 
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
@@ -112,6 +115,7 @@ export default function EvaluationsTab({
           {(selectedClass || selectedSubject) && (
             <p className="text-xs text-muted-foreground mt-1">
               Showing: <span className="font-semibold text-foreground">{selectedClass}</span>
+              {selectedSection && <> (<span className="font-semibold text-foreground">{selectedSection}</span>)</>}
               {selectedSubject && <> · <span className="font-semibold text-foreground">{selectedSubject}</span></>}
             </p>
           )}
