@@ -66,7 +66,7 @@ export default function SecondaryMarkEntryPage() {
     (c) => c.type === activeComponentType
   );
 
-  // Marks entry hook for direct marks (INTERNAL/THEORY)
+  // Marks entry hook for direct marks (THEORY)
   const {
     markEntryRows,
     stats,

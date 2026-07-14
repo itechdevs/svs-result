@@ -2,7 +2,7 @@
 // SECONDARY MARKS ENTRY TYPES
 // ============================================================================
 
-export type SecondaryComponentType = "INTERNAL" | "THEORY" | "PRACTICAL";
+export type SecondaryComponentType = "THEORY" | "PRACTICAL";
 
 export type MarksStatus = "DRAFT" | "SUBMITTED" | "VERIFIED" | "LOCKED";
 

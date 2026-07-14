@@ -24,7 +24,6 @@ interface TermMarksheetData {
   subjectResults: Array<{
     subject: string;
     creditHours: number;
-    internalMarks: number;
     theoryMarks: number;
     practicalMarks: number;
     totalObtained: number;
@@ -157,7 +156,6 @@ export function prepareTermMarksheetData(
     subjectResults: (subjectResults || []).map(sr => ({
       subject: sr?.subjectConfig?.syncedSubject?.name || 'Unknown Subject',
       creditHours: sr?.creditHours || 0,
-      internalMarks: Number(sr?.internalMarks || 0),
       theoryMarks: Number(sr?.theoryMarks || 0),
       practicalMarks: Number(sr?.practicalMarks || 0),
       totalObtained: Number(sr?.totalObtained || 0),

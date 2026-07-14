@@ -303,7 +303,6 @@ const GRADE_INTERVALS = [
 interface SubjectResult {
   subject: string;
   creditHours: number;
-  internalMarks: number;
   theoryMarks: number;
   practicalMarks: number;
   totalObtained: number;
