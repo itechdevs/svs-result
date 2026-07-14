@@ -87,6 +87,17 @@ export const POST = withPublicHandler(async (req: NextRequest) => {
             syncedAt: new Date(),
           },
         });
+
+        // Keep SyncedClassroom in sync
+        const cn = className.trim();
+        const sn = (data.section || "A").trim();
+        if (cn && sn) {
+          await prisma.syncedClassroom.upsert({
+            where: { name_section: { name: cn, section: sn } },
+            create: { name: cn, section: sn, isActive: true },
+            update: { isActive: true, syncedAt: new Date() },
+          });
+        }
       }
     } else if (event.entity === "teacher") {
       const data = event.payload as {

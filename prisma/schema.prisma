@@ -290,6 +290,19 @@ model SyncedStudent {
   @@map("synced_students")
 }
 
+model SyncedClassroom {
+  id        String   @id @default(cuid())
+  name      String
+  section   String
+  isActive  Boolean  @default(true)
+  syncedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([name, section])
+  @@index([isActive])
+  @@map("synced_classrooms")
+}
+
 /// Mirror of school management → Teacher
 /// One SyncedTeacher can be linked to at most one User (the teacher's login).
 model SyncedTeacher {

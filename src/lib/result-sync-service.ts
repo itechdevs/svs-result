@@ -124,6 +124,18 @@ const syncStudent = async (action: SyncAction, rawPayload: Record<string, unknow
     },
   });
 
+  // Keep SyncedClassroom in sync — upsert by (name, section) so every class
+  // that has at least one student is represented here.
+  const className = (payload.class || "").trim();
+  const sectionName = (payload.section || "A").trim();
+  if (className && sectionName) {
+    await prisma.syncedClassroom.upsert({
+      where: { name_section: { name: className, section: sectionName } },
+      create: { name: className, section: sectionName, isActive: true },
+      update: { isActive: true, syncedAt: new Date() },
+    });
+  }
+
   await prisma.syncLog.create({
     data: {
       entity: "student",
