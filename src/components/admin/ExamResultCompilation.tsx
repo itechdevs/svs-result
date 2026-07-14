@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import {
   FileSearch,
@@ -94,6 +95,7 @@ interface Props {
       gradeLevel: string;
     } | null;
   }>;
+  schoolLevel?: "PRE_PRIMARY" | "PRIMARY" | "SECONDARY" | "HIGHER" | null;
 }
 
 /** Observation data keyed by syncedStudentId */
@@ -143,6 +145,7 @@ export default function ExamResultCompilation({
   gradeLevel,
   academicYearId,
   linkedTemplates,
+  schoolLevel,
 }: Props) {
   const [showTranscriptModal, setShowTranscriptModal] =
     useState<Student | null>(null);
@@ -170,6 +173,19 @@ export default function ExamResultCompilation({
   const [prePrimaryModal, setPrePrimaryModal] = useState<PrePrimaryStudentData | null>(null);
   // For pre-primary bulk modal
   const [prePrimaryBulk, setPrePrimaryBulk] = useState<PrePrimaryStudentData[] | null>(null);
+
+  // Auto-enable observation mode for pre-primary, disable for secondary+
+  useEffect(() => {
+    if (schoolLevel === "PRE_PRIMARY" && includeObservation === null) {
+      setIncludeObservation(true);
+      loadObservations();
+    } else if (
+      (schoolLevel === "SECONDARY" || schoolLevel === "HIGHER") &&
+      includeObservation === null
+    ) {
+      setIncludeObservation(false);
+    }
+  }, [schoolLevel]);
 
   const { data: studentsData, isLoading: studentsLoading } = useStudents({
     class: gradeLevel,
@@ -642,42 +658,74 @@ export default function ExamResultCompilation({
         )}
       </div>
 
-      {/* ── Observation toggle card ──────────────────────────────────────── */}
+      {/* ── Observation toggle / School-level notice ──────────────────── */}
       {(showResultsTable || hasSavedResults) && !isCompiling && includeObservation === null && (
-        <div className="bg-card rounded-xl border border-primary/30 shadow-sm p-5">
-          <div className="flex items-start gap-3 mb-4">
-            <ClipboardList className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-bold text-foreground">
-                Include Observation in Grade Sheet?
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                If the class teacher has entered observations for this exam,
-                you can include them in the grade sheet (Pre-Primary format).
-                Otherwise the standard marksheet template will be used.
-              </p>
+        (schoolLevel === "SECONDARY" || schoolLevel === "HIGHER") ? (
+          <div className="bg-card rounded-xl border border-border shadow-sm p-5">
+            <div className="flex items-start gap-3 mb-3">
+              <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-bold text-foreground">
+                  Secondary Level Exam
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  This exam is at the secondary level. Use the Secondary Mark Entry and
+                  Result Compilation pages for component-based assessment
+                  (Theory, Practical, Internal).
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/admin/secondary/mark-verification"
+                className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:opacity-90"
+              >
+                Go to Secondary Mark Verification
+              </Link>
+              <Link
+                href="/admin/secondary/result-compilation"
+                className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg border border-border text-foreground hover:bg-muted"
+              >
+                Go to Secondary Result Compilation
+              </Link>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <Button
-              onClick={async () => {
-                setIncludeObservation(true);
-                await loadObservations();
-              }}
-              className="flex items-center gap-2 bg-primary text-primary-foreground"
-            >
-              <ClipboardList className="w-4 h-4" />
-              Yes, include observation
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setIncludeObservation(false)}
-              className="flex items-center gap-2"
-            >
-              No, use standard template
-            </Button>
+        ) : (
+          <div className="bg-card rounded-xl border border-primary/30 shadow-sm p-5">
+            <div className="flex items-start gap-3 mb-4">
+              <ClipboardList className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-bold text-foreground">
+                  Include Observation in Grade Sheet?
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  If the class teacher has entered observations for this exam,
+                  you can include them in the grade sheet (Pre-Primary format).
+                  Otherwise the standard marksheet template will be used.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={async () => {
+                  setIncludeObservation(true);
+                  await loadObservations();
+                }}
+                className="flex items-center gap-2 bg-primary text-primary-foreground"
+              >
+                <ClipboardList className="w-4 h-4" />
+                Yes, include observation
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setIncludeObservation(false)}
+                className="flex items-center gap-2"
+              >
+                No, use standard template
+              </Button>
+            </div>
           </div>
-        </div>
+        )
       )}
 
       {/* Observation mode active banner */}
@@ -698,7 +746,7 @@ export default function ExamResultCompilation({
             onClick={() => { setIncludeObservation(null); setObservationMap({}); }}
             className="text-[10px] font-semibold text-muted-foreground hover:text-foreground underline"
           >
-            Change
+            {schoolLevel === "PRE_PRIMARY" ? "Change" : "Change"}
           </button>
         </div>
       )}

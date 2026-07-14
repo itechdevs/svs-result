@@ -11,13 +11,6 @@ interface ComponentTabsProps {
 }
 
 const COMPONENT_CONFIG = {
-  INTERNAL: {
-    label: "Internal",
-    icon: FileText,
-    color: "text-blue-600 dark:text-blue-400",
-    bgActive: "bg-blue-50 dark:bg-blue-950/20 border-blue-500",
-    bgInactive: "hover:bg-blue-50/50 dark:hover:bg-blue-950/10",
-  },
   THEORY: {
     label: "Theory",
     icon: BookOpen,

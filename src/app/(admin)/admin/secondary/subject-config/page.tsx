@@ -37,7 +37,7 @@ import SanskarLoader from "@/components/shared/SanskarLoader";
 
 interface ComponentInput {
   id?: string;
-  type: "INTERNAL" | "THEORY" | "PRACTICAL";
+  type: "THEORY" | "PRACTICAL";
   fullMarks: number;
   passMarks: number;
   displayOrder: number;
@@ -135,7 +135,6 @@ export default function SecondarySubjectConfigPage() {
       setCreditHours(4);
       setComponents([
         { type: "THEORY", fullMarks: 75, passMarks: 26.25, displayOrder: 1 },
-        { type: "INTERNAL", fullMarks: 25, passMarks: 8.75, displayOrder: 2 },
       ]);
     }
     setConfigOpen(true);
@@ -229,7 +228,6 @@ export default function SecondarySubjectConfigPage() {
   const handleLoadDefaults = () => {
     setComponents([
       { type: "THEORY", fullMarks: 75, passMarks: 26.25, displayOrder: 1 },
-      { type: "INTERNAL", fullMarks: 25, passMarks: 8.75, displayOrder: 2 },
     ]);
     setCreditHours(4);
   };
@@ -461,7 +459,6 @@ export default function SecondarySubjectConfigPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="INTERNAL">INTERNAL</SelectItem>
                         <SelectItem value="THEORY">THEORY</SelectItem>
                         <SelectItem value="PRACTICAL">PRACTICAL</SelectItem>
                       </SelectContent>

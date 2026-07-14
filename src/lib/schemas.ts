@@ -499,7 +499,6 @@ export const secondaryPracticalHeadingSchema = z.object({
 });
 
 export const secondaryComponentTypeSchema = z.enum([
-  "INTERNAL",
   "THEORY",
   "PRACTICAL",
 ]);

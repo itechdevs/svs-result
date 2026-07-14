@@ -9,7 +9,7 @@ import { getSecondaryGrade } from "@/lib/secondary-grades";
 export const POST = withHandler(
   async (_req: NextRequest, { params }) => {
     const { examId } = await params;
-    
+
     const exam = await prisma.exam.findUnique({
       where: { id: examId },
     });
@@ -26,32 +26,38 @@ export const POST = withHandler(
     });
 
     if (subjectConfigs.length === 0) {
-      return badRequest("No active secondary subject configurations found for this exam's grade level and academic year.");
+      return badRequest(
+        "No active secondary subject configurations found for this exam's grade level and academic year.",
+      );
     }
 
-    const configIds = subjectConfigs.map(sc => sc.id);
+    const configIds = subjectConfigs.map((sc) => sc.id);
 
     // Fetch all verified component marks for this exam
     const componentMarks = await prisma.secondaryComponentMark.findMany({
       where: {
         examId: examId,
         component: {
-          subjectConfigId: { in: configIds }
+          subjectConfigId: { in: configIds },
         },
       },
       include: { component: true },
     });
 
-    const unverifiedMarks = componentMarks.filter(m => m.status !== "VERIFIED");
+    const unverifiedMarks = componentMarks.filter(
+      (m) => m.status !== "VERIFIED",
+    );
     if (unverifiedMarks.length > 0) {
       // For strict compliance, all marks should be verified before compilation.
       // But we can allow partials. Let's enforce it.
-      return badRequest(`There are ${unverifiedMarks.length} unverified marks. Please verify all marks before compilation.`);
+      return badRequest(
+        `There are ${unverifiedMarks.length} unverified marks. Please verify all marks before compilation.`,
+      );
     }
 
     // Group marks by student
     const studentMarksMap = new Map<string, typeof componentMarks>();
-    
+
     // Some students might have missing marks. We'll group what we have.
     for (const mark of componentMarks) {
       if (!studentMarksMap.has(mark.syncedStudentId)) {
@@ -71,23 +77,26 @@ export const POST = withHandler(
       let totalWeightedPoints = 0;
 
       for (const config of subjectConfigs) {
-        let internalMarks = 0;
         let theoryMarks = 0;
         let practicalMarks = 0;
         let totalFullMarks = 0;
 
         for (const comp of config.components) {
           totalFullMarks += Number(comp.fullMarks);
-          const studentMarkList = marks.filter(m => m.componentId === comp.id);
-          const studentMarkObj = studentMarkList.length > 0 ? Number(studentMarkList[0].marksObtained || 0) : 0;
-          
-          if (comp.type === "INTERNAL") internalMarks += studentMarkObj;
+          const studentMarkList = marks.filter(
+            (m) => m.componentId === comp.id,
+          );
+          const studentMarkObj =
+            studentMarkList.length > 0
+              ? Number(studentMarkList[0].marksObtained || 0)
+              : 0;
+
           if (comp.type === "THEORY") theoryMarks += studentMarkObj;
           if (comp.type === "PRACTICAL") practicalMarks += studentMarkObj;
         }
 
-        const totalObtained = internalMarks + theoryMarks + practicalMarks;
-        
+        const totalObtained = theoryMarks + practicalMarks;
+
         let percentage = 0;
         if (totalFullMarks > 0) {
           percentage = (totalObtained / totalFullMarks) * 100;
@@ -109,7 +118,6 @@ export const POST = withHandler(
           syncedStudentId: studentId,
           subjectConfigId: config.id,
           examId: exam.id,
-          internalMarks,
           theoryMarks,
           practicalMarks,
           totalObtained,
@@ -123,7 +131,8 @@ export const POST = withHandler(
         });
       } // end subject iteration
 
-      const gpa = totalCreditHours > 0 ? (totalWeightedPoints / totalCreditHours) : 0;
+      const gpa =
+        totalCreditHours > 0 ? totalWeightedPoints / totalCreditHours : 0;
       const resultStatus = totalNg > 0 ? "NG_BLOCKED" : "PROMOTED";
 
       termResultsData.push({
@@ -144,7 +153,9 @@ export const POST = withHandler(
     // Save outputs using a transaction
     await prisma.$transaction(async (tx) => {
       // Clean up previous compilation if any
-      await tx.secondarySubjectResult.deleteMany({ where: { examId: exam.id } });
+      await tx.secondarySubjectResult.deleteMany({
+        where: { examId: exam.id },
+      });
       await tx.secondaryTermResult.deleteMany({ where: { examId: exam.id } });
 
       // Create term results and build a map: studentId -> termResultId
@@ -163,7 +174,7 @@ export const POST = withHandler(
             gpa: res.gpa,
             hasNG: res.hasNG,
             resultStatus: res.resultStatus as "NG_BLOCKED" | "PROMOTED",
-          }
+          },
         });
         termResultIdMap.set(res.syncedStudentId, created.id);
       }
@@ -176,7 +187,6 @@ export const POST = withHandler(
             syncedStudentId: subRes.syncedStudentId,
             subjectConfigId: subRes.subjectConfigId,
             examId: subRes.examId,
-            internalMarks: subRes.internalMarks,
             theoryMarks: subRes.theoryMarks,
             practicalMarks: subRes.practicalMarks,
             totalObtained: subRes.totalObtained,
@@ -188,12 +198,15 @@ export const POST = withHandler(
             creditHours: subRes.creditHours,
             weightedPoint: subRes.weightedPoint,
             finalResultId,
-          }
+          },
         });
       }
     });
 
-    return ok({ studentsProcessed: termResultsData.length }, "Term compiled successfully");
+    return ok(
+      { studentsProcessed: termResultsData.length },
+      "Term compiled successfully",
+    );
   },
-  ["ADMIN"]
+  ["ADMIN"],
 );
