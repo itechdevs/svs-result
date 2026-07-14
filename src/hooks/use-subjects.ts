@@ -39,3 +39,18 @@ export function useGradeLevels() {
     },
   });
 }
+
+export interface GradeLevelWithSection {
+  gradeLevel: string;
+  section: string;
+  displayName: string;
+}
+
+export function useGradeLevelsWithSection() {
+  return useQuery<GradeLevelWithSection[]>({
+    queryKey: ["grade-levels-with-section"],
+    queryFn: async () => {
+      return apiClient.get("/subjects/grade-levels?withSection=true");
+    },
+  });
+}

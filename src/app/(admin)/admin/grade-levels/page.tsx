@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { motion } from "motion/react";
-import { Layers, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useGradeLevels } from "@/hooks/use-subjects";
+import { useGradeLevelsWithSection } from "@/hooks/use-subjects";
 import {
   useGradeLevelCategories,
   useUpdateGradeLevelCategories,
@@ -37,43 +37,57 @@ const SCHOOL_LEVEL_LABELS: Record<string, string> = {
 const SCHOOL_LEVELS = ["PRE_PRIMARY", "PRIMARY", "SECONDARY", "HIGHER"] as const;
 
 export default function GradeLevelsPage() {
-  const { data: gradeLevels, isLoading: isLoadingGrades } = useGradeLevels();
+  const { data: classSections, isLoading: isLoadingGrades } =
+    useGradeLevelsWithSection();
   const { data: categories, isLoading: isLoadingCategories } =
     useGradeLevelCategories();
   const updateCategories = useUpdateGradeLevelCategories();
 
-  const [mappings, setMappings] = useState<
-    Record<string, string | undefined>
-  >({});
+  const [mappings, setMappings] = useState<Record<string, string | undefined>>(
+    {},
+  );
+
+  // Unique base grade levels for category mapping (categories apply per grade, not per section)
+  const uniqueGradeLevels = useMemo(() => {
+    if (!classSections) return [];
+    const seen = new Set<string>();
+    return classSections
+      .map((c) => c.gradeLevel)
+      .filter((g) => {
+        if (seen.has(g)) return false;
+        seen.add(g);
+        return true;
+      });
+  }, [classSections]);
 
   const initialised = useMemo(() => {
-    if (!gradeLevels || !categories) return {};
+    if (!uniqueGradeLevels.length || !categories) return {};
     const catMap: Record<string, string | undefined> = {};
     for (const c of categories) {
       catMap[c.gradeLevel] = c.schoolLevel;
     }
-    for (const g of gradeLevels) {
+    for (const g of uniqueGradeLevels) {
       if (!(g in catMap)) {
         catMap[g] = undefined;
       }
     }
     return catMap;
-  }, [gradeLevels, categories]);
+  }, [uniqueGradeLevels, categories]);
 
   const currentMappings =
     Object.keys(mappings).length > 0 ? mappings : initialised;
 
   const hasChanges = useMemo(() => {
-    if (!gradeLevels || !categories) return false;
+    if (!uniqueGradeLevels.length || !categories) return false;
     const catMap: Record<string, string | undefined> = {};
     for (const c of categories) {
       catMap[c.gradeLevel] = c.schoolLevel;
     }
-    for (const g of gradeLevels) {
+    for (const g of uniqueGradeLevels) {
       if (currentMappings[g] !== (catMap[g] ?? undefined)) return true;
     }
     return false;
-  }, [gradeLevels, categories, currentMappings]);
+  }, [uniqueGradeLevels, categories, currentMappings]);
 
   const handleLevelChange = (gradeLevel: string, schoolLevel: string) => {
     setMappings((prev) => ({
@@ -83,8 +97,7 @@ export default function GradeLevelsPage() {
   };
 
   const handleSave = async () => {
-    if (!gradeLevels) return;
-    const payload = gradeLevels
+    const payload = uniqueGradeLevels
       .filter((g) => currentMappings[g])
       .map((g) => ({
         gradeLevel: g,
@@ -146,7 +159,7 @@ export default function GradeLevelsPage() {
           <div className="flex justify-center py-20">
             <SanskarLoader />
           </div>
-        ) : !gradeLevels || gradeLevels.length === 0 ? (
+        ) : !classSections || classSections.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground text-sm">
             No grade levels found. Sync subjects and students first.
           </div>
@@ -158,7 +171,7 @@ export default function GradeLevelsPage() {
                   #
                 </TableHead>
                 <TableHead className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                  Grade Level
+                  Class
                 </TableHead>
                 <TableHead className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                   School Level
@@ -166,18 +179,20 @@ export default function GradeLevelsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {gradeLevels.map((level, index) => (
-                <TableRow key={level}>
+              {classSections.map((item, index) => (
+                <TableRow key={`${item.gradeLevel}-${item.section}`}>
                   <TableCell className="text-xs text-muted-foreground font-medium">
                     {index + 1}
                   </TableCell>
                   <TableCell className="text-sm font-medium">
-                    {level}
+                    {item.displayName}
                   </TableCell>
                   <TableCell>
                     <Select
-                      value={currentMappings[level] ?? "unassigned"}
-                      onValueChange={(v) => handleLevelChange(level, v)}
+                      value={currentMappings[item.gradeLevel] ?? "unassigned"}
+                      onValueChange={(v) =>
+                        handleLevelChange(item.gradeLevel, v)
+                      }
                     >
                       <SelectTrigger className="w-[180px]">
                         <SelectValue placeholder="Unassigned" />
@@ -203,10 +218,12 @@ export default function GradeLevelsPage() {
         )}
       </div>
 
-      {gradeLevels && gradeLevels.length > 0 && (
+      {classSections && classSections.length > 0 && (
         <div className="text-xs text-muted-foreground">
-          <strong>{gradeLevels.length}</strong> grade level
-          {gradeLevels.length !== 1 ? "s" : ""} loaded
+          <strong>{classSections.length}</strong> class
+          {classSections.length !== 1 ? "es" : ""} across{" "}
+          <strong>{uniqueGradeLevels.length}</strong> grade level
+          {uniqueGradeLevels.length !== 1 ? "s" : ""} loaded
         </div>
       )}
     </motion.div>
