@@ -32,7 +32,12 @@ import { useState } from "react";
 
 // A nav child can optionally carry a `category` key that is matched
 // against the ?category= search param for active-state detection.
-type NavChild = { label: string; href: string; category?: string; sectionHeader?: undefined };
+type NavChild = {
+  label: string;
+  href: string;
+  category?: string;
+  sectionHeader?: undefined;
+};
 
 interface NavSubSection {
   label: string;
@@ -79,18 +84,13 @@ const NAV_ITEMS: NavItem[] = [
     icon: Layers,
   },
   {
-    label: "Exam Management",
-    href: ROUTES.ADMIN_EXAMS,
-    icon: BookOpen,
-  },
-  {
     label: "Pre-Primary",
     icon: GraduationCap,
     section: true,
     children: [
       { label: "Observations & Feedback", href: ROUTES.ADMIN_OBSERVATIONS },
       {
-        label: "Evaluation Plans",
+        label: "Exam Plan",
         href: `${ROUTES.ADMIN_EXAMS}?category=PRE_PRIMARY`,
         category: "PRE_PRIMARY",
       },
@@ -102,7 +102,7 @@ const NAV_ITEMS: NavItem[] = [
     section: true,
     children: [
       {
-        label: "Evaluation Plans",
+        label: "Exam Plan",
         href: `${ROUTES.ADMIN_EXAMS}?category=PRIMARY`,
         category: "PRIMARY",
       },
@@ -114,7 +114,7 @@ const NAV_ITEMS: NavItem[] = [
     section: true,
     children: [
       {
-        label: "Evaluation Plans",
+        label: "Exam Plan",
         href: `${ROUTES.ADMIN_EXAMS}?category=SECONDARY`,
         category: "SECONDARY",
       },
@@ -154,7 +154,9 @@ export function AdminSidebar() {
   // ?category= param must match the child's declared category.
   const isChildItemActive = (child: NavChild) => {
     if (child.category) {
-      return pathname === ROUTES.ADMIN_EXAMS && currentCategory === child.category;
+      return (
+        pathname === ROUTES.ADMIN_EXAMS && currentCategory === child.category
+      );
     }
     return pathname === child.href;
   };

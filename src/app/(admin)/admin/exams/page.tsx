@@ -788,11 +788,24 @@ export default function ExamsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredExams.map((exam) => (
+              {filteredExams.map((exam) => {
+                const schoolLevel = gradeLevelToSchoolLevel.get(exam.gradeLevel);
+                const isSecondaryOrHigher =
+                  schoolLevel === "SECONDARY" || schoolLevel === "HIGHER";
+
+                return (
                 <TableRow
                   key={exam.id}
                   className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => router.push(`/admin/exams/${exam.id}`)}
+                  onClick={() => {
+                    if (isSecondaryOrHigher) {
+                      router.push(
+                        `/admin/secondary/result-compilation?year=${exam.academicYearId}&grade=${exam.gradeLevel}&exam=${exam.id}&tab=term`,
+                      );
+                    } else {
+                      router.push(`/admin/exams/${exam.id}`);
+                    }
+                  }}
                 >
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
@@ -878,7 +891,8 @@ export default function ExamsPage() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+              );
+            })}
             </TableBody>
           </Table>
         ) : (
