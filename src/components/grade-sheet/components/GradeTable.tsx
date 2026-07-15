@@ -61,7 +61,7 @@ const headerCell: React.CSSProperties = {
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.5px",
-  color: "#ffffff",
+  color: "#1f5e9d",
   fontFamily: "Arial, sans-serif",
   lineHeight: 1.3,
 };
@@ -74,20 +74,21 @@ export default function GradeTable({ subjects }: GradeTableProps) {
         tableLayout: "fixed",
         borderCollapse: "collapse",
         fontSize: "10px",
-        marginBottom: "4px",
+        marginBottom: "0",
         fontFamily: "Arial, sans-serif",
       }}
     >
       <colgroup>
+        <col style={{ width: "6%" }} />
         <col style={{ width: "32%" }} />
-        <col style={{ width: "9%" }} />
-        <col style={{ width: "13%" }} />
-        <col style={{ width: "9%" }} />
-        <col style={{ width: "19%" }} />
-        <col style={{ width: "18%" }} />
+        <col style={{ width: "14%" }} />
+        <col style={{ width: "12%" }} />
+        <col style={{ width: "16%" }} />
+        <col style={{ width: "20%" }} />
       </colgroup>
       <thead>
-        <tr style={{ background: "#1f5e9d" }}>
+        <tr style={{ background: "#ffffff" }}>
+          <th style={headerCell}>S.N.</th>
           <th
             style={{
               ...headerCell,
@@ -95,20 +96,11 @@ export default function GradeTable({ subjects }: GradeTableProps) {
               paddingLeft: "10px",
             }}
           >
-            SUBJECT
+            SUBJECTS
           </th>
-          <th style={headerCell}>
-            CREDIT
-            <br />
-            HOUR
-          </th>
-          <th style={headerCell}>
-            GRADE
-            <br />
-            POINT (GP)
-          </th>
+          <th style={headerCell}>CREDIT HOUR (CH)</th>
           <th style={headerCell}>GRADE</th>
-          <th style={headerCell}>FINAL GRADE</th>
+          <th style={headerCell}>GRADE POINT</th>
           <th style={headerCell}>REMARKS</th>
         </tr>
       </thead>
@@ -117,32 +109,18 @@ export default function GradeTable({ subjects }: GradeTableProps) {
         {subjects.map((subject, idx) => {
           const evenBg = idx % 2 === 0 ? "#ffffff" : "#f8fbff";
           return (
-            <Fragment key={subject.name}>
-              {/* Theory row */}
-              <tr style={{ background: evenBg }}>
-                <td style={subjectCell}>{subject.name} (TH)</td>
-                <td style={centerCell}>{subject.creditHourTheory}</td>
-                <td style={centerCell}>{subject.gpTheory.toFixed(1)}</td>
-                <td style={centerCell}>{subject.gradeTheory}</td>
-                <td style={mergedCell} rowSpan={2}>
-                  {subject.finalGrade}
-                </td>
-                <td
-                  style={{ ...mergedCell, fontWeight: 600, fontSize: "9.5px" }}
-                  rowSpan={2}
-                >
-                  {subject.remarks}
-                </td>
-              </tr>
-
-              {/* Internal row */}
-              <tr key={`${subject.name}-in`} style={{ background: evenBg }}>
-                <td style={internalSubjectCell}>{subject.name} (IN)</td>
-                <td style={centerCell}>{subject.creditHourInternal}</td>
-                <td style={centerCell}>{subject.gpInternal.toFixed(1)}</td>
-                <td style={centerCell}>{subject.gradeInternal}</td>
-              </tr>
-            </Fragment>
+            <tr key={subject.name} style={{ background: evenBg }}>
+              <td style={centerCell}>{idx + 1}.</td>
+              <td style={subjectCell}>{subject.name}</td>
+              <td style={centerCell}>{subject.creditHourTheory.toFixed(1)}</td>
+              <td style={centerCell}>{subject.finalGrade}</td>
+              <td style={centerCell}>
+                {subject.gpTheory > 0 ? subject.gpTheory.toFixed(2) : "\u2013"}
+              </td>
+              <td style={{ ...subjectCell, textAlign: "left", fontWeight: 600 }}>
+                {subject.remarks}.
+              </td>
+            </tr>
           );
         })}
       </tbody>

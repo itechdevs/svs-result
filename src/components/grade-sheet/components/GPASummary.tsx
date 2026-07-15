@@ -9,29 +9,35 @@ interface GPASummaryProps {
 
 export default function GPASummary({ gpa, rank }: GPASummaryProps) {
   return (
-    <div
+    <table
       style={{
-        background: '#dbeeff',
-        border: '1px solid #4a7aa8',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '5px 14px',
-        fontSize: '10.5px',
-        fontWeight: 700,
-        color: '#1f5e9d',
-        marginBottom: '6px',
+        width: '100%',
+        borderCollapse: 'collapse',
+        marginBottom: '10px',
         fontFamily: 'Arial, sans-serif',
       }}
     >
-      <span>
-        Grade Point Average (GPA) ={' '}
-        <strong style={{ fontSize: '11px' }}>{gpa.toFixed(2)}</strong>
-      </span>
-      <span style={{ color: '#4a7aa8', fontSize: '13px', fontWeight: 300 }}>|</span>
-      <span>
-        Rank = <strong style={{ fontSize: '11px' }}>{rank}</strong>
-      </span>
-    </div>
+      <tbody>
+        <tr>
+          <td
+            style={{
+              borderLeft: '0.5px solid #4a7aa8',
+              borderRight: '0.5px solid #4a7aa8',
+              borderBottom: '0.5px solid #4a7aa8',
+              padding: '5px 14px',
+              fontSize: '11px',
+              fontWeight: 700,
+              color: '#1f5e9d',
+              textAlign: 'center',
+            }}
+          >
+            Grade Point Average (GPA) ={' '}
+            <strong style={{ fontSize: '12px' }}>{gpa.toFixed(2)}</strong>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            Rank = <strong style={{ fontSize: '12px' }}>{rank}</strong>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   )
 }
