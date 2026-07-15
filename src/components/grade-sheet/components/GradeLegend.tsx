@@ -16,42 +16,42 @@ const DEFAULT_NOTES = [
   "Students must pass all subjects to be promoted.",
 ];
 
-function GpaFormula() {
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "2px",
-        flexWrap: "wrap",
-      }}
-    >
-      GPA =&nbsp;
-      <span
-        style={{
-          display: "inline-flex",
-          flexDirection: "column",
-          alignItems: "center",
-          fontSize: "8px",
-          lineHeight: 1.3,
-          verticalAlign: "middle",
-        }}
-      >
-        <span
-          style={{
-            borderBottom: "1px solid #1f5e9d",
-            padding: "0 3px 1px",
-          }}
-        >
-          &Sigma;(Credit Hour*Grade Point)
-        </span>
-        <span style={{ padding: "1px 3px 0" }}>
-          Total Credit Hour of the Grade
-        </span>
-      </span>
-    </span>
-  );
-}
+// function GpaFormula() {
+//   return (
+//     <span
+//       style={{
+//         display: "inline-flex",
+//         alignItems: "center",
+//         gap: "2px",
+//         flexWrap: "wrap",
+//       }}
+//     >
+//       GPA =&nbsp;
+//       <span
+//         style={{
+//           display: "inline-flex",
+//           flexDirection: "column",
+//           alignItems: "center",
+//           fontSize: "8px",
+//           lineHeight: 1.3,
+//           verticalAlign: "middle",
+//         }}
+//       >
+//         <span
+//           style={{
+//             borderBottom: "1px solid #1f5e9d",
+//             padding: "0 3px 1px",
+//           }}
+//         >
+//           &Sigma;(Credit Hour*Grade Point)
+//         </span>
+//         <span style={{ padding: "1px 3px 0" }}>
+//           Total Credit Hour of the Grade
+//         </span>
+//       </span>
+//     </span>
+//   );
+// }
 
 const tableHeaderCell: React.CSSProperties = {
   border: "0.5px solid #1f5e9d",
@@ -110,15 +110,56 @@ export default function GradeLegend({
         }}
       >
         <div style={{ marginBottom: "2px", fontSize: "9.5px" }}>Note:</div>
-        <div style={{ marginBottom: "1px" }}>1. One Credit Hour Equals To 32 Working Hours.</div>
-        <div style={{ marginBottom: "1px" }}>2. INTERNAL(IN): This Covers The Participation, Practical/Project<br/>Works &amp; Terminal Examination.</div>
-        <div style={{ marginBottom: "1px" }}>3. EXTERNAL(TH): This Covers Written External Examination.</div>
-        <div style={{ display: "flex", gap: "32px", marginBottom: "1px" }}>
-          <span>4. ABS: Absent</span>
-          <span>5. *NG: Not Graded</span>
+
+        <div style={{ marginBottom: "1px" }}>
+          1. ABS: Absent
         </div>
+
+        <div style={{ marginBottom: "1px" }}>
+          2. *NG: Not Graded
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", marginBottom: "1px" }}>
+          3.&nbsp;
+          <span>
+            Achieved Percentage of each subjects =
+            <span
+              style={{
+                display: "inline-flex",
+                flexDirection: "column",
+                textAlign: "center",
+                verticalAlign: "middle",
+                margin: "0 4px",
+              }}
+            >
+              <span style={{ borderBottom: "1px solid #000", padding: "0 3px" }}>
+                Total Obtained Marks
+              </span>
+              <span>4 × Total Learning Outcomes</span>
+            </span>
+            × 100
+          </span>
+        </div>
+
         <div style={{ display: "flex", alignItems: "center" }}>
-          6.&nbsp;<GpaFormula />
+          4.&nbsp;
+          <span>
+            Average GPA =
+            <span
+              style={{
+                display: "inline-flex",
+                flexDirection: "column",
+                textAlign: "center",
+                verticalAlign: "middle",
+                margin: "0 4px",
+              }}
+            >
+              <span style={{ borderBottom: "1px solid #000", padding: "0 3px" }}>
+                Total GPA Obtained
+              </span>
+              <span>Total Number of Subjects</span>
+            </span>
+          </span>
         </div>
       </div>
 
