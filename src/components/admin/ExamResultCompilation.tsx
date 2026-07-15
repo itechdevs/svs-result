@@ -74,6 +74,7 @@ interface CompiledResult {
   overallPercentage: number;
   overallGrade: string;
   result: "Pass" | "Fail" | "Pending";
+  hasReExam?: boolean;
 }
 
 interface Props {
@@ -338,6 +339,19 @@ export default function ExamResultCompilation({
     return lookup;
   }, [resultsData]);
 
+  const studentsWithReExam = useMemo(() => {
+    const set = new Set<string>();
+    for (const [studentId, subjects] of Object.entries(marksLookup)) {
+      for (const entry of Object.values(subjects)) {
+        if (entry.hasReExam) {
+          set.add(studentId);
+          break;
+        }
+      }
+    }
+    return set;
+  }, [marksLookup]);
+
   const templatesBySubject = useMemo(() => {
     const map = new Map<string, typeof templates>();
     for (const t of templates) {
@@ -420,9 +434,10 @@ export default function ExamResultCompilation({
         overallPercentage,
         overallGrade: hasAnyMarks ? lookupGrade(overallPercentage) : "N/A",
         result: !hasAnyMarks ? "Pending" : anyFailed ? "Fail" : "Pass",
+        hasReExam: studentsWithReExam.has(student.id),
       };
     });
-  }, [students, totalSubjectsInTemplates, templatesBySubject, marksLookup]);
+  }, [students, totalSubjectsInTemplates, templatesBySubject, marksLookup, studentsWithReExam]);
 
   const toggleSort = (column: "rank" | "rollNo" | "studentName") => {
     if (sortColumn === column) {
@@ -434,18 +449,35 @@ export default function ExamResultCompilation({
   };
 
   const sortedResults = useMemo(() => {
-    const sorted = [...compiledResults].sort((a, b) => {
-      let cmp: number;
-      if (sortColumn === "rank") {
-        cmp = a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true });
-      } else if (sortColumn === "rollNo") {
-        cmp = a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true });
-      } else {
-        cmp = a.studentName.localeCompare(b.studentName);
+    const regularPass = compiledResults
+      .filter((r) => r.result === "Pass" && !r.hasReExam)
+      .sort((a, b) => b.overallPercentage - a.overallPercentage);
+
+    const reExamPass = compiledResults
+      .filter((r) => r.result === "Pass" && r.hasReExam)
+      .sort((a, b) => b.overallPercentage - a.overallPercentage);
+
+    const others = compiledResults
+      .filter((r) => r.result !== "Pass")
+      .sort((a, b) => a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true }));
+
+    const groups = [regularPass, reExamPass, others];
+
+    let rankCounter = 1;
+    for (const group of groups) {
+      for (const r of group) {
+        r.rank = rankCounter++;
       }
-      return sortDirection === "asc" ? cmp : -cmp;
-    });
-    return sorted.map((r, i) => ({ ...r, rank: i + 1 }) as CompiledResult);
+    }
+
+    const all = [...regularPass, ...reExamPass, ...others];
+
+    if (sortColumn === "rollNo") {
+      all.sort((a, b) => a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true }));
+    } else if (sortColumn === "studentName") {
+      all.sort((a, b) => a.studentName.localeCompare(b.studentName));
+    }
+    return sortDirection === "desc" ? all.reverse() : all;
   }, [compiledResults, sortColumn, sortDirection]);
 
   const allSelected =
@@ -1033,6 +1065,8 @@ export default function ExamResultCompilation({
                         "hover:bg-muted/20",
                         selectedIds.has(result.studentId) &&
                           "bg-blue-50/40 dark:bg-blue-950/20",
+                        result.hasReExam &&
+                          "bg-amber-50/60 dark:bg-amber-950/20",
                       )}
                     >
                       <TableCell className="border border-border px-3 py-2 text-center">
@@ -1093,6 +1127,11 @@ export default function ExamResultCompilation({
                         )}
                       >
                         {result.result}
+                        {result.hasReExam && (
+                          <span className="ml-1.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                            (Re-exam)
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell className="border border-border px-3 py-2 text-center">
                         <button
