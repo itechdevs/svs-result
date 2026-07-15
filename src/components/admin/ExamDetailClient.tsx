@@ -44,7 +44,6 @@ import { useExam, useUpdateExam, useDeleteExam } from "@/hooks/use-exams";
 import { useAcademicYears } from "@/hooks/use-academic-config";
 import { useGradeLevels } from "@/hooks/use-subjects";
 import { useGradeLevelCategories } from "@/hooks/use-grade-level-categories";
-import { categorizeGradeLevel } from "@/lib/schemas";
 import SanskarLoader from "@/components/shared/SanskarLoader";
 import { ROUTES } from "@/lib/constants";
 import ExamResultCompilation from "@/components/admin/ExamResultCompilation";
@@ -88,11 +87,8 @@ export default function ExamDetailClient({ examId }: Props) {
     for (const c of categories ?? []) {
       dbMap.set(c.gradeLevel, c.schoolLevel);
     }
-    if (dbMap.has(exam.gradeLevel)) {
-      return dbMap.get(exam.gradeLevel) as SchoolLevel;
-    }
-    const fallback = categorizeGradeLevel(exam.gradeLevel);
-    return fallback === "HIGHER" ? "SECONDARY" : (fallback as SchoolLevel);
+    const level = (dbMap.get(exam.gradeLevel) ?? "PRIMARY") as SchoolLevel;
+    return level === "HIGHER" ? "SECONDARY" : level;
   }, [exam?.gradeLevel, categories]);
 
   const openEditDialog = useCallback(() => {

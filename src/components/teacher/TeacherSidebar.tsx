@@ -24,7 +24,6 @@ import {
 import { useState, useMemo } from "react";
 import { useProfile } from "@/hooks/use-profile";
 import { useGradeLevelCategories } from "@/hooks/use-grade-level-categories";
-import { categorizeGradeLevel } from "@/lib/schemas";
 import { signOut } from "next-auth/react";
 import { toast } from "sonner";
 import { LogOut } from "lucide-react";
@@ -59,10 +58,7 @@ function getSchoolLevel(
   gradeLevel: string,
   dbMap: Map<string, SchoolLevelKey>,
 ): SchoolLevelKey {
-  if (dbMap.has(gradeLevel)) return dbMap.get(gradeLevel)!;
-  const fallback = categorizeGradeLevel(gradeLevel);
-  if (fallback === "HIGHER") return "HIGHER";
-  return fallback as SchoolLevelKey;
+  return dbMap.get(gradeLevel) ?? "PRIMARY";
 }
 
 export function TeacherSidebar() {

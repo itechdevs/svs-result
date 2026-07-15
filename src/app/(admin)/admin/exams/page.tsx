@@ -3,7 +3,15 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
-import { Plus, Trash2, BookOpen, Calendar, Pencil, X, Check } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  BookOpen,
+  Calendar,
+  Pencil,
+  X,
+  Check,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,11 +57,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useExams, useCreateExam, useUpdateExam, useDeleteExam } from "@/hooks/use-exams";
+import {
+  useExams,
+  useCreateExam,
+  useUpdateExam,
+  useDeleteExam,
+} from "@/hooks/use-exams";
 import { useAcademicYears } from "@/hooks/use-academic-config";
 import { useGradeLevels } from "@/hooks/use-subjects";
 import { useGradeLevelCategories } from "@/hooks/use-grade-level-categories";
-import { groupGradeLevelsByCategory } from "@/lib/schemas";
 import SanskarLoader from "@/components/shared/SanskarLoader";
 
 export default function ExamsPage() {
@@ -62,12 +74,12 @@ export default function ExamsPage() {
 
   // Initialise from URL — pre-selects when coming from /admin/academic-years row click
   const [academicYearFilter, setAcademicYearFilter] = useState(
-    () => searchParams.get("academicYearId") ?? ""
+    () => searchParams.get("academicYearId") ?? "",
   );
   const [gradeLevelFilter, setGradeLevelFilter] = useState("");
   // Category filter driven by ?category= param (PRE_PRIMARY | PRIMARY | SECONDARY | HIGHER)
   const [categoryFilter, setCategoryFilter] = useState(
-    () => searchParams.get("category") ?? ""
+    () => searchParams.get("category") ?? "",
   );
 
   // Stay in sync when browser navigates back/forward
@@ -106,10 +118,21 @@ export default function ExamsPage() {
     });
   }, [exams, categoryFilter, gradeLevelToSchoolLevel]);
 
-  // Group grade levels by category
-  const groupedGrades = gradeLevels ? groupGradeLevelsByCategory(gradeLevels) : null;
-
-  const currentYear = academicYears?.find((y: any) => y.isCurrent);
+  // Group grade levels by DB-driven categories
+  const groupedGrades = useMemo(() => {
+    if (!gradeLevels) return null;
+    const groups: Record<string, string[]> = {
+      PRE_PRIMARY: [],
+      PRIMARY: [],
+      SECONDARY: [],
+      HIGHER: [],
+    };
+    gradeLevels.forEach((level) => {
+      const cat = gradeLevelToSchoolLevel.get(level) ?? "PRIMARY";
+      groups[cat]?.push(level);
+    });
+    return groups;
+  }, [gradeLevels, gradeLevelToSchoolLevel]);
 
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -170,8 +193,8 @@ export default function ExamsPage() {
             gradeLevel: grade,
             startDate: startDate || undefined,
             endDate: endDate || undefined,
-          })
-        )
+          }),
+        ),
       );
 
       resetForm();
@@ -248,10 +271,13 @@ export default function ExamsPage() {
               : "Create and manage exam groupings across subjects"}
           </p>
         </div>
-        <Dialog open={open} onOpenChange={(val) => {
-          if (val) resetForm();
-          setOpen(val);
-        }}>
+        <Dialog
+          open={open}
+          onOpenChange={(val) => {
+            if (val) resetForm();
+            setOpen(val);
+          }}
+        >
           <DialogTrigger asChild>
             <Button className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold gap-2">
               <Plus className="w-4 h-4" />
@@ -318,13 +344,21 @@ export default function ExamsPage() {
                     >
                       <div className="flex gap-1 overflow-hidden truncate">
                         {isLoadingGrades ? (
-                          <span className="text-muted-foreground">Loading grades...</span>
+                          <span className="text-muted-foreground">
+                            Loading grades...
+                          </span>
                         ) : selectedGrades.length === 0 ? (
-                          <span className="text-muted-foreground">Select grade levels...</span>
+                          <span className="text-muted-foreground">
+                            Select grade levels...
+                          </span>
                         ) : selectedGrades.length <= 3 ? (
-                          <span className="text-foreground">{selectedGrades.join(", ")}</span>
+                          <span className="text-foreground">
+                            {selectedGrades.join(", ")}
+                          </span>
                         ) : (
-                          <span className="text-foreground">{selectedGrades.length} grades selected</span>
+                          <span className="text-foreground">
+                            {selectedGrades.length} grades selected
+                          </span>
                         )}
                       </div>
                       <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
@@ -346,14 +380,19 @@ export default function ExamsPage() {
                       className="font-semibold"
                     >
                       <div
-                        className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${selectedGrades.length === gradeLevels?.length
-                          ? "bg-primary text-primary-foreground"
-                          : "opacity-50"
-                          }`}
+                        className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${
+                          selectedGrades.length === gradeLevels?.length
+                            ? "bg-primary text-primary-foreground"
+                            : "opacity-50"
+                        }`}
                       >
-                        {selectedGrades.length === gradeLevels?.length && <Check className="h-3 w-3" />}
+                        {selectedGrades.length === gradeLevels?.length && (
+                          <Check className="h-3 w-3" />
+                        )}
                       </div>
-                      {selectedGrades.length === gradeLevels?.length ? "Unselect All" : "Select All"}
+                      {selectedGrades.length === gradeLevels?.length
+                        ? "Unselect All"
+                        : "Select All"}
                     </DropdownMenuItem>
 
                     {groupedGrades && (
@@ -373,15 +412,22 @@ export default function ExamsPage() {
                                   onSelect={(e) => {
                                     e.preventDefault();
                                     if (isChecked) {
-                                      setSelectedGrades((prev) => prev.filter((g) => g !== level));
+                                      setSelectedGrades((prev) =>
+                                        prev.filter((g) => g !== level),
+                                      );
                                     } else {
-                                      setSelectedGrades((prev) => [...prev, level]);
+                                      setSelectedGrades((prev) => [
+                                        ...prev,
+                                        level,
+                                      ]);
                                     }
                                   }}
                                 >
                                   <div
                                     className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${
-                                      isChecked ? "bg-primary text-primary-foreground" : "opacity-50"
+                                      isChecked
+                                        ? "bg-primary text-primary-foreground"
+                                        : "opacity-50"
                                     }`}
                                   >
                                     {isChecked && <Check className="h-3 w-3" />}
@@ -408,15 +454,22 @@ export default function ExamsPage() {
                                   onSelect={(e) => {
                                     e.preventDefault();
                                     if (isChecked) {
-                                      setSelectedGrades((prev) => prev.filter((g) => g !== level));
+                                      setSelectedGrades((prev) =>
+                                        prev.filter((g) => g !== level),
+                                      );
                                     } else {
-                                      setSelectedGrades((prev) => [...prev, level]);
+                                      setSelectedGrades((prev) => [
+                                        ...prev,
+                                        level,
+                                      ]);
                                     }
                                   }}
                                 >
                                   <div
                                     className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${
-                                      isChecked ? "bg-primary text-primary-foreground" : "opacity-50"
+                                      isChecked
+                                        ? "bg-primary text-primary-foreground"
+                                        : "opacity-50"
                                     }`}
                                   >
                                     {isChecked && <Check className="h-3 w-3" />}
@@ -443,15 +496,22 @@ export default function ExamsPage() {
                                   onSelect={(e) => {
                                     e.preventDefault();
                                     if (isChecked) {
-                                      setSelectedGrades((prev) => prev.filter((g) => g !== level));
+                                      setSelectedGrades((prev) =>
+                                        prev.filter((g) => g !== level),
+                                      );
                                     } else {
-                                      setSelectedGrades((prev) => [...prev, level]);
+                                      setSelectedGrades((prev) => [
+                                        ...prev,
+                                        level,
+                                      ]);
                                     }
                                   }}
                                 >
                                   <div
                                     className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${
-                                      isChecked ? "bg-primary text-primary-foreground" : "opacity-50"
+                                      isChecked
+                                        ? "bg-primary text-primary-foreground"
+                                        : "opacity-50"
                                     }`}
                                   >
                                     {isChecked && <Check className="h-3 w-3" />}
@@ -478,15 +538,22 @@ export default function ExamsPage() {
                                   onSelect={(e) => {
                                     e.preventDefault();
                                     if (isChecked) {
-                                      setSelectedGrades((prev) => prev.filter((g) => g !== level));
+                                      setSelectedGrades((prev) =>
+                                        prev.filter((g) => g !== level),
+                                      );
                                     } else {
-                                      setSelectedGrades((prev) => [...prev, level]);
+                                      setSelectedGrades((prev) => [
+                                        ...prev,
+                                        level,
+                                      ]);
                                     }
                                   }}
                                 >
                                   <div
                                     className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${
-                                      isChecked ? "bg-primary text-primary-foreground" : "opacity-50"
+                                      isChecked
+                                        ? "bg-primary text-primary-foreground"
+                                        : "opacity-50"
                                     }`}
                                   >
                                     {isChecked && <Check className="h-3 w-3" />}
@@ -516,10 +583,7 @@ export default function ExamsPage() {
                   <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
                     End Date
                   </label>
-                  <BSCalendarSelector
-                    value={endDate}
-                    onChange={setEndDate}
-                  />
+                  <BSCalendarSelector value={endDate} onChange={setEndDate} />
                 </div>
               </div>
             </div>
@@ -537,7 +601,10 @@ export default function ExamsPage() {
               <Button
                 onClick={handleCreate}
                 disabled={
-                  !name || !academicYearId || selectedGrades.length === 0 || createExam.isPending
+                  !name ||
+                  !academicYearId ||
+                  selectedGrades.length === 0 ||
+                  createExam.isPending
                 }
                 className="bg-primary text-primary-foreground text-xs font-bold"
               >
@@ -599,7 +666,11 @@ export default function ExamsPage() {
                 <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
                   Grade Level
                 </label>
-                <Select value={gradeLevel} onValueChange={setGradeLevel} disabled>
+                <Select
+                  value={gradeLevel}
+                  onValueChange={setGradeLevel}
+                  disabled
+                >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select grade level" />
                   </SelectTrigger>
@@ -626,10 +697,7 @@ export default function ExamsPage() {
                   <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
                     End Date
                   </label>
-                  <BSCalendarSelector
-                    value={endDate}
-                    onChange={setEndDate}
-                  />
+                  <BSCalendarSelector value={endDate} onChange={setEndDate} />
                 </div>
               </div>
             </div>
@@ -663,7 +731,9 @@ export default function ExamsPage() {
           <div className="w-full sm:w-60">
             <Select
               value={academicYearFilter}
-              onValueChange={(val) => setAcademicYearFilter(val === "all" ? "" : val)}
+              onValueChange={(val) =>
+                setAcademicYearFilter(val === "all" ? "" : val)
+              }
             >
               <SelectTrigger className="w-full text-sm h-9">
                 <SelectValue placeholder="All Academic Years" />
@@ -672,7 +742,8 @@ export default function ExamsPage() {
                 <SelectItem value="all">All Academic Years</SelectItem>
                 {academicYears?.map((year: any) => (
                   <SelectItem key={year.id} value={year.id}>
-                    {year.name}{year.isCurrent && " (Current)"}
+                    {year.name}
+                    {year.isCurrent && " (Current)"}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -683,7 +754,9 @@ export default function ExamsPage() {
           <div className="w-full sm:w-56">
             <Select
               value={gradeLevelFilter}
-              onValueChange={(val) => setGradeLevelFilter(val === "all" ? "" : val)}
+              onValueChange={(val) =>
+                setGradeLevelFilter(val === "all" ? "" : val)
+              }
             >
               <SelectTrigger className="w-full text-sm h-9">
                 <SelectValue placeholder="All Grade Levels" />
@@ -701,7 +774,7 @@ export default function ExamsPage() {
         </div>
       </div>
 
-          <div className="bg-card border border-border rounded-xl shadow-sm overflow-x-auto w-full">
+      <div className="bg-card border border-border rounded-xl shadow-sm overflow-x-auto w-full">
         {filteredExams && filteredExams.length > 0 ? (
           <Table>
             <TableHeader>
@@ -747,7 +820,10 @@ export default function ExamsPage() {
                         <div className="text-[10px] text-muted-foreground pl-4.5">
                           {new Date(exam.startDate).toLocaleDateString()}
                           {exam.endDate && (
-                            <> — {new Date(exam.endDate).toLocaleDateString()}</>
+                            <>
+                              {" "}
+                              — {new Date(exam.endDate).toLocaleDateString()}
+                            </>
                           )}
                         </div>
                       </div>
@@ -809,7 +885,9 @@ export default function ExamsPage() {
           <div className="p-12 text-center">
             <BookOpen className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
             <p className="text-sm font-medium text-muted-foreground">
-              {academicYearFilter || gradeLevelFilter || categoryFilter ? "No exams match the selected filters" : "No exams yet"}
+              {academicYearFilter || gradeLevelFilter || categoryFilter
+                ? "No exams match the selected filters"
+                : "No exams yet"}
             </p>
             <p className="text-xs text-muted-foreground/60 mt-1">
               {academicYearFilter || gradeLevelFilter || categoryFilter
