@@ -163,7 +163,7 @@ function SchoolHeader({ result }: { result: StudentResult }) {
 }
 
 // ── Exam title block ─────────────────────────────────────────────────────────
-function ExamTitle() {
+function ExamTitle({ examName }: { examName?: string }) {
   return (
     <div
       style={{
@@ -183,7 +183,7 @@ function ExamTitle() {
           textTransform: "uppercase",
         }}
       >
-        FINAL EXAMINATION
+        {examName || "FINAL EXAMINATION"}
       </div>
       <div
         style={{
@@ -390,7 +390,7 @@ export default function GradeSheet({
               <SchoolHeader result={result} />
 
               {/* "FINAL EXAMINATION / GRADE SHEET" */}
-              <ExamTitle />
+              <ExamTitle examName={result.examName} />
 
               {/* Student info sentence */}
               <StudentInfo

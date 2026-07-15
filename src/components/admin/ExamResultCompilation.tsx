@@ -105,6 +105,7 @@ function toStudentObj(
   result: CompiledResult,
   gradeLevel: string,
   students: any[],
+  examName?: string,
 ): Student {
   return {
     id: result.studentId,
@@ -136,6 +137,8 @@ function toStudentObj(
       pass: sub.isPassed,
     })),
     dist: {},
+    rank: result.rank ?? 1,
+    examName,
   };
 }
 
@@ -166,13 +169,18 @@ export default function ExamResultCompilation({
   // ── Observation toggle ──────────────────────────────────────────────────────
   // null = not yet decided; true = include (use PrePrimary gradesheet);
   // false = don't include (use standard gradesheet)
-  const [includeObservation, setIncludeObservation] = useState<boolean | null>(null);
+  const [includeObservation, setIncludeObservation] = useState<boolean | null>(
+    null,
+  );
   const [observationMap, setObservationMap] = useState<ObservationMap>({});
   const [isLoadingObservations, setIsLoadingObservations] = useState(false);
   // For pre-primary single modal
-  const [prePrimaryModal, setPrePrimaryModal] = useState<PrePrimaryStudentData | null>(null);
+  const [prePrimaryModal, setPrePrimaryModal] =
+    useState<PrePrimaryStudentData | null>(null);
   // For pre-primary bulk modal
-  const [prePrimaryBulk, setPrePrimaryBulk] = useState<PrePrimaryStudentData[] | null>(null);
+  const [prePrimaryBulk, setPrePrimaryBulk] = useState<
+    PrePrimaryStudentData[] | null
+  >(null);
 
   // Auto-enable observation mode for pre-primary, disable for secondary+
   useEffect(() => {
@@ -225,22 +233,28 @@ export default function ExamResultCompilation({
     [templates],
   );
 
-  const { data: resultsData = [], isLoading: resultsLoading, refetch: refetchResults } =
-    useStudentEvaluationResults(
-      {
-        limit: 5000,
-        evaluationTemplateIds:
-          effectiveTemplateIds.length > 0 ? effectiveTemplateIds : undefined,
-      },
-      { enabled: effectiveTemplateIds.length > 0 },
-    );
+  const {
+    data: resultsData = [],
+    isLoading: resultsLoading,
+    refetch: refetchResults,
+  } = useStudentEvaluationResults(
+    {
+      limit: 5000,
+      evaluationTemplateIds:
+        effectiveTemplateIds.length > 0 ? effectiveTemplateIds : undefined,
+    },
+    { enabled: effectiveTemplateIds.length > 0 },
+  );
 
-  const { data: teacherCompilations = [], isLoading: compilationsLoading, refetch: refetchCompilations } =
-    useAdminTeacherCompilations({
-      status: "SUBMITTED",
-      academicYearId: academicYearId || undefined,
-      gradeLevel: gradeLevel || undefined,
-    });
+  const {
+    data: teacherCompilations = [],
+    isLoading: compilationsLoading,
+    refetch: refetchCompilations,
+  } = useAdminTeacherCompilations({
+    status: "SUBMITTED",
+    academicYearId: academicYearId || undefined,
+    gradeLevel: gradeLevel || undefined,
+  });
 
   const isLoading =
     studentsLoading ||
@@ -521,8 +535,8 @@ export default function ExamResultCompilation({
   };
 
   const handleViewAllGradeSheets = () => {
-    const studentObjs = sortedResults.map((r) =>
-      toStudentObj(r, gradeLevel, students),
+    const studentObjs = compiledResults.map((r) =>
+      toStudentObj(r, gradeLevel, students, examName),
     );
     setBulkGradeSheets(studentObjs);
   };
@@ -533,9 +547,14 @@ export default function ExamResultCompilation({
   const loadObservations = async (): Promise<ObservationMap> => {
     try {
       setIsLoadingObservations(true);
-      const res = await apiClient.get(
+      const res = (await apiClient.get(
         `/admin/observations/results?examId=${examId}&class=${encodeURIComponent(gradeLevel)}`,
-      ) as { students: Array<{ syncedStudentId: string; results: StudentObservationEntry[] }> };
+      )) as {
+        students: Array<{
+          syncedStudentId: string;
+          results: StudentObservationEntry[];
+        }>;
+      };
       const map: ObservationMap = {};
       for (const s of res.students ?? []) {
         map[s.syncedStudentId] = s.results;
@@ -659,8 +678,10 @@ export default function ExamResultCompilation({
       </div>
 
       {/* ── Observation toggle / School-level notice ──────────────────── */}
-      {(showResultsTable || hasSavedResults) && !isCompiling && includeObservation === null && (
-        (schoolLevel === "SECONDARY" || schoolLevel === "HIGHER") ? (
+      {(showResultsTable || hasSavedResults) &&
+        !isCompiling &&
+        includeObservation === null &&
+        (schoolLevel === "SECONDARY" || schoolLevel === "HIGHER" ? (
           <div className="bg-card rounded-xl border border-border shadow-sm p-5">
             <div className="flex items-start gap-3 mb-3">
               <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
@@ -669,9 +690,9 @@ export default function ExamResultCompilation({
                   Secondary Level Exam
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  This exam is at the secondary level. Use the Secondary Mark Entry and
-                  Result Compilation pages for component-based assessment
-                  (Theory, Practical, Internal).
+                  This exam is at the secondary level. Use the Secondary Mark
+                  Entry and Result Compilation pages for component-based
+                  assessment (Theory, Practical, Internal).
                 </p>
               </div>
             </div>
@@ -725,31 +746,44 @@ export default function ExamResultCompilation({
               </Button>
             </div>
           </div>
-        )
-      )}
+        ))}
 
       {/* Observation mode active banner */}
-      {(showResultsTable || hasSavedResults) && !isCompiling && includeObservation !== null && (
-        <div className={cn(
-          "rounded-xl border p-4 flex items-center gap-3",
-          includeObservation
-            ? "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800"
-            : "bg-muted/40 border-border",
-        )}>
-          <ClipboardList className={cn("w-4 h-4 shrink-0", includeObservation ? "text-blue-600 dark:text-blue-400" : "text-muted-foreground")} />
-          <p className="text-xs font-semibold text-foreground flex-1">
-            {includeObservation
-              ? "Pre-Primary grade sheet with observation data will be used."
-              : "Standard marksheet template will be used (no observation)."}
-          </p>
-          <button
-            onClick={() => { setIncludeObservation(null); setObservationMap({}); }}
-            className="text-[10px] font-semibold text-muted-foreground hover:text-foreground underline"
+      {(showResultsTable || hasSavedResults) &&
+        !isCompiling &&
+        includeObservation !== null && (
+          <div
+            className={cn(
+              "rounded-xl border p-4 flex items-center gap-3",
+              includeObservation
+                ? "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800"
+                : "bg-muted/40 border-border",
+            )}
           >
-            {schoolLevel === "PRE_PRIMARY" ? "Change" : "Change"}
-          </button>
-        </div>
-      )}
+            <ClipboardList
+              className={cn(
+                "w-4 h-4 shrink-0",
+                includeObservation
+                  ? "text-blue-600 dark:text-blue-400"
+                  : "text-muted-foreground",
+              )}
+            />
+            <p className="text-xs font-semibold text-foreground flex-1">
+              {includeObservation
+                ? "Pre-Primary grade sheet with observation data will be used."
+                : "Standard marksheet template will be used (no observation)."}
+            </p>
+            <button
+              onClick={() => {
+                setIncludeObservation(null);
+                setObservationMap({});
+              }}
+              className="text-[10px] font-semibold text-muted-foreground hover:text-foreground underline"
+            >
+              {schoolLevel === "PRE_PRIMARY" ? "Change" : "Change"}
+            </button>
+          </div>
+        )}
 
       {totalSubjectsInTemplates.length > 0 && (
         <div className="bg-card rounded-xl border border-border shadow-sm p-5">
@@ -895,7 +929,11 @@ export default function ExamResultCompilation({
                   </Button>
                 )}
                 <Button
-                  onClick={includeObservation ? handleViewAllPrePrimaryGradeSheets : handleViewAllGradeSheets}
+                  onClick={
+                    includeObservation
+                      ? handleViewAllPrePrimaryGradeSheets
+                      : handleViewAllGradeSheets
+                  }
                   disabled={isLoadingObservations}
                   variant="outline"
                   className="flex items-center gap-2 h-9 py-2 text-xs font-semibold cursor-pointer"
@@ -994,7 +1032,7 @@ export default function ExamResultCompilation({
                       className={cn(
                         "hover:bg-muted/20",
                         selectedIds.has(result.studentId) &&
-                        "bg-blue-50/40 dark:bg-blue-950/20",
+                          "bg-blue-50/40 dark:bg-blue-950/20",
                       )}
                     >
                       <TableCell className="border border-border px-3 py-2 text-center">
@@ -1026,8 +1064,8 @@ export default function ExamResultCompilation({
                                 className={cn(
                                   "font-mono text-xs",
                                   !sub.isPassed &&
-                                  sub.subjectName &&
-                                  "text-destructive",
+                                    sub.subjectName &&
+                                    "text-destructive",
                                 )}
                               >
                                 {sub.percentage.toFixed(1)}%
@@ -1062,8 +1100,13 @@ export default function ExamResultCompilation({
                             includeObservation
                               ? handleViewPrePrimaryGradeSheet(result)
                               : setShowTranscriptModal(
-                                toStudentObj(result, gradeLevel, students),
-                              )
+                                  toStudentObj(
+                                    result,
+                                    gradeLevel,
+                                    students,
+                                    examName,
+                                  ),
+                                )
                           }
                           className="px-2.5 py-1 bg-primary hover:bg-primary/90 text-primary-foreground rounded text-[11px] font-bold cursor-pointer transition-colors"
                         >

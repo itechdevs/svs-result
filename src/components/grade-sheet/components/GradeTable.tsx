@@ -1,13 +1,31 @@
 // ─────────────────────────────────────────────
-//  GradeTable — Main subject marks table
-//  Theory + Internal rows with merged Final Grade / Remarks cells
+//  GradeTable — Subject marks table
+//  Shows: SUBJECT | GP | GRADE | REMARKS
+//  All grade values are calculated dynamically from the grading intervals.
 // ─────────────────────────────────────────────
 
-import { Fragment } from "react";
-import { Subject } from "../types";
+import { Subject, DEFAULT_GRADE_INTERVALS } from "../types";
 
 interface GradeTableProps {
   subjects: Subject[];
+}
+
+function getGradeDetails(pct: number) {
+  for (const row of DEFAULT_GRADE_INTERVALS) {
+    const parts = row.interval.split(/\s*–\s*/);
+    const [low, high] = parts.map((s) => {
+      const match = s.match(/(\d+)/);
+      return match ? Number(match[1]) : 0;
+    });
+    if (pct >= low && pct <= high) {
+      return {
+        grade: row.grade,
+        gp: row.gradePoint === "–" ? 0 : Number(row.gradePoint),
+        description: row.description,
+      };
+    }
+  }
+  return { grade: "NG", gp: 0, description: "Not Graded" };
 }
 
 const cell: React.CSSProperties = {
@@ -33,22 +51,6 @@ const subjectCell: React.CSSProperties = {
   fontWeight: 700,
   fontSize: "9.5px",
   textTransform: "uppercase",
-};
-
-const internalSubjectCell: React.CSSProperties = {
-  ...subjectCell,
-  paddingLeft: "16px",
-  fontStyle: "italic",
-  fontWeight: 600,
-  fontSize: "9px",
-};
-
-const mergedCell: React.CSSProperties = {
-  ...centerCell,
-  background: "#f0f6ff",
-  fontWeight: 800,
-  fontSize: "10.5px",
-  verticalAlign: "middle",
 };
 
 const headerCell: React.CSSProperties = {
@@ -79,12 +81,10 @@ export default function GradeTable({ subjects }: GradeTableProps) {
       }}
     >
       <colgroup>
-        <col style={{ width: "6%" }} />
-        <col style={{ width: "32%" }} />
-        <col style={{ width: "14%" }} />
-        <col style={{ width: "12%" }} />
+        <col style={{ width: "34%" }} />
+        <col style={{ width: "18%" }} />
         <col style={{ width: "16%" }} />
-        <col style={{ width: "20%" }} />
+        <col style={{ width: "32%" }} />
       </colgroup>
       <thead>
         <tr style={{ background: "#ffffff" }}>
@@ -98,9 +98,12 @@ export default function GradeTable({ subjects }: GradeTableProps) {
           >
             SUBJECTS
           </th>
-          <th style={headerCell}>CREDIT HOUR (CH)</th>
+          <th style={headerCell}>
+            GRADE
+            <br />
+            POINT (GP)
+          </th>
           <th style={headerCell}>GRADE</th>
-          <th style={headerCell}>GRADE POINT</th>
           <th style={headerCell}>REMARKS</th>
         </tr>
       </thead>
@@ -108,18 +111,29 @@ export default function GradeTable({ subjects }: GradeTableProps) {
       <tbody>
         {subjects.map((subject, idx) => {
           const evenBg = idx % 2 === 0 ? "#ffffff" : "#f8fbff";
+
+          let grade = subject.finalGrade;
+          let gp = subject.gpTheory;
+          let remarks = subject.remarks;
+
+          if (
+            subject.marksObtained !== undefined &&
+            subject.maxMarks &&
+            subject.maxMarks > 0
+          ) {
+            const pct = (subject.marksObtained / subject.maxMarks) * 100;
+            const details = getGradeDetails(pct);
+            grade = details.grade;
+            gp = details.gp;
+            remarks = details.description;
+          }
+
           return (
             <tr key={subject.name} style={{ background: evenBg }}>
-              <td style={centerCell}>{idx + 1}.</td>
               <td style={subjectCell}>{subject.name}</td>
-              <td style={centerCell}>{subject.creditHourTheory.toFixed(1)}</td>
-              <td style={centerCell}>{subject.finalGrade}</td>
-              <td style={centerCell}>
-                {subject.gpTheory > 0 ? subject.gpTheory.toFixed(2) : "\u2013"}
-              </td>
-              <td style={{ ...subjectCell, textAlign: "left", fontWeight: 600 }}>
-                {subject.remarks}.
-              </td>
+              <td style={centerCell}>{gp.toFixed(1)}</td>
+              <td style={centerCell}>{grade}</td>
+              <td style={centerCell}>{remarks}</td>
             </tr>
           );
         })}
