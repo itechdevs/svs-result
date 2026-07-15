@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
 import { Plus, Trash2, BookOpen, Calendar, Pencil, X, Check } from "lucide-react";
@@ -52,6 +52,7 @@ import {
 import { useExams, useCreateExam, useUpdateExam, useDeleteExam } from "@/hooks/use-exams";
 import { useAcademicYears } from "@/hooks/use-academic-config";
 import { useGradeLevels } from "@/hooks/use-subjects";
+import { useGradeLevelCategories } from "@/hooks/use-grade-level-categories";
 import { groupGradeLevelsByCategory } from "@/lib/schemas";
 import SanskarLoader from "@/components/shared/SanskarLoader";
 
@@ -64,10 +65,15 @@ export default function ExamsPage() {
     () => searchParams.get("academicYearId") ?? ""
   );
   const [gradeLevelFilter, setGradeLevelFilter] = useState("");
+  // Category filter driven by ?category= param (PRE_PRIMARY | PRIMARY | SECONDARY | HIGHER)
+  const [categoryFilter, setCategoryFilter] = useState(
+    () => searchParams.get("category") ?? ""
+  );
 
   // Stay in sync when browser navigates back/forward
   useEffect(() => {
     setAcademicYearFilter(searchParams.get("academicYearId") ?? "");
+    setCategoryFilter(searchParams.get("category") ?? "");
   }, [searchParams]);
 
   const { data: exams, isLoading } = useExams({
@@ -76,9 +82,29 @@ export default function ExamsPage() {
   });
   const { data: academicYears } = useAcademicYears();
   const { data: gradeLevels, isLoading: isLoadingGrades } = useGradeLevels();
+  const { data: gradeLevelCategories } = useGradeLevelCategories();
   const createExam = useCreateExam();
   const deleteExam = useDeleteExam();
   const updateExam = useUpdateExam();
+
+  // Build a gradeLevel → schoolLevel lookup map from the DB categories
+  const gradeLevelToSchoolLevel = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of gradeLevelCategories ?? []) {
+      map.set(c.gradeLevel, c.schoolLevel);
+    }
+    return map;
+  }, [gradeLevelCategories]);
+
+  // Apply category filter on top of the already-fetched exams (data-driven, not hardcoded)
+  const filteredExams = useMemo(() => {
+    if (!exams) return [];
+    if (!categoryFilter) return exams;
+    return exams.filter((exam) => {
+      const level = gradeLevelToSchoolLevel.get(exam.gradeLevel);
+      return level === categoryFilter;
+    });
+  }, [exams, categoryFilter, gradeLevelToSchoolLevel]);
 
   // Group grade levels by category
   const groupedGrades = gradeLevels ? groupGradeLevelsByCategory(gradeLevels) : null;
@@ -212,10 +238,14 @@ export default function ExamsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-foreground">
-            Exam Plans
+            {categoryFilter
+              ? `${categoryFilter === "PRE_PRIMARY" ? "Pre-Primary" : categoryFilter === "PRIMARY" ? "Primary" : categoryFilter === "SECONDARY" ? "Secondary" : categoryFilter} — Evaluation Plans`
+              : "Exam Plans"}
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-            Create and manage exam groupings across subjects
+            {categoryFilter
+              ? `Showing Evaluation Plans for the ${categoryFilter === "PRE_PRIMARY" ? "Pre-Primary" : categoryFilter === "PRIMARY" ? "Primary" : "Secondary"} category`
+              : "Create and manage exam groupings across subjects"}
           </p>
         </div>
         <Dialog open={open} onOpenChange={(val) => {
@@ -671,8 +701,8 @@ export default function ExamsPage() {
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-xl shadow-sm overflow-x-auto w-full">
-        {exams && exams.length > 0 ? (
+          <div className="bg-card border border-border rounded-xl shadow-sm overflow-x-auto w-full">
+        {filteredExams && filteredExams.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow>
@@ -685,7 +715,7 @@ export default function ExamsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {exams.map((exam) => (
+              {filteredExams.map((exam) => (
                 <TableRow
                   key={exam.id}
                   className="cursor-pointer hover:bg-muted/50"
@@ -779,10 +809,10 @@ export default function ExamsPage() {
           <div className="p-12 text-center">
             <BookOpen className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
             <p className="text-sm font-medium text-muted-foreground">
-              {academicYearFilter || gradeLevelFilter ? "No exams match the selected filters" : "No exams yet"}
+              {academicYearFilter || gradeLevelFilter || categoryFilter ? "No exams match the selected filters" : "No exams yet"}
             </p>
             <p className="text-xs text-muted-foreground/60 mt-1">
-              {academicYearFilter || gradeLevelFilter
+              {academicYearFilter || gradeLevelFilter || categoryFilter
                 ? "Try selecting different filters"
                 : "Create your first exam to get started"}
             </p>
