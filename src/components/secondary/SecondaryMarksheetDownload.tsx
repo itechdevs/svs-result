@@ -24,6 +24,7 @@ interface TermMarksheetData {
   subjectResults: Array<{
     subject: string;
     creditHours: number;
+    internalMarks: number;
     theoryMarks: number;
     practicalMarks: number;
     totalObtained: number;
@@ -156,6 +157,7 @@ export function prepareTermMarksheetData(
     subjectResults: (subjectResults || []).map(sr => ({
       subject: sr?.subjectConfig?.syncedSubject?.name || 'Unknown Subject',
       creditHours: sr?.creditHours || 0,
+      internalMarks: Number(sr?.internalMarks || 0),
       theoryMarks: Number(sr?.theoryMarks || 0),
       practicalMarks: Number(sr?.practicalMarks || 0),
       totalObtained: Number(sr?.totalObtained || 0),
@@ -170,11 +172,7 @@ export function prepareTermMarksheetData(
     totalCreditHours: termResult?.totalCreditHours || 0,
     gpa: Number(termResult?.gpa || 0),
     resultStatus: termResult?.resultStatus || 'PENDING',
-    generatedDate: new Date().toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    }),
+    generatedDate: new Date().toLocaleDateString('en-GB').replace(/\//g, '-'),
   };
 }
 
@@ -210,11 +208,7 @@ export function prepareAnnualMarksheetData(
     gpa: Number(annualResult?.gpa || 0),
     resultStatus: annualResult?.resultStatus || 'PENDING',
     classRank: annualResult?.classRank || undefined,
-    generatedDate: new Date().toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    }),
+    generatedDate: new Date().toLocaleDateString('en-GB').replace(/\//g, '-'),
     remarks: annualResult.remarks || undefined,
   };
 }

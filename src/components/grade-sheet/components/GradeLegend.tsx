@@ -16,7 +16,6 @@ const DEFAULT_NOTES = [
   "Students must pass all subjects to be promoted.",
 ];
 
-/** Fraction-style GPA formula rendered as inline flex */
 function GpaFormula() {
   return (
     <span
@@ -44,10 +43,10 @@ function GpaFormula() {
             padding: "0 3px 1px",
           }}
         >
-          &Sigma;(Total Obtained) &times; 100
+          &Sigma;(Credit Hour*Grade Point)
         </span>
         <span style={{ padding: "1px 3px 0" }}>
-          4 &times; No. of Learning Outcomes
+          Total Credit Hour of the Grade
         </span>
       </span>
     </span>
@@ -55,38 +54,48 @@ function GpaFormula() {
 }
 
 const tableHeaderCell: React.CSSProperties = {
-  border: "0.5px solid #4a7aa8",
+  border: "0.5px solid #1f5e9d",
   padding: "4px 6px",
   textAlign: "center",
   fontWeight: 700,
   fontSize: "8px",
-  textTransform: "uppercase" as const,
-  background: "#dbeeff",
   color: "#1f5e9d",
   fontFamily: "Arial, sans-serif",
+  whiteSpace: "pre-wrap",
 };
 
 const tableBodyCell: React.CSSProperties = {
-  border: "0.5px solid #4a7aa8",
-  padding: "3px 6px",
+  border: "0.5px solid #1f5e9d",
+  padding: "2px 6px",
   textAlign: "center",
-  fontWeight: 600,
-  height: "22px",
+  fontWeight: 700,
+  height: "18px",
   color: "#1f5e9d",
-  fontSize: "8.5px",
+  fontSize: "8px",
   fontFamily: "Arial, sans-serif",
 };
 
 export default function GradeLegend({
-  notes = DEFAULT_NOTES,
   intervals = DEFAULT_GRADE_INTERVALS,
 }: GradeLegendProps) {
+  const formatInterval = (inv: string) => {
+    if (inv.includes('100')) return '90 to 100';
+    if (inv.includes('90')) return '80 to below 90';
+    if (inv.includes('80')) return '70 to below 80';
+    if (inv.includes('70')) return '60 to below 70';
+    if (inv.includes('60')) return '50 to below 60';
+    if (inv.includes('50')) return '40 to below 50';
+    if (inv.includes('40')) return '35 to below 40';
+    if (inv.includes('35')) return '0 to below 35';
+    return inv;
+  };
+
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "5fr 6fr",
-        gap: "8px",
+        gridTemplateColumns: "11fr 10fr",
+        gap: "4px",
         marginBottom: "6px",
         fontFamily: "Arial, sans-serif",
       }}
@@ -94,69 +103,47 @@ export default function GradeLegend({
       {/* ── LEFT: Notes ── */}
       <div
         style={{
-          border: "0.5px solid #4a7aa8",
-          fontSize: "9px",
+          fontSize: "8.5px",
           color: "#1f5e9d",
+          fontWeight: 700,
+          lineHeight: 1.4,
         }}
       >
-        <div
-          style={{
-            background: "#1f5e9d",
-            color: "white",
-            fontWeight: 700,
-            padding: "4px 8px",
-            fontSize: "9.5px",
-            textTransform: "uppercase",
-            letterSpacing: "0.5px",
-          }}
-        >
-          Notes
+        <div style={{ marginBottom: "2px", fontSize: "9.5px" }}>Note:</div>
+        <div style={{ marginBottom: "1px" }}>1. One Credit Hour Equals To 32 Working Hours.</div>
+        <div style={{ marginBottom: "1px" }}>2. INTERNAL(IN): This Covers The Participation, Practical/Project<br/>Works &amp; Terminal Examination.</div>
+        <div style={{ marginBottom: "1px" }}>3. EXTERNAL(TH): This Covers Written External Examination.</div>
+        <div style={{ display: "flex", gap: "32px", marginBottom: "1px" }}>
+          <span>4. ABS: Absent</span>
+          <span>5. *NG: Not Graded</span>
         </div>
-        <div style={{ padding: "6px 8px" }}>
-          <ol style={{ paddingLeft: "14px", lineHeight: 1.9 }}>
-            {notes.map((note, i) => (
-              <li
-                key={i}
-                  style={{
-                    marginBottom: "2px",
-                    display: "flex",
-                    alignItems: "center",
-                    whiteSpace: "nowrap",
-                  }}
-              >
-                {note === "GPA_FORMULA" ? <GpaFormula /> : note}
-              </li>
-            ))}
-          </ol>
+        <div style={{ display: "flex", alignItems: "center" }}>
+          6.&nbsp;<GpaFormula />
         </div>
       </div>
 
       {/* ── RIGHT: Grade intervals ── */}
       <div
         style={{
-          border: "0.5px solid #4a7aa8",
           fontSize: "8.5px",
           color: "#1f5e9d",
         }}
       >
         <div
           style={{
-            background: "#1f5e9d",
-            color: "white",
+            color: "#1f5e9d",
             fontWeight: 700,
-            padding: "4px 8px",
             fontSize: "9.5px",
-            textTransform: "uppercase",
-            letterSpacing: "0.5px",
             textAlign: "center",
+            marginBottom: "4px",
           }}
         >
           Intervals and Grade
         </div>
         <table style={{ width: "100%", tableLayout: "fixed", borderCollapse: "collapse" }}>
           <colgroup>
-            <col style={{ width: "10%" }} />
-            <col style={{ width: "28%" }} />
+            <col style={{ width: "8%" }} />
+            <col style={{ width: "30%" }} />
             <col style={{ width: "14%" }} />
             <col style={{ width: "18%" }} />
             <col style={{ width: "30%" }} />
@@ -164,9 +151,9 @@ export default function GradeLegend({
           <thead>
             <tr>
               <th style={tableHeaderCell}>SN</th>
-              <th style={tableHeaderCell}>Interval (%)</th>
+              <th style={tableHeaderCell}>{"Interval In\nPercent"}</th>
               <th style={tableHeaderCell}>Grade</th>
-              <th style={tableHeaderCell}>Grade Point</th>
+              <th style={tableHeaderCell}>{"Grade\nPoint"}</th>
               <th style={tableHeaderCell}>Description</th>
             </tr>
           </thead>
@@ -174,13 +161,9 @@ export default function GradeLegend({
             {intervals.map((row) => (
               <tr key={row.sn}>
                 <td style={tableBodyCell}>{row.sn}</td>
-                <td style={tableBodyCell}>{row.interval}</td>
-                <td style={{ ...tableBodyCell, fontWeight: 800 }}>
-                  {row.grade}
-                </td>
-                <td style={{ ...tableBodyCell, fontWeight: 800 }}>
-                  {row.gradePoint}
-                </td>
+                <td style={tableBodyCell}>{formatInterval(row.interval)}</td>
+                <td style={tableBodyCell}>{row.grade}</td>
+                <td style={tableBodyCell}>{row.gradePoint}</td>
                 <td style={tableBodyCell}>{row.description}</td>
               </tr>
             ))}

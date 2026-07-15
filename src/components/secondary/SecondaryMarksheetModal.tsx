@@ -3,17 +3,17 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
   DialogTitle,
   DialogDescription
 } from '@/components/shared/ui/dialog';
-import { 
-  SecondaryMarksheetDownload, 
+import {
+  SecondaryMarksheetDownload,
   prepareTermMarksheetData,
-  prepareAnnualMarksheetData 
+  prepareAnnualMarksheetData
 } from '@/components/secondary/SecondaryMarksheetDownload';
 import { Loader2, FileText, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -51,7 +51,7 @@ export function SecondaryMarksheetModal({ marksheetId, open, onClose }: Secondar
     } else if (marksheet.metadata && typeof marksheet.metadata === 'object') {
       // Fall back to metadata snapshot
       const metadata: any = marksheet.metadata;
-      
+
       if (marksheet.termResultId) {
         // It's a term marksheet
         return prepareTermMarksheetData(
@@ -77,7 +77,7 @@ export function SecondaryMarksheetModal({ marksheetId, open, onClose }: Secondar
         );
       }
     }
-    
+
     return null;
   };
 
@@ -162,11 +162,10 @@ export function SecondaryMarksheetModal({ marksheetId, open, onClose }: Secondar
                   </div>
                   <div className="flex items-center justify-between mt-2">
                     <span className="text-sm text-muted-foreground">Status:</span>
-                    <span className={`font-bold text-sm px-3 py-1 rounded ${
-                      marksheetData.resultStatus === 'PROMOTED' 
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400' 
+                    <span className={`font-bold text-sm px-3 py-1 rounded ${marksheetData.resultStatus === 'PROMOTED'
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
                         : 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400'
-                    }`}>
+                      }`}>
                       {marksheetData.resultStatus === 'PROMOTED' ? 'PROMOTED' : 'NG BLOCKED'}
                     </span>
                   </div>

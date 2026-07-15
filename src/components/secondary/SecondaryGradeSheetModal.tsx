@@ -3,6 +3,7 @@
 import React from 'react';
 import GradeSheet from '@/components/grade-sheet/components/GradeSheet';
 import type { StudentResult, Subject } from '@/components/grade-sheet/types';
+import { DEFAULT_GRADE_INTERVALS } from '@/components/grade-sheet/types';
 import { X, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -15,6 +16,12 @@ const SCHOOL_INFO = {
   nepaliYear: '2082',
   englishYear: '2026',
 };
+
+function getGradeDescription(grade: string, isNG?: boolean) {
+  if (isNG || grade === 'NG') return 'Not Graded';
+  const match = DEFAULT_GRADE_INTERVALS.find(g => g.grade === grade);
+  return match ? match.description : '\u2013';
+}
 
 function mapTermResultToStudentResult(termResult: any): StudentResult {
   const student = termResult.syncedStudent || {};
@@ -34,7 +41,7 @@ function mapTermResultToStudentResult(termResult: any): StudentResult {
       gpInternal: 0,
       gradeInternal: '\u2013',
       finalGrade: grade,
-      remarks: sr?.isNG ? 'Not Graded' : '\u2013',
+      remarks: getGradeDescription(grade, sr?.isNG),
     };
   });
 
@@ -69,7 +76,7 @@ function mapAnnualResultToStudentResult(annualResult: any): StudentResult {
       gpInternal: 0,
       gradeInternal: '\u2013',
       finalGrade: grade,
-      remarks: sr?.isNG ? 'Not Graded' : '\u2013',
+      remarks: getGradeDescription(grade, sr?.isNG),
     };
   });
 
@@ -109,13 +116,83 @@ export function SecondaryGradeSheetModal({
       : mapAnnualResultToStudentResult(result);
 
   const handlePrint = () => {
-    document.body.classList.add('printing-grade-sheet');
-    window.print();
-    window.addEventListener(
-      'afterprint',
-      () => document.body.classList.remove('printing-grade-sheet'),
-      { once: true },
+    // Find the grade sheet root inside this modal
+    const root = document.querySelector<HTMLElement>('.grade-sheet-root');
+    if (!root) {
+      console.warn('[SecondaryGradeSheetModal] .grade-sheet-root not found');
+      return;
+    }
+
+    // Collect all styles from the current page
+    const styleNodes = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+      .map((el) => el.outerHTML)
+      .join('\n');
+
+    const printHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Grade Sheet - Print</title>
+  ${styleNodes}
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: white;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    .no-print { display: none !important; }
+    .grade-sheet-root {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      box-shadow: none !important;
+    }
+    @media print {
+      @page { size: A4 portrait; margin: 0; }
+      html, body { margin: 0; padding: 0; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  ${root.outerHTML}
+</body>
+</html>`;
+
+    const printWindow = window.open(
+      '',
+      '_blank',
+      'width=900,height=1200,menubar=no,toolbar=no,location=no,status=no',
     );
+
+    if (!printWindow) {
+      alert('Please allow popups for this site to enable printing.');
+      return;
+    }
+
+    printWindow.document.open();
+    printWindow.document.write(printHTML);
+    printWindow.document.close();
+
+    // Wait for images and fonts to load before triggering print
+    printWindow.onload = () => {
+      printWindow.focus();
+      printWindow.print();
+      printWindow.onafterprint = () => printWindow.close();
+    };
+
+    // Safety timeout for browsers that don't fire onload on document.write
+    setTimeout(() => {
+      if (!printWindow.closed) {
+        printWindow.focus();
+        printWindow.print();
+        printWindow.onafterprint = () => printWindow.close();
+      }
+    }, 1000);
   };
 
   return (
