@@ -34,7 +34,7 @@ export function SchoolHeader({ data }: { data: PrePrimaryGradeSheetData }) {
       style={{
         textAlign: 'center',
         paddingBottom: '8px',
-        borderBottom: `1.5px solid ${borderColor}`,
+        borderBottom: 'none',
         marginBottom: '4px',
         fontFamily: FONT,
       }}
@@ -86,7 +86,7 @@ export function SchoolHeader({ data }: { data: PrePrimaryGradeSheetData }) {
         }}
       >
         Email: {data.schoolEmail}
-        {data.schoolWebsite ? `  Website: ${data.schoolWebsite}` : ''}
+        {data.schoolWebsite ? `  |  Website: ${data.schoolWebsite}` : ''}
       </div>
     </div>
   );
@@ -123,7 +123,7 @@ export function TitleBlock({ evaluationName }: { evaluationName: string }) {
           color: accentColor,
           letterSpacing: '2px',
           textTransform: 'uppercase',
-          marginTop: '1px',
+          marginTop: '10px',
         }}
       >
         GRADE SHEET
@@ -183,17 +183,17 @@ export function StudentInfoRow({ data }: { data: PrePrimaryGradeSheetData }) {
         }}
       >
         <span style={labelStyle}>THE FOLLOWING ARE THE GRADE BY:</span>
-        <span style={{ ...underlineBase, flex: 2, minWidth: '80px' }}>
+        <span style={{ ...underlineBase, flex: 2, minWidth: '80px', textAlign: 'center' }}>
           {data.studentName || '\u00A0'}
         </span>
-        <span style={labelStyle}>DATE OF BIRTH:</span>
+        {/* <span style={labelStyle}>DATE OF BIRTH:</span>
         <span style={{ ...underlineBase, flex: 1, minWidth: '60px' }}>
           {data.dateOfBirth || '\u00A0'}
         </span>
-        <span style={labelStyle}>B. S.</span>
+        <span style={labelStyle}>B. S.</span> */}
       </div>
 
-      {/* Line 2: ( _dob_ A.D.) ROLL NO: _roll_ GRADE: _class_ IN THE */}
+      {/* Line 2: ROLL NO: _roll_ GRADE: _class_ IN THE */}
       <div
         style={{
           display: 'flex',
@@ -202,16 +202,17 @@ export function StudentInfoRow({ data }: { data: PrePrimaryGradeSheetData }) {
           width: '100%',
         }}
       >
-        <span style={labelStyle}>(</span>
+        {/* <span style={labelStyle}>(</span>
         <span style={{ ...underlineBase, flex: 1, minWidth: '60px' }}>
           {data.dateOfBirth || '\u00A0'}
         </span>
-        <span style={labelStyle}>A.D.) ROLL NO:</span>
-        <span style={{ ...underlineBase, flex: 1, minWidth: '50px' }}>
+        <span style={labelStyle}>A.D.) </span> */}
+        <span style={labelStyle}> ROLL NO:</span>
+        <span style={{ ...underlineBase, flex: 1, minWidth: '50px', textAlign: 'center' }}>
           {data.rollNo || '\u00A0'}
         </span>
         <span style={labelStyle}>GRADE:</span>
-        <span style={{ ...underlineBase, flex: 1, minWidth: '50px' }}>
+        <span style={{ ...underlineBase, flex: 1, minWidth: '50px', textAlign: 'center' }}>
           {data.className || '\u00A0'}
           {data.section ? ` (${data.section})` : ''}
         </span>
@@ -232,7 +233,8 @@ export function DeclarationLine({ evaluationName }: { evaluationName: string }) 
         fontWeight: 700,
         color: textColor,
         fontFamily: FONT,
-        marginBottom: '6px',
+        marginTop: '-9px',
+        marginBottom: '10px',
       }}
     >
       <span style={{ fontWeight: 900 }}>
@@ -417,15 +419,13 @@ export function GradeScaleTable({ rows }: { rows: GradeScaleRow[] }) {
 export function SummarySection({
   gpa,
   rank,
-  attendance,
 }: {
   gpa: number | null;
   rank: number | null;
-  attendance: string;
+  attendance?: string;
 }) {
   const displayGpa = gpa !== null && gpa !== undefined ? gpa.toFixed(2) : '';
   const displayRank = rank !== null && rank !== undefined ? String(rank) : '';
-  const displayAttendance = attendance || '';
 
   const labelStyle: React.CSSProperties = {
     fontSize: '9px',
@@ -453,25 +453,19 @@ export function SummarySection({
       style={{
         display: 'flex',
         alignItems: 'flex-end',
-        gap: '16px',
+        gap: '130px',
         padding: '6px 2px',
         fontFamily: FONT,
         marginBottom: '4px',
-        borderTop: `1px solid ${borderColor}`,
-        borderBottom: `1px solid ${borderColor}`,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px' }}>
-        <span style={labelStyle}>Grade Point Average (GPA) =</span>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', fontSize: '9px' }}>
+        <span style={labelStyle} >Grade Point Average (GPA) =</span>
         <span style={valueUnderline}>{displayGpa}</span>
       </div>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
         <span style={labelStyle}>Rank :</span>
-        <span style={valueUnderline}>{displayRank}</span>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px' }}>
-        <span style={labelStyle}>Attendance:</span>
-        <span style={valueUnderline}>{displayAttendance}</span>
+        <span style={{ ...valueUnderline, textAlign: 'center', verticalAlign: 'middle' }}>{displayRank}</span>
       </div>
     </div>
   );
@@ -497,7 +491,6 @@ export function ObservationSection({ data }: { data: PrePrimaryGradeSheetData })
             fontSize: '9px',
             fontWeight: 900,
             color: textColor,
-            textDecoration: 'underline',
             marginBottom: '2px',
             textTransform: 'uppercase',
             letterSpacing: '0.5px',
@@ -513,7 +506,7 @@ export function ObservationSection({ data }: { data: PrePrimaryGradeSheetData })
                   style={{
                     border: `1px solid ${borderColor}`,
                     padding: '3px 8px',
-                    fontSize: '8.5px',
+                    fontSize: '9px',
                     fontWeight: 700,
                     color: textColor,
                     width: '35%',
@@ -528,7 +521,7 @@ export function ObservationSection({ data }: { data: PrePrimaryGradeSheetData })
                   style={{
                     border: `1px solid ${borderColor}`,
                     padding: '3px 8px',
-                    fontSize: '8.5px',
+                    fontSize: '9px',
                     color: textColor,
                     height: '22px',
                     verticalAlign: 'middle',
@@ -565,7 +558,6 @@ export function ObservationSection({ data }: { data: PrePrimaryGradeSheetData })
           fontSize: '9px',
           fontWeight: 900,
           color: textColor,
-          textDecoration: 'underline',
           marginBottom: '2px',
           textTransform: 'uppercase',
           letterSpacing: '0.5px',
@@ -589,7 +581,7 @@ export function ObservationSection({ data }: { data: PrePrimaryGradeSheetData })
                 style={{
                   border: `1px solid ${borderColor}`,
                   padding: '3px 8px',
-                  fontSize: '8.5px',
+                  fontSize: '9px',
                   fontWeight: 700,
                   color: textColor,
                   width: '35%',
@@ -604,7 +596,7 @@ export function ObservationSection({ data }: { data: PrePrimaryGradeSheetData })
                 style={{
                   border: `1px solid ${borderColor}`,
                   padding: '3px 8px',
-                  fontSize: '8.5px',
+                  fontSize: '9px',
                   color: textColor,
                   height: '22px',
                   verticalAlign: 'middle',

@@ -200,15 +200,42 @@ export function buildPrePrimaryData(params: {
     // ObservationSection renders rawObservations directly when present,
     // so we don't need to match descriptions to fixed grade-sheet fields.
 
+    const gradeScale: GradeScaleRow[] =
+        gradeScales.length > 0
+            ? gradeScales
+                .map((gs, idx) => ({
+                    sn: idx + 1,
+                    interval: `${Number(gs.minPercent)} \u2013 ${Number(gs.maxPercent)}`,
+                    grade: gs.grade,
+                    gradePoint: gs.gradePoint != null ? gs.gradePoint.toFixed(1) : '\u2013',
+                    description: gs.description || '',
+                }))
+                .sort((a, b) => a.sn - b.sn)
+            : DEFAULT_GRADE_SCALE;
+
+    const findGradeData = (grade: string | undefined | null) => {
+        if (!grade || grade === '\u2013') return null;
+        return gradeScale.find((g) => g.grade === grade) || null;
+    };
+
+    const parseGP = (gpStr: string | undefined | null) => {
+        if (!gpStr || gpStr === '\u2013') return null;
+        const num = Number(gpStr);
+        return isNaN(num) ? null : num;
+    };
+
     let subjects: PrePrimarySubjectResult[] = [];
 
     if (subjectResults.length > 0) {
-        subjects = subjectResults.map((sr) => ({
-            subjectName: sr.syncedSubject?.name || sr.syncedSubjectId,
-            grade: sr.grade || '\u2013',
-            gradePoint: sr.gradePoint ?? null,
-            remarks: sr.remarks || null,
-        }));
+        subjects = subjectResults.map((sr) => {
+            const gdData = findGradeData(sr.grade);
+            return {
+                subjectName: sr.syncedSubject?.name || sr.syncedSubjectId,
+                grade: sr.grade || '\u2013',
+                gradePoint: sr.gradePoint ?? (gdData ? parseGP(gdData.gradePoint) : null),
+                remarks: (gdData ? gdData.description : null) || sr.remarks || null,
+            };
+        });
     } else if (evaluationTemplates.length > 0) {
         const templateMap = new Map(evaluationTemplates.map((t) => [t.id, t]));
         const subjectAgg: Record<
@@ -231,27 +258,26 @@ export function buildPrePrimaryData(params: {
         subjects = Object.entries(subjectAgg).map(([, agg]) => {
             const pct = agg.totalMax > 0 ? (agg.totalMarks / agg.totalMax) * 100 : 0;
             const gd = getGradeFromScale(pct, gradeScales);
+            const gdData = findGradeData(gd.grade);
             return {
                 subjectName: agg.name,
                 grade: gd.grade,
-                gradePoint: gd.gradePoint,
-                remarks: agg.remarks.join('; ') || null,
+                gradePoint: gd.gradePoint ?? (gdData ? parseGP(gdData.gradePoint) : null),
+                remarks: (gdData ? gdData.description : null) || agg.remarks.join('; ') || null,
             };
         });
     }
 
-    const gradeScale: GradeScaleRow[] =
-        gradeScales.length > 0
-            ? gradeScales
-                .map((gs, idx) => ({
-                    sn: idx + 1,
-                    interval: `${Number(gs.minPercent)} \u2013 ${Number(gs.maxPercent)}`,
-                    grade: gs.grade,
-                    gradePoint: gs.gradePoint != null ? gs.gradePoint.toFixed(1) : '\u2013',
-                    description: gs.description || '',
-                }))
-                .sort((a, b) => a.sn - b.sn)
-            : DEFAULT_GRADE_SCALE;
+    let calculatedGpa = finalResult?.cgpa ?? null;
+    if (subjects.length > 0) {
+        let sum = 0;
+        for (const s of subjects) {
+            if (s.gradePoint !== null && s.gradePoint !== undefined) {
+                sum += Number(s.gradePoint);
+            }
+        }
+        calculatedGpa = sum / subjects.length;
+    }
 
     return {
         schoolName: 'SANSKAR VIDHYAPITH SCHOOL',
@@ -268,7 +294,7 @@ export function buildPrePrimaryData(params: {
         section: syncedStudent?.section || '',
         subjects,
         gradeScale,
-        gpa: finalResult?.cgpa ?? null,
+        gpa: calculatedGpa,
         rank: finalResult?.classRank ?? null,
         attendance,
         observation: '',
@@ -325,13 +351,52 @@ export default function PrePrimaryGradeSheet({
     showPrintButton = true,
 }: PrePrimaryGradeSheetProps) {
     const handlePrint = useCallback(() => {
-        document.body.classList.add('printing-grade-sheet');
-        window.print();
-        window.addEventListener(
-            'afterprint',
-            () => document.body.classList.remove('printing-grade-sheet'),
-            { once: true },
-        );
+        const root = document.querySelector('.pp-grade-sheet-root');
+        if (!root) return;
+
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+
+        const styleSheets = Array.from(document.styleSheets)
+            .map((sheet) => {
+                try {
+                    return Array.from(sheet.cssRules)
+                        .map((r) => r.cssText)
+                        .join('');
+                } catch {
+                    return '';
+                }
+            })
+            .join('');
+
+        const baseUrl =
+            document.querySelector('base')?.href || window.location.href;
+
+        printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <base href="${baseUrl}">
+        <title>Pre-Primary Grade Sheet</title>
+        <style>
+          @page { size: A4 portrait; margin: 8mm; }
+          @media print {
+            body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .pp-no-print { display: none !important; }
+          }
+          body { background: #f0f0f0; margin: 0; padding: 20px; display: flex; justify-content: center; }
+          ${styleSheets}
+        </style>
+      </head>
+      <body>
+        ${root.outerHTML}
+      </body>
+      </html>
+    `);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
     }, []);
 
     return (
@@ -386,7 +451,7 @@ export default function PrePrimaryGradeSheet({
                     padding: '10mm 12mm',
                     display: 'flex',
                     flexDirection: 'column',
-                    border: `2px solid ${borderColor}`,
+                    border: 'none',
                 }}
             >
                 {/* Watermark logo — centered, low opacity */}

@@ -117,6 +117,7 @@ export default function PrePrimaryBulkGradeSheetsModal({ students, onClose }: Pr
                                 rollNumber: student.rollNo,
                                 class: student.className,
                                 section: student.section,
+
                             },
                             exam: { name: student.examName },
                             academicYear: { name: student.academicYear },
