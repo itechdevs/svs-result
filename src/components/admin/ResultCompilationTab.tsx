@@ -31,6 +31,7 @@ interface SubjectResult {
 }
 
 interface CompiledResult {
+  rank?: number;
   rollNo: string;
   studentId: string;
   studentName: string;
@@ -40,7 +41,7 @@ interface CompiledResult {
   result: 'Pass' | 'Fail' | 'Pending';
 }
 
-function toStudentObj(result: CompiledResult, selectedClass: string, students: any[]): Student {
+function toStudentObj(result: CompiledResult, selectedClass: string, students: any[], examName?: string): Student {
   return {
     id: result.studentId,
     name: result.studentName,
@@ -60,6 +61,8 @@ function toStudentObj(result: CompiledResult, selectedClass: string, students: a
       obtained: sub.totalObtained, max: sub.totalFull, pass: sub.isPassed,
     })),
     dist: {},
+    rank: result.rank ?? 1,
+    examName,
   };
 }
 
@@ -189,7 +192,7 @@ export default function ResultCompilationTab() {
 
   const compiledResults = useMemo((): CompiledResult[] => {
     if (filteredStudents.length === 0 || totalSubjectsInTemplates.length === 0) return [];
-    return filteredStudents.map((student) => {
+    const results = filteredStudents.map((student) => {
       const subjects: Record<string, SubjectResult> = {};
       let totalPercentage = 0, subjectCount = 0, hasAnyMarks = false, anyFailed = false;
       for (const subject of totalSubjectsInTemplates) {
@@ -227,6 +230,10 @@ export default function ResultCompilationTab() {
         result: !hasAnyMarks ? 'Pending' : anyFailed ? 'Fail' : 'Pass',
       };
     });
+    const ranked = [...results].sort((a, b) => b.overallPercentage - a.overallPercentage);
+    const rankMap = new Map<string, number>();
+    ranked.forEach((r, i) => rankMap.set(r.studentId, i + 1));
+    return results.map((r) => ({ ...r, rank: rankMap.get(r.studentId) ?? 1 } as CompiledResult));
   }, [filteredStudents, totalSubjectsInTemplates, templatesBySubject, marksLookup]);
 
   const selectedExamName = useMemo(() =>
@@ -287,10 +294,10 @@ export default function ResultCompilationTab() {
       const JSZip = (await import('jszip')).default;
       const zip = new JSZip();
       await Promise.all(selected.map(async result => {
-        const studentObj = toStudentObj(result, selectedClass, students);
+        const studentObj = toStudentObj(result, selectedClass, students, selectedExamName);
         const scores = buildMergedScores(studentObj.scores);
         const gpa = computeGpa(scores);
-        const blob = await pdf(<GradeSheetPDF student={studentObj} mergedScoresList={scores} gpa={gpa} rank={3} />).toBlob();
+        const blob = await pdf(<GradeSheetPDF student={studentObj} mergedScoresList={scores} gpa={gpa} rank={studentObj.rank ?? 1} />).toBlob();
         zip.file(`GradeSheet_${result.studentName}_${result.rollNo}.pdf`, blob);
       }));
       const zipBlob = await zip.generateAsync({ type: 'blob' });
@@ -509,7 +516,7 @@ export default function ResultCompilationTab() {
                         {result.result}
                       </TableCell>
                       <TableCell className="border border-border px-3 py-2 text-center">
-                        <button onClick={() => setShowTranscriptModal(toStudentObj(result, selectedClass, students))}
+                        <button onClick={() => setShowTranscriptModal(toStudentObj(result, selectedClass, students, selectedExamName))}
                           className="px-2.5 py-1 bg-[#002045] hover:bg-opacity-95 text-white rounded text-[11px] font-bold cursor-pointer transition-colors">
                           View Grade Sheet
                         </button>

@@ -163,13 +163,13 @@ function SchoolHeader({ result }: { result: StudentResult }) {
 }
 
 // ── Exam title block ─────────────────────────────────────────────────────────
-function ExamTitle() {
+function ExamTitle({ examName }: { examName?: string }) {
   return (
     <div
       style={{
         textAlign: "center",
         padding: "5px 0 3px",
-
+        // borderBottom: "1px solid #4a7aa8",
         marginBottom: "8px",
         fontFamily: "Arial, sans-serif",
       }}
@@ -183,7 +183,7 @@ function ExamTitle() {
           textTransform: "uppercase",
         }}
       >
-        FINAL EXAMINATION
+        {examName || "FINAL EXAMINATION"}
       </div>
       <div
         style={{
@@ -214,9 +214,11 @@ export default function GradeSheet({
     }
 
     // Collect all stylesheets and inline styles from the current document
-    const styleNodes = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+    const styleNodes = Array.from(
+      document.querySelectorAll('style, link[rel="stylesheet"]'),
+    )
       .map((el) => el.outerHTML)
-      .join('\n');
+      .join("\n");
 
     const printHTML = `<!DOCTYPE html>
 <html lang="en">
@@ -254,16 +256,26 @@ export default function GradeSheet({
 </body>
 </html>`;
 
-    const printWindow = window.open('', '_blank', 'width=900,height=1200,menubar=no,toolbar=no,location=no,status=no');
+    const printWindow = window.open(
+      "",
+      "_blank",
+      "width=900,height=1200,menubar=no,toolbar=no,location=no,status=no",
+    );
     if (!printWindow) {
       // Popup blocked — fallback: use iframe approach
-      let iframe = document.getElementById('grade-sheet-print-iframe') as HTMLIFrameElement;
+      let iframe = document.getElementById(
+        "grade-sheet-print-iframe",
+      ) as HTMLIFrameElement;
       if (!iframe) {
-        iframe = document.createElement('iframe');
-        iframe.id = 'grade-sheet-print-iframe';
+        iframe = document.createElement("iframe");
+        iframe.id = "grade-sheet-print-iframe";
         Object.assign(iframe.style, {
-          position: 'fixed', right: '0', bottom: '0',
-          width: '1px', height: '1px', border: 'none',
+          position: "fixed",
+          right: "0",
+          bottom: "0",
+          width: "1px",
+          height: "1px",
+          border: "none",
         });
         document.body.appendChild(iframe);
       }
@@ -390,7 +402,7 @@ export default function GradeSheet({
               <SchoolHeader result={result} />
 
               {/* "FINAL EXAMINATION / GRADE SHEET" */}
-              <ExamTitle />
+              <ExamTitle examName={result.examName} />
 
               {/* Student info sentence */}
               <StudentInfo
