@@ -53,14 +53,9 @@ function toStudentResult(student: Student): StudentResult {
     };
   });
 
-  const percentages = subjects.map((s) => {
-    if (s.maxMarks && s.maxMarks > 0 && s.marksObtained !== undefined) {
-      return (s.marksObtained / s.maxMarks) * 100;
-    }
-    return 0;
-  }).filter((p) => p > 0);
-  const gpa = percentages.length > 0
-    ? percentages.reduce((a, b) => a + b, 0) / percentages.length
+  const gpValues = subjects.map((s) => s.gpTheory);
+  const gpa = gpValues.length > 0
+    ? gpValues.reduce((a, b) => a + b, 0) / gpValues.length
     : 0;
 
   const now = new Date();
