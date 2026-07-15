@@ -49,6 +49,7 @@ export default function StudentInfo({
           alignItems: "baseline",
           flexWrap: "wrap",
           width: "100%",
+          marginBottom: "2px",
         }}
       >
         <span style={labelStyle}>THE GRADE(S) SECURED BY: </span>
@@ -86,14 +87,12 @@ export default function StudentInfo({
           marginTop: "2px",
         }}
       >
-        <span style={labelStyle}>IN THE FINAL EXAMINATION CONDUCTED IN </span>
+        <span style={labelStyle}>IN THE EXAMINATION CONDUCTED IN </span>
         <span style={{ ...underlineStyle, minWidth: "38px" }}>
           {nepaliYear}
         </span>
         <span style={labelStyle}>&nbsp;B.S. (&nbsp;</span>
-        <span style={{ ...underlineStyle, minWidth: "38px" }}>
-          {englishYear}
-        </span>
+        {/* <span style={{ ...underlineStyle, minWidth: '38px' }}>{englishYear}</span> */}
         <span style={labelStyle}>&nbsp;A.D.) ARE GIVEN BELOW.</span>
       </div>
     </div>
