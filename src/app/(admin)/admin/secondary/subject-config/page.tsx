@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { BookOpen, Calendar, Settings, Plus, Trash2, CheckCircle2, AlertTriangle, Info, ListPlus, Edit2, Cog } from "lucide-react";
@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
 import { useAcademicYears } from "@/hooks/use-academic-config";
 import { useSubjects, useGradeLevels } from "@/hooks/use-subjects";
-import { categorizeGradeLevel } from "@/lib/schemas";
+import { useGradeLevelCategories } from "@/hooks/use-grade-level-categories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -61,13 +61,22 @@ export default function SecondarySubjectConfigPage() {
   // Queries
   const { data: years, isLoading: isLoadingYears } = useAcademicYears();
   const { data: allGradeLevels, isLoading: isLoadingGrades } = useGradeLevels();
+  const { data: categories } = useGradeLevelCategories();
   const { data: syncedSubjects, isLoading: isLoadingSubjects } = useSubjects({
     gradeLevel: selectedGrade || undefined,
   });
 
+  const categoryMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of categories ?? []) {
+      map.set(c.gradeLevel, c.schoolLevel);
+    }
+    return map;
+  }, [categories]);
+
   // Filter to only secondary and higher secondary grades
   const secondaryGrades = allGradeLevels?.filter((grade) => {
-    const category = categorizeGradeLevel(grade);
+    const category = categoryMap.get(grade);
     return category === "SECONDARY" || category === "HIGHER";
   }) || [];
 

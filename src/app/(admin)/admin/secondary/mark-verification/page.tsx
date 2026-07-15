@@ -20,7 +20,7 @@ import { apiClient } from "@/lib/api-client";
 import { useAcademicYears } from "@/hooks/use-academic-config";
 import { useExams } from "@/hooks/use-exams";
 import { useGradeLevels } from "@/hooks/use-subjects";
-import { categorizeGradeLevel } from "@/lib/schemas";
+import { useGradeLevelCategories } from "@/hooks/use-grade-level-categories";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -105,11 +105,20 @@ function SecondaryMarkVerificationPage() {
 
   const { data: years, isLoading: isLoadingYears } = useAcademicYears();
   const { data: allGradeLevels, isLoading: isLoadingGrades } = useGradeLevels();
+  const { data: categories } = useGradeLevelCategories();
   const currentYear = years?.find((y) => y.isCurrent);
+
+  const categoryMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of categories ?? []) {
+      map.set(c.gradeLevel, c.schoolLevel);
+    }
+    return map;
+  }, [categories]);
 
   // Filter to only secondary and higher secondary grades
   const secondaryGrades = allGradeLevels?.filter((grade) => {
-    const category = categorizeGradeLevel(grade);
+    const category = categoryMap.get(grade);
     return category === "SECONDARY" || category === "HIGHER";
   }) || [];
 

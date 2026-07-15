@@ -5,16 +5,13 @@ import { motion, AnimatePresence } from "motion/react";
 import ReExamPortalTab from "@/components/admin/ReExamPortalTab";
 import { useProfile } from "@/hooks/use-profile";
 import { useGradeLevelCategories } from "@/hooks/use-grade-level-categories";
-import { categorizeGradeLevel } from "@/lib/schemas";
 import { ClipboardX } from "lucide-react";
 
 function getSchoolLevel(
   gradeLevel: string,
   dbMap: Map<string, string>,
 ): string {
-  if (dbMap.has(gradeLevel)) return dbMap.get(gradeLevel)!;
-  const fallback = categorizeGradeLevel(gradeLevel);
-  return fallback === "HIGHER" ? "SECONDARY" : fallback;
+  return dbMap.get(gradeLevel) ?? "PRIMARY";
 }
 
 export default function TeacherReExamPage() {

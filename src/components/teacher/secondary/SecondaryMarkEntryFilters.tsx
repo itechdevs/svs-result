@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useAcademicYears } from "@/hooks/use-academic-config";
 import { useGradeLevels } from "@/hooks/use-subjects";
 import { useTeacherSubjects } from "@/hooks/use-teacher-subjects";
 import { useExams } from "@/hooks/use-exams";
-import { categorizeGradeLevel } from "@/lib/schemas";
+import { useGradeLevelCategories } from "@/hooks/use-grade-level-categories";
 import {
   Select,
   SelectContent,
@@ -45,10 +45,19 @@ export function SecondaryMarkEntryFilters({
     academicYearId: academicYearId || undefined,
     gradeLevel: gradeLevel || undefined,
   });
+  const { data: categories } = useGradeLevelCategories();
+
+  const categoryMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of categories ?? []) {
+      map.set(c.gradeLevel, c.schoolLevel);
+    }
+    return map;
+  }, [categories]);
 
   // Filter to only secondary and higher secondary grades
   const secondaryGrades = allGradeLevels?.filter((grade) => {
-    const category = categorizeGradeLevel(grade);
+    const category = categoryMap.get(grade);
     return category === "SECONDARY" || category === "HIGHER";
   }) || [];
 
