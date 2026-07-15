@@ -64,6 +64,7 @@ const headerCell: React.CSSProperties = {
   textTransform: "uppercase",
   letterSpacing: "0.5px",
   color: "#1f5e9d",
+  color: "#1f5e9d",
   fontFamily: "Arial, sans-serif",
   lineHeight: 1.3,
 };
@@ -88,7 +89,6 @@ export default function GradeTable({ subjects }: GradeTableProps) {
       </colgroup>
       <thead>
         <tr style={{ background: "#ffffff" }}>
-          <th style={headerCell}>S.N.</th>
           <th
             style={{
               ...headerCell,
