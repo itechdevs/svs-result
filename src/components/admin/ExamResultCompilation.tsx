@@ -521,7 +521,7 @@ export default function ExamResultCompilation({
   };
 
   const handleViewAllGradeSheets = () => {
-    const studentObjs = compiledResults.map((r) =>
+    const studentObjs = sortedResults.map((r) =>
       toStudentObj(r, gradeLevel, students),
     );
     setBulkGradeSheets(studentObjs);
@@ -592,7 +592,7 @@ export default function ExamResultCompilation({
     if (Object.keys(obs).length === 0) {
       obs = await loadObservations();
     }
-    setPrePrimaryBulk(compiledResults.map((r) => toPrePrimaryData(r, obs)));
+    setPrePrimaryBulk(sortedResults.map((r) => toPrePrimaryData(r, obs)));
   };
 
   if (isLoading) {
@@ -994,7 +994,7 @@ export default function ExamResultCompilation({
                       className={cn(
                         "hover:bg-muted/20",
                         selectedIds.has(result.studentId) &&
-                          "bg-blue-50/40 dark:bg-blue-950/20",
+                        "bg-blue-50/40 dark:bg-blue-950/20",
                       )}
                     >
                       <TableCell className="border border-border px-3 py-2 text-center">
@@ -1026,8 +1026,8 @@ export default function ExamResultCompilation({
                                 className={cn(
                                   "font-mono text-xs",
                                   !sub.isPassed &&
-                                    sub.subjectName &&
-                                    "text-destructive",
+                                  sub.subjectName &&
+                                  "text-destructive",
                                 )}
                               >
                                 {sub.percentage.toFixed(1)}%
@@ -1062,8 +1062,8 @@ export default function ExamResultCompilation({
                             includeObservation
                               ? handleViewPrePrimaryGradeSheet(result)
                               : setShowTranscriptModal(
-                                  toStudentObj(result, gradeLevel, students),
-                                )
+                                toStudentObj(result, gradeLevel, students),
+                              )
                           }
                           className="px-2.5 py-1 bg-primary hover:bg-primary/90 text-primary-foreground rounded text-[11px] font-bold cursor-pointer transition-colors"
                         >

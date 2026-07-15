@@ -54,7 +54,7 @@ export default function PrePrimaryBulkGradeSheetsModal({ students, onClose }: Pr
         <base href="${baseUrl}">
         <title>Pre-Primary Grade Sheets</title>
         <style>
-          @page { size: A4 portrait; margin: 8mm; }
+          @page { size: A4 portrait; margin: 0; }
           @media print {
             body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
@@ -117,6 +117,7 @@ export default function PrePrimaryBulkGradeSheetsModal({ students, onClose }: Pr
                                 rollNumber: student.rollNo,
                                 class: student.className,
                                 section: student.section,
+
                             },
                             exam: { name: student.examName },
                             academicYear: { name: student.academicYear },
