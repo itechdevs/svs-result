@@ -623,7 +623,7 @@ export function SignatureBlock({ label }: { label: string }) {
         minWidth: '130px',
       }}
     >
-      <div style={{ height: '36px' }} />
+      <div style={{ height: '20px' }} />
       <div
         style={{
           borderTop: `1px solid ${borderColor}`,
@@ -644,7 +644,7 @@ export function SignatureBlock({ label }: { label: string }) {
 
 export function FooterSection({ data }: { data: PrePrimaryGradeSheetData }) {
   return (
-    <div style={{ marginTop: 'auto', paddingTop: '8px', fontFamily: FONT }}>
+    <div style={{ marginTop: 'auto', paddingTop: '4px', fontFamily: FONT, pageBreakInside: 'avoid', breakInside: 'avoid' }}>
       {/* Signatures */}
       <div
         style={{

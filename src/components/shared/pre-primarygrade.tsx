@@ -413,7 +413,7 @@ export default function PrePrimaryGradeSheet({
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
-          @page { size: A4 portrait; margin: 8mm; }
+          @page { size: A4 portrait; margin: 0; }
         }
       `}</style>
 
@@ -442,18 +442,35 @@ export default function PrePrimaryGradeSheet({
                 className="pp-grade-sheet-root"
                 style={{
                     width: '210mm',
-                    minHeight: '297mm',
+                    height: '296mm',
                     background: whiteBg,
                     position: 'relative',
                     margin: '0 auto',
                     overflow: 'hidden',
                     fontFamily: FONT,
-                    padding: '10mm 12mm',
+                    padding: '8mm 10mm',
                     display: 'flex',
                     flexDirection: 'column',
-                    border: 'none',
+                    border: '2.5px solid #1A1A18',
+                    boxSizing: 'border-box',
+                    pageBreakInside: 'avoid',
+                    breakInside: 'avoid',
                 }}
             >
+                {/* Inner border — double-border effect */}
+                <div
+                    style={{
+                        position: 'absolute',
+                        top: '3px',
+                        left: '3px',
+                        right: '3px',
+                        bottom: '3px',
+                        border: '1px solid #1A1A18',
+                        pointerEvents: 'none',
+                        zIndex: 2,
+                    }}
+                />
+
                 {/* Watermark logo — centered, low opacity */}
                 <div
                     style={{
