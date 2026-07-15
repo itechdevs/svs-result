@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   LayoutGrid,
@@ -30,7 +30,9 @@ import { signOut } from "next-auth/react";
 import { toast } from "sonner";
 import { useState } from "react";
 
-type NavChild = { label: string; href: string; sectionHeader?: undefined };
+// A nav child can optionally carry a `category` key that is matched
+// against the ?category= search param for active-state detection.
+type NavChild = { label: string; href: string; category?: string; sectionHeader?: undefined };
 
 interface NavSubSection {
   label: string;
@@ -87,19 +89,35 @@ const NAV_ITEMS: NavItem[] = [
     section: true,
     children: [
       { label: "Observations & Feedback", href: ROUTES.ADMIN_OBSERVATIONS },
+      {
+        label: "Evaluation Plans",
+        href: `${ROUTES.ADMIN_EXAMS}?category=PRE_PRIMARY`,
+        category: "PRE_PRIMARY",
+      },
     ],
   },
   {
     label: "Primary",
     icon: School,
     section: true,
-    children: [{ label: "Evaluation Plans", href: ROUTES.ADMIN_EXAMS }],
+    children: [
+      {
+        label: "Evaluation Plans",
+        href: `${ROUTES.ADMIN_EXAMS}?category=PRIMARY`,
+        category: "PRIMARY",
+      },
+    ],
   },
   {
     label: "Secondary",
     icon: FlaskConical,
     section: true,
     children: [
+      {
+        label: "Evaluation Plans",
+        href: `${ROUTES.ADMIN_EXAMS}?category=SECONDARY`,
+        category: "SECONDARY",
+      },
       { label: "Subject Configs", href: ROUTES.ADMIN_SECONDARY_SUBJECT_CONFIG },
       { label: "Term Weights", href: ROUTES.ADMIN_SECONDARY_TERM_WEIGHTS },
       {
@@ -121,6 +139,8 @@ const NAV_ITEMS: NavItem[] = [
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentCategory = searchParams.get("category") ?? "";
   const { state, isMobile, openMobile, setOpenMobile } = useSidebar();
   const isCollapsed = state === "collapsed" && !isMobile;
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -128,6 +148,16 @@ export function AdminSidebar() {
     new Set(["Secondary"]),
   );
   const { data: profile } = useProfile();
+
+  // Returns true when a nav child's link matches the current page.
+  // For category-filtered exams links the pathname must match AND the
+  // ?category= param must match the child's declared category.
+  const isChildItemActive = (child: NavChild) => {
+    if (child.category) {
+      return pathname === ROUTES.ADMIN_EXAMS && currentCategory === child.category;
+    }
+    return pathname === child.href;
+  };
 
   const toggleExpanded = (label: string) => {
     setExpandedItems((prev) => {
@@ -144,9 +174,7 @@ export function AdminSidebar() {
   const renderSubSection = (item: NavSubSection) => {
     const Icon = item.icon;
     const isExpanded = expandedItems.has(item.label);
-    const isChildActive = item.children.some(
-      (child) => pathname === child.href,
-    );
+    const isSectionChildActive = item.children.some(isChildItemActive);
 
     return (
       <div key={item.label}>
@@ -154,7 +182,7 @@ export function AdminSidebar() {
           onClick={() => toggleExpanded(item.label)}
           className={cn(
             "w-full group relative flex items-center gap-3 py-2.5 rounded-lg border transition-all duration-200 overflow-hidden text-left",
-            isChildActive
+            isSectionChildActive
               ? "bg-sidebar-accent border-sidebar-border text-sidebar-accent-foreground"
               : "border-transparent hover:bg-sidebar-accent/60 hover:border-sidebar-border/50 text-sidebar-foreground/70 hover:text-sidebar-foreground",
             isCollapsed ? "px-2 justify-center" : "px-3",
@@ -164,7 +192,7 @@ export function AdminSidebar() {
           <div
             className={cn(
               "w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-all duration-200",
-              isChildActive
+              isSectionChildActive
                 ? "bg-sidebar-primary/20"
                 : "bg-sidebar-foreground/5 group-hover:bg-sidebar-primary/10",
             )}
@@ -174,7 +202,7 @@ export function AdminSidebar() {
               strokeWidth={1.8}
               className={cn(
                 "transition-colors duration-200",
-                isChildActive
+                isSectionChildActive
                   ? "text-sidebar-primary"
                   : "text-sidebar-foreground/50 group-hover:text-sidebar-primary/80",
               )}
@@ -185,7 +213,7 @@ export function AdminSidebar() {
               <span
                 className={cn(
                   "text-[13px] transition-colors duration-200 whitespace-nowrap flex-1 text-left",
-                  isChildActive ? "font-semibold" : "font-medium",
+                  isSectionChildActive ? "font-semibold" : "font-medium",
                 )}
               >
                 {item.label}
@@ -203,21 +231,21 @@ export function AdminSidebar() {
         {!isCollapsed && isExpanded && (
           <div className="mt-1 ml-11 flex flex-col gap-0.5">
             {item.children.map((child) => {
-              const isChildItemActive = pathname === child.href;
+              const active = isChildItemActive(child);
               return (
                 <Link
                   key={child.href}
                   href={child.href}
                   className={cn(
                     "group relative flex items-center py-2 px-3 rounded-md transition-all duration-200",
-                    isChildItemActive
+                    active
                       ? "bg-sidebar-accent/80 text-sidebar-accent-foreground font-medium"
                       : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40",
                   )}
                   onClick={() => isMobile && setOpenMobile(false)}
                 >
                   <span className="text-[12px]">{child.label}</span>
-                  {isChildItemActive && (
+                  {active && (
                     <span className="absolute right-2 w-1 h-1 rounded-full bg-sidebar-primary" />
                   )}
                 </Link>
