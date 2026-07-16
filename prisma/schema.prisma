@@ -372,6 +372,7 @@ model Exam {
 
   academicYear        AcademicYear         @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
   evaluationTemplates EvaluationTemplate[]
+  teacherCompilations TeacherSubjectCompilation[]
 
   // Secondary Level Relations
   secondaryComponentMarks SecondaryComponentMark[]
@@ -735,6 +736,7 @@ model TeacherSubjectCompilation {
   syncedSubjectId       String
   academicYearId        String
   gradeLevel            String
+  examId                String? // Exam this compilation is submitted to
   evaluationTemplateIds Json // Array of selected EvaluationTemplate IDs
   status                CompilationStatus @default(DRAFT)
   submittedAt           DateTime?
@@ -745,12 +747,14 @@ model TeacherSubjectCompilation {
   teacher      User                              @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   subject      SyncedSubject                     @relation(fields: [syncedSubjectId], references: [id], onDelete: Cascade)
   academicYear AcademicYear                      @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  exam         Exam?                             @relation(fields: [examId], references: [id], onDelete: SetNull)
   results      TeacherSubjectCompilationResult[]
 
-  @@unique([teacherId, syncedSubjectId, academicYearId, gradeLevel])
+  @@unique([teacherId, syncedSubjectId, academicYearId, gradeLevel, examId])
   @@index([teacherId])
   @@index([syncedSubjectId])
   @@index([academicYearId])
+  @@index([examId])
   @@index([status])
   @@map("teacher_subject_compilations")
 }

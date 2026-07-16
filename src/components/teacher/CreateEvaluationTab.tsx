@@ -33,6 +33,9 @@ interface CreateEvaluationTabProps {
   selectedExamId?: string;
   setSelectedExamId?: (val: string) => void;
   exams?: Array<{ id: string; name: string; description?: string | null }>;
+  academicYears?: Array<{ id: string; name: string; isCurrent: boolean }>;
+  selectedAcademicYearId?: string;
+  setSelectedAcademicYearId?: (val: string) => void;
   targetMarks: number;
   setTargetMarks: (val: number) => void;
   newOutcomes: TaskGroup[];
@@ -52,6 +55,9 @@ export default function CreateEvaluationTab({
   selectedExamId = '',
   setSelectedExamId,
   exams = [],
+  academicYears,
+  selectedAcademicYearId = '',
+  setSelectedAcademicYearId,
   targetMarks,
   setTargetMarks,
   newOutcomes,
@@ -224,17 +230,42 @@ export default function CreateEvaluationTab({
               />
             </div>
 
+            {/* Academic Year selector — shown whenever academicYears list is available */}
+            {academicYears && academicYears.length > 0 && (
+              <div>
+                <label className="text-[10px] font-extrabold text-muted-foreground uppercase block mb-1">
+                  Fiscal Year
+                </label>
+                <select
+                  value={selectedAcademicYearId}
+                  onChange={e => setSelectedAcademicYearId?.(e.target.value)}
+                  className="w-full text-xs border border-input bg-background px-3 py-2 rounded-md"
+                >
+                  <option value="">-- Select Fiscal Year --</option>
+                  {academicYears.map((year) => (
+                    <option key={year.id} value={year.id}>
+                      {year.name}{year.isCurrent ? ' (Current)' : ''}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Select the fiscal year to filter exam/term plans below
+                </p>
+              </div>
+            )}
+
+            {/* Exam/Term — only visible after an academic year is chosen (or if no year selector) */}
             {exams.length > 0 && (
               <div>
                 <label className="text-[10px] font-extrabold text-muted-foreground uppercase block mb-1">
-                  Exam/Term (Optional)
+                  Exam/Term
                 </label>
                 <select
                   value={selectedExamId}
                   onChange={e => setSelectedExamId?.(e.target.value)}
                   className="w-full text-xs border border-input bg-background px-3 py-2 rounded-md"
                 >
-                  <option value="" className=''>-- Select Exam/Term --</option>
+                  <option value="">-- Select Exam/Term --</option>
                   {exams.map((exam) => (
                     <option key={exam.id} value={exam.id}>
                       {exam.name}
@@ -245,6 +276,13 @@ export default function CreateEvaluationTab({
                   Select which exam/term this evaluation belongs to (e.g., First Term, Second Term)
                 </p>
               </div>
+            )}
+
+            {/* Show a hint when a year is selected but no exams exist for it */}
+            {academicYears && academicYears.length > 0 && selectedAcademicYearId && exams.length === 0 && (
+              <p className="text-[10px] text-muted-foreground">
+                No exam plans found for the selected fiscal year.
+              </p>
             )}
           </div>
         </div>

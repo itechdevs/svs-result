@@ -14,6 +14,7 @@ export const GET = withHandler(
       syncedSubjectId: searchParams.get("syncedSubjectId") ?? undefined,
       academicYearId: searchParams.get("academicYearId") ?? undefined,
       gradeLevel: searchParams.get("gradeLevel") ?? undefined,
+      examId: searchParams.get("examId") ?? undefined,
       status: searchParams.get("status") ?? undefined,
     });
 
@@ -21,6 +22,7 @@ export const GET = withHandler(
     if (query.syncedSubjectId) where.syncedSubjectId = query.syncedSubjectId;
     if (query.academicYearId) where.academicYearId = query.academicYearId;
     if (query.gradeLevel) where.gradeLevel = query.gradeLevel;
+    if (query.examId) where.examId = query.examId;
     if (query.status) where.status = query.status;
 
     // Teachers can only see their own compilations
@@ -28,7 +30,7 @@ export const GET = withHandler(
       where.teacherId = user.id;
     }
 
-    const compilations = await prisma.teacherSubjectCompilation.findMany({
+    const compilations = await (prisma.teacherSubjectCompilation as any).findMany({
       where,
       include: {
         subject: { select: { id: true, name: true, code: true, gradeLevel: true } },
@@ -36,7 +38,7 @@ export const GET = withHandler(
         teacher: { select: { id: true, name: true } },
         results: {
           include: {
-              student: { select: { id: true, name: true, rollNumber: true, class: true, section: true } },
+            student: { select: { id: true, name: true, rollNumber: true, class: true, section: true } },
           },
         },
       },
@@ -87,6 +89,9 @@ export const POST = withHandler(
         evaluationTemplate: {
           select: { id: true, fullMarks: true, passMarks: true, weightage: true },
         },
+        reExamResult: {
+          select: { marksObtained: true, isPassed: true, status: true },
+        },
       },
     });
 
@@ -112,23 +117,30 @@ export const POST = withHandler(
       };
     };
 
-    // Build marks lookup: [studentId][templateId] = marksObtained
+    // Build marks lookup: [studentId][templateId] = marksObtained (use re-exam if better)
     const marksLookup = new Map<string, Map<string, number | null>>();
     for (const r of results) {
       if (!marksLookup.has(r.syncedStudentId)) {
         marksLookup.set(r.syncedStudentId, new Map());
       }
-      marksLookup.get(r.syncedStudentId)!.set(
-        r.evaluationTemplateId,
-        r.marksObtained !== null ? Number(r.marksObtained) : null
-      );
+
+      // Use re-exam marks if available (they are the better score)
+      let effectiveMarks: number | null = r.marksObtained !== null ? Number(r.marksObtained) : null;
+      if (r.reExamResult?.marksObtained !== null && r.reExamResult?.marksObtained !== undefined) {
+        const reExamMarks = Number(r.reExamResult.marksObtained);
+        if (effectiveMarks === null || reExamMarks > effectiveMarks) {
+          effectiveMarks = reExamMarks;
+        }
+      }
+
+      marksLookup.get(r.syncedStudentId)!.set(r.evaluationTemplateId, effectiveMarks);
     }
 
-    // Compute weighted accumulation per student
+    // Compute per-student totals using RAW marks (not weighted percentages)
     const compilationResults = students.map((student) => {
       const studentMarks = marksLookup.get(student.id);
-      let totalWeightedObtained = 0;
-      let totalFullMarks = 0;
+      let totalObtained = 0;
+      let totalFull = 0;
       let failedEvaluations = 0;
       let hasAnyMarks = false;
 
@@ -136,23 +148,20 @@ export const POST = withHandler(
         const obtained = studentMarks?.get(template.id) ?? null;
         const fullMarks = Number(template.fullMarks);
         const passMarks = Number(template.passMarks);
-        const weight = Number(template.weightage) / 100;
 
-        totalFullMarks += fullMarks * weight;
+        totalFull += fullMarks;
 
         if (obtained !== null) {
           hasAnyMarks = true;
-          totalWeightedObtained += (obtained / fullMarks) * fullMarks * weight;
+          totalObtained += obtained;
           if (obtained < passMarks) {
             failedEvaluations++;
           }
         }
       }
 
-      const fullMarksDecimal = totalFullMarks;
-      const obtainedDecimal = Number(totalWeightedObtained.toFixed(2));
-      const percentage = fullMarksDecimal > 0
-        ? Number(((obtainedDecimal / fullMarksDecimal) * 100).toFixed(2))
+      const percentage = totalFull > 0
+        ? Number(((totalObtained / totalFull) * 100).toFixed(2))
         : 0;
 
       const { grade, gradePoint } = lookupGrade(percentage);
@@ -160,8 +169,8 @@ export const POST = withHandler(
 
       return {
         syncedStudentId: student.id,
-        totalFullMarks: fullMarksDecimal,
-        obtainedMarks: obtainedDecimal,
+        totalFullMarks: totalFull,
+        obtainedMarks: totalObtained,
         percentage,
         grade,
         gradePoint: gradePoint ? Number(gradePoint) : null,
@@ -171,32 +180,45 @@ export const POST = withHandler(
     });
 
     // Upsert compilation and results in a transaction
+    // The unique key now includes examId so the same teacher can have different
+    // compilations for different exams of the same subject
     const compilation = await prisma.$transaction(async (tx) => {
-      const comp = await tx.teacherSubjectCompilation.upsert({
+      // Try to find an existing compilation for this teacher+subject+year+grade+exam
+      const existingComp = await (tx.teacherSubjectCompilation as any).findFirst({
         where: {
-          teacherId_syncedSubjectId_academicYearId_gradeLevel: {
-            teacherId: userId,
-            syncedSubjectId: body.syncedSubjectId,
-            academicYearId: body.academicYearId,
-            gradeLevel: body.gradeLevel,
-          },
-        },
-        create: {
           teacherId: userId,
           syncedSubjectId: body.syncedSubjectId,
           academicYearId: body.academicYearId,
           gradeLevel: body.gradeLevel,
-          evaluationTemplateIds: body.evaluationTemplateIds,
-          status: "DRAFT",
-          computedAt: new Date(),
-        },
-        update: {
-          evaluationTemplateIds: body.evaluationTemplateIds,
-          status: "DRAFT",
-          submittedAt: null,
-          computedAt: new Date(),
+          examId: body.examId ?? null,
         },
       });
+
+      let comp;
+      if (existingComp) {
+        comp = await tx.teacherSubjectCompilation.update({
+          where: { id: existingComp.id },
+          data: {
+            evaluationTemplateIds: body.evaluationTemplateIds,
+            status: "DRAFT",
+            submittedAt: null,
+            computedAt: new Date(),
+          },
+        });
+      } else {
+        comp = await (tx.teacherSubjectCompilation as any).create({
+          data: {
+            teacherId: userId,
+            syncedSubjectId: body.syncedSubjectId,
+            academicYearId: body.academicYearId,
+            gradeLevel: body.gradeLevel,
+            examId: body.examId ?? null,
+            evaluationTemplateIds: body.evaluationTemplateIds,
+            status: "DRAFT",
+            computedAt: new Date(),
+          },
+        });
+      }
 
       // Delete old results and insert new ones
       await tx.teacherSubjectCompilationResult.deleteMany({
@@ -218,7 +240,7 @@ export const POST = withHandler(
           teacher: { select: { id: true, name: true } },
           results: {
             include: {
-            student: { select: { id: true, name: true, rollNumber: true, class: true, section: true } },
+              student: { select: { id: true, name: true, rollNumber: true, class: true, section: true } },
             },
           },
         },

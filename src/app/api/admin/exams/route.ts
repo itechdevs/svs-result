@@ -66,7 +66,6 @@ export const POST = withHandler(
         academicYearId: body.academicYearId,
         gradeLevel: body.gradeLevel,
         name: body.name,
-        isActive: true,
       },
     });
     if (duplicate) {
