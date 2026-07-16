@@ -62,6 +62,7 @@ const tableHeaderCell: React.CSSProperties = {
   color: "#1f5e9d",
   fontFamily: "Arial, sans-serif",
   whiteSpace: "pre-wrap",
+  font: "bold 8px Arial, sans-serif",
 };
 
 const tableBodyCell: React.CSSProperties = {
@@ -79,14 +80,14 @@ export default function GradeLegend({
   intervals = DEFAULT_GRADE_INTERVALS,
 }: GradeLegendProps) {
   const formatInterval = (inv: string) => {
-    if (inv.includes('100')) return '90 to 100';
-    if (inv.includes('90')) return '80 to below 90';
-    if (inv.includes('80')) return '70 to below 80';
-    if (inv.includes('70')) return '60 to below 70';
-    if (inv.includes('60')) return '50 to below 60';
-    if (inv.includes('50')) return '40 to below 50';
-    if (inv.includes('40')) return '35 to below 40';
-    if (inv.includes('35')) return '0 to below 35';
+    if (inv.includes("100")) return "90 to 100";
+    if (inv.includes("90")) return "80 to below 90";
+    if (inv.includes("80")) return "70 to below 80";
+    if (inv.includes("70")) return "60 to below 70";
+    if (inv.includes("60")) return "50 to below 60";
+    if (inv.includes("50")) return "40 to below 50";
+    if (inv.includes("40")) return "35 to below 40";
+    if (inv.includes("35")) return "0 to below 35";
     return inv;
   };
 
@@ -111,15 +112,13 @@ export default function GradeLegend({
       >
         <div style={{ marginBottom: "2px", fontSize: "9.5px" }}>Note:</div>
 
-        <div style={{ marginBottom: "1px" }}>
-          1. ABS: Absent
-        </div>
+        <div style={{ marginBottom: "1px" }}>1. ABS: Absent</div>
 
-        <div style={{ marginBottom: "1px" }}>
-          2. *NG: Not Graded
-        </div>
+        <div style={{ marginBottom: "1px" }}>2. *NG: Not Graded</div>
 
-        <div style={{ display: "flex", alignItems: "center", marginBottom: "1px" }}>
+        <div
+          style={{ display: "flex", alignItems: "center", marginBottom: "1px" }}
+        >
           3.&nbsp;
           <span>
             Achieved Percentage of each subjects =
@@ -132,7 +131,9 @@ export default function GradeLegend({
                 margin: "0 4px",
               }}
             >
-              <span style={{ borderBottom: "1px solid #000", padding: "0 3px" }}>
+              <span
+                style={{ borderBottom: "1px solid #000", padding: "0 3px" }}
+              >
                 Total Obtained Marks
               </span>
               <span>4 × Total Learning Outcomes</span>
@@ -154,7 +155,9 @@ export default function GradeLegend({
                 margin: "0 4px",
               }}
             >
-              <span style={{ borderBottom: "1px solid #000", padding: "0 3px" }}>
+              <span
+                style={{ borderBottom: "1px solid #000", padding: "0 3px" }}
+              >
                 Total GPA Obtained
               </span>
               <span>Total Number of Subjects</span>
@@ -181,7 +184,13 @@ export default function GradeLegend({
         >
           Intervals and Grade
         </div>
-        <table style={{ width: "100%", tableLayout: "fixed", borderCollapse: "collapse" }}>
+        <table
+          style={{
+            width: "100%",
+            tableLayout: "fixed",
+            borderCollapse: "collapse",
+          }}
+        >
           <colgroup>
             <col style={{ width: "8%" }} />
             <col style={{ width: "30%" }} />
