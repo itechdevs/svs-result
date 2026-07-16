@@ -11,6 +11,7 @@ export const GET = withHandler(
       syncedSubjectId: searchParams.get("syncedSubjectId") ?? undefined,
       academicYearId: searchParams.get("academicYearId") ?? undefined,
       gradeLevel: searchParams.get("gradeLevel") ?? undefined,
+      examId: searchParams.get("examId") ?? undefined,
       status: searchParams.get("status") ?? undefined,
     });
 
@@ -18,9 +19,10 @@ export const GET = withHandler(
     if (query.syncedSubjectId) where.syncedSubjectId = query.syncedSubjectId;
     if (query.academicYearId) where.academicYearId = query.academicYearId;
     if (query.gradeLevel) where.gradeLevel = query.gradeLevel;
+    if (query.examId) where.examId = query.examId;
     if (query.status) where.status = query.status;
 
-    const compilations = await prisma.teacherSubjectCompilation.findMany({
+    const compilations = await (prisma.teacherSubjectCompilation as any).findMany({
       where,
       include: {
         subject: { select: { id: true, name: true, code: true, gradeLevel: true } },

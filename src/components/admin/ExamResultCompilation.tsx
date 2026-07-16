@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -22,6 +22,7 @@ import {
 import { useStudents } from "@/hooks/use-students";
 import { useAdminTeacherCompilations } from "@/hooks/use-teacher-compilations";
 import { useFinalResults } from "@/hooks/use-final-results";
+import { useGradeConfigs, type GradeScale } from "@/hooks/use-academic-config";
 import { Button } from "@/components/shared/ui/button";
 import {
   Table,
@@ -206,26 +207,19 @@ export default function ExamResultCompilation({
       isActive: true,
     });
 
+  // Only use templates that are explicitly linked to this exam.
+  // This ensures admin only compiles results from plans teachers submitted for THIS exam.
   const effectiveTemplates = useMemo(() => {
-    const map = new Map<string, (typeof linkedTemplates)[0]>();
-
-    // Linked templates (exam-specific) take priority
-    for (const t of linkedTemplates) {
-      map.set(t.id, t);
+    // linkedTemplates comes from the exam's evaluationTemplates relation — already filtered to this exam.
+    // If for some reason none are linked, fall back to allTemplates filtered by examId.
+    if (linkedTemplates.length > 0) {
+      return linkedTemplates;
     }
-
-    // Add grade-level templates from the academic year that aren't already linked
-    const gradeLevelOnes = allTemplates.filter(
-      (t) => t.syncedSubject?.gradeLevel === gradeLevel,
+    // Fallback: filter allTemplates by examId
+    return allTemplates.filter(
+      (t) => (t as any).examId === examId && t.syncedSubject?.gradeLevel === gradeLevel,
     );
-    for (const t of gradeLevelOnes) {
-      if (!map.has(t.id)) {
-        map.set(t.id, t as any);
-      }
-    }
-
-    return Array.from(map.values());
-  }, [linkedTemplates, allTemplates, gradeLevel]);
+  }, [linkedTemplates, allTemplates, examId, gradeLevel]);
 
   const templates = effectiveTemplates;
 
@@ -255,6 +249,7 @@ export default function ExamResultCompilation({
     status: "SUBMITTED",
     academicYearId: academicYearId || undefined,
     gradeLevel: gradeLevel || undefined,
+    examId: examId || undefined,
   });
 
   const isLoading =
@@ -271,10 +266,54 @@ export default function ExamResultCompilation({
     limit: 1,
   });
 
+  // Fetch grade config for DB-driven grade scale lookup
+  const { data: gradeConfigs = [] } = useGradeConfigs({
+    academicYearId: academicYearId || undefined,
+    gradeLevel: gradeLevel || undefined,
+  });
+
+  const gradeScales = useMemo((): GradeScale[] => {
+    const config = gradeConfigs.find(
+      (c) => c.gradeLevel === gradeLevel && c.academicYearId === academicYearId,
+    );
+    return config?.gradeScales ?? [];
+  }, [gradeConfigs, gradeLevel, academicYearId]);
+
   const hasSavedResults =
     isSaved || (finalResultsData?.results?.length ?? 0) > 0;
 
-  const dataReady = students.length > 0 && templates.length > 0;
+  // Subject IDs from compilations submitted to THIS exam
+  const submittedSubjectIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const comp of teacherCompilations) {
+      if (comp.status === "SUBMITTED" && comp.syncedSubjectId)
+        ids.add(comp.syncedSubjectId);
+    }
+    return ids;
+  }, [teacherCompilations]);
+
+  // Subjects submitted to THIS exam (from teacher compilations filtered by examId)
+  const submittedSubjects = useMemo(() => {
+    const subjectMap = new Map<string, string>();
+    for (const comp of teacherCompilations) {
+      if (comp.status === "SUBMITTED" && comp.subject?.name) {
+        subjectMap.set(comp.subject.name, comp.syncedSubjectId);
+      }
+    }
+    return Array.from(subjectMap.entries()).map(([name, id]) => ({ name, id }));
+  }, [teacherCompilations]);
+
+  // All subjects referenced by linked templates for this exam
+  const totalSubjectsInTemplates = useMemo(() => {
+    const subjectMap = new Map<string, string>();
+    for (const t of templates) {
+      if (t.syncedSubject?.name)
+        subjectMap.set(t.syncedSubject.name, t.syncedSubject.id);
+    }
+    return Array.from(subjectMap.entries()).map(([name, id]) => ({ name, id }));
+  }, [templates]);
+
+  const dataReady = students.length > 0 && (templates.length > 0 || submittedSubjects.length > 0);
 
   useEffect(() => {
     if (
@@ -289,33 +328,6 @@ export default function ExamResultCompilation({
   }, [hasSavedResults, dataReady, showResults, isCompiling, showSavedOnLoad]);
 
   const showResultsTable = showResults || showSavedOnLoad;
-
-  const submittedSubjectIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const comp of teacherCompilations) {
-      if (comp.status === "SUBMITTED" && comp.syncedSubjectId)
-        ids.add(comp.syncedSubjectId);
-    }
-    return ids;
-  }, [teacherCompilations]);
-
-  const submittedSubjects = useMemo(() => {
-    const subjectMap = new Map<string, string>();
-    for (const t of templates) {
-      if (t.syncedSubject?.name && submittedSubjectIds.has(t.syncedSubject.id))
-        subjectMap.set(t.syncedSubject.name, t.syncedSubject.id);
-    }
-    return Array.from(subjectMap.entries()).map(([name, id]) => ({ name, id }));
-  }, [templates, submittedSubjectIds]);
-
-  const totalSubjectsInTemplates = useMemo(() => {
-    const subjectMap = new Map<string, string>();
-    for (const t of templates) {
-      if (t.syncedSubject?.name)
-        subjectMap.set(t.syncedSubject.name, t.syncedSubject.id);
-    }
-    return Array.from(subjectMap.entries()).map(([name, id]) => ({ name, id }));
-  }, [templates]);
 
   const marksLookup = useMemo(() => {
     const lookup: Record<
@@ -362,57 +374,81 @@ export default function ExamResultCompilation({
     return map;
   }, [templates]);
 
-  const lookupGrade = (percent: number): string => {
-    if (percent >= 90) return "A+";
-    if (percent >= 80) return "A";
-    if (percent >= 70) return "B+";
-    if (percent >= 60) return "B";
-    if (percent >= 50) return "C+";
-    if (percent >= 40) return "C";
-    return "D";
-  };
+  // DB-driven grade lookup using grade scales configured by admin.
+  // Falls back to a simple hardcoded scale only when no DB config exists.
+  const lookupGrade = useCallback(
+    (percent: number): string => {
+      if (gradeScales.length > 0) {
+        const scale = gradeScales.find(
+          (s) => percent >= Number(s.minPercent) && percent <= Number(s.maxPercent),
+        );
+        return scale?.grade ?? "N/A";
+      }
+      // Fallback hardcoded scale
+      if (percent >= 90) return "A+";
+      if (percent >= 80) return "A";
+      if (percent >= 70) return "B+";
+      if (percent >= 60) return "B";
+      if (percent >= 50) return "C+";
+      if (percent >= 40) return "C";
+      return "D";
+    },
+    [gradeScales],
+  );
 
   const compiledResults = useMemo((): CompiledResult[] => {
-    if (students.length === 0 || totalSubjectsInTemplates.length === 0)
-      return [];
+    if (students.length === 0 || submittedSubjects.length === 0) return [];
+
     return students.map((student) => {
       const subjects: Record<string, SubjectResult> = {};
-      let totalObtainedAll = 0,
-        totalFullAll = 0,
-        subjectCount = 0,
-        hasAnyMarks = false,
-        anyFailed = false;
-      for (const subject of totalSubjectsInTemplates) {
-        const subjectTemplates = templatesBySubject.get(subject.name) ?? [];
+      let totalObtainedAll = 0;
+      let totalFullAll = 0;
+      let hasAnyMarks = false;
+      let anyFailed = false;
+
+      // Only compile subjects that teachers actually submitted to THIS exam
+      for (const subject of submittedSubjects) {
+        // Get only the templates for this subject that are linked to this exam
+        const subjectTemplates = (templatesBySubject.get(subject.name) ?? []).filter(
+          (t) => (t as any).examId === examId || linkedTemplates.some((lt) => lt.id === t.id),
+        );
         if (subjectTemplates.length === 0) continue;
-        let totalObtained = 0,
-          totalFull = 0,
-          failedEvals = 0,
-          subjectHasMarks = false;
+
+        let totalObtained = 0;
+        let totalFull = 0;
+        let failedEvals = 0;
+        let subjectHasMarks = false;
+
         for (const t of subjectTemplates) {
           const lookup = marksLookup[student.id]?.[t.id];
           const obtained = lookup?.marks ?? null;
           const fullMarks = Number(t.fullMarks);
+          const passMarks = Number(t.passMarks);
+
           totalFull += fullMarks;
+
           if (obtained !== null) {
             subjectHasMarks = true;
             hasAnyMarks = true;
             totalObtained += obtained;
-            if (obtained < Number(t.passMarks)) failedEvals++;
+            if (obtained < passMarks) failedEvals++;
           }
         }
+
+        // percentage = obtained / full * 100 (raw, not weighted)
         const percentage =
           totalFull > 0
             ? Number(((totalObtained / totalFull) * 100).toFixed(1))
             : 0;
         const grade = subjectHasMarks ? lookupGrade(percentage) : "N/A";
         const isPassed = subjectHasMarks && failedEvals === 0;
+
         if (subjectHasMarks) {
           totalObtainedAll += totalObtained;
           totalFullAll += totalFull;
-          subjectCount++;
         }
         if (!isPassed && subjectHasMarks) anyFailed = true;
+
         subjects[subject.name] = {
           subjectName: subject.name,
           totalObtained: Number(totalObtained.toFixed(2)),
@@ -422,10 +458,13 @@ export default function ExamResultCompilation({
           isPassed,
         };
       }
+
+      // Overall: percentage = sum(obtained) / sum(full) * 100
       const overallPercentage =
         totalFullAll > 0
           ? Number(((totalObtainedAll / totalFullAll) * 100).toFixed(1))
           : 0;
+
       return {
         rollNo: student.rollNumber,
         studentId: student.id,
@@ -437,7 +476,7 @@ export default function ExamResultCompilation({
         hasReExam: studentsWithReExam.has(student.id),
       };
     });
-  }, [students, totalSubjectsInTemplates, templatesBySubject, marksLookup, studentsWithReExam]);
+  }, [students, submittedSubjects, templatesBySubject, marksLookup, studentsWithReExam, lookupGrade, examId, linkedTemplates]);
 
   const toggleSort = (column: "rank" | "rollNo" | "studentName") => {
     if (sortColumn === column) {
@@ -497,9 +536,9 @@ export default function ExamResultCompilation({
     });
 
   const handleCompile = async () => {
-    if (templates.length === 0) {
+    if (teacherCompilations.length === 0 && templates.length === 0) {
       toast.error(
-        "No evaluation templates found for this grade level and academic year.",
+        "No teacher submissions found for this exam. Teachers must submit their results first.",
       );
       return;
     }
@@ -533,6 +572,7 @@ export default function ExamResultCompilation({
               name,
               {
                 subjectId:
+                  submittedSubjects.find((s) => s.name === name)?.id ??
                   totalSubjectsInTemplates.find((s) => s.name === name)?.id ??
                   "",
                 totalObtained: data.totalObtained,
@@ -656,17 +696,16 @@ export default function ExamResultCompilation({
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6"
     >
-      {linkedTemplates.length === 0 && effectiveTemplates.length > 0 && (
+      {linkedTemplates.length === 0 && teacherCompilations.length === 0 && (
         <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
-              Templates not linked to this exam
+              No evaluation plans linked to this exam
             </p>
             <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
-              Showing all evaluation templates for {gradeLevel}. To link
-              templates to this exam, update each template's exam assignment
-              from the evaluation templates management page.
+              Teachers need to submit their subject compilations for this exam before results can be compiled.
+              Ask teachers to go to Result Compilation, select this exam, choose their evaluation plans and submit.
             </p>
           </div>
         </div>
@@ -831,14 +870,14 @@ export default function ExamResultCompilation({
           {submittedSubjects.length === 0 ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
               <AlertCircle className="w-4 h-4" />
-              No subjects have been submitted by teachers yet.
+              No subjects have been submitted by teachers for this exam yet.
             </div>
           ) : (
             <>
               <div className="flex flex-wrap gap-2 mb-3">
                 {submittedSubjects.map((subject) => {
                   const comp = teacherCompilations.find(
-                    (c) => c.subject.name === subject.name,
+                    (c) => c.syncedSubjectId === subject.id,
                   );
                   return (
                     <div
@@ -939,7 +978,7 @@ export default function ExamResultCompilation({
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
               <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
                 Compiled Results ({compiledResults.length} students ·{" "}
-                {totalSubjectsInTemplates.length} subjects)
+                {submittedSubjects.length} subjects)
               </h3>
               <div className="flex flex-wrap items-center gap-2">
                 <Button

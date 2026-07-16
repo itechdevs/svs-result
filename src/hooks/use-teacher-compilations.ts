@@ -29,6 +29,7 @@ export interface TeacherSubjectCompilation {
   syncedSubjectId: string;
   academicYearId: string;
   gradeLevel: string;
+  examId: string | null;
   evaluationTemplateIds: string[];
   status: "DRAFT" | "SUBMITTED";
   submittedAt: string | null;
@@ -56,6 +57,7 @@ export interface ListTeacherCompilationsFilters {
   syncedSubjectId?: string;
   academicYearId?: string;
   gradeLevel?: string;
+  examId?: string;
   status?: "DRAFT" | "SUBMITTED";
 }
 
@@ -63,6 +65,7 @@ export interface CreateTeacherCompilationInput {
   syncedSubjectId: string;
   academicYearId: string;
   gradeLevel: string;
+  examId?: string;
   evaluationTemplateIds: string[];
 }
 
@@ -76,6 +79,7 @@ export function useTeacherSubjectCompilations(
       if (filters.syncedSubjectId) params.set("syncedSubjectId", filters.syncedSubjectId);
       if (filters.academicYearId) params.set("academicYearId", filters.academicYearId);
       if (filters.gradeLevel) params.set("gradeLevel", filters.gradeLevel);
+      if (filters.examId) params.set("examId", filters.examId);
       if (filters.status) params.set("status", filters.status);
       return apiClient.get(`/teacher/subject-compilations?${params.toString()}`);
     },
@@ -116,6 +120,7 @@ export function useAdminTeacherCompilations(
       if (filters.syncedSubjectId) params.set("syncedSubjectId", filters.syncedSubjectId);
       if (filters.academicYearId) params.set("academicYearId", filters.academicYearId);
       if (filters.gradeLevel) params.set("gradeLevel", filters.gradeLevel);
+      if (filters.examId) params.set("examId", filters.examId);
       if (filters.status) params.set("status", filters.status);
       return apiClient.get(`/admin/teacher-compilations?${params.toString()}`);
     },
