@@ -23,9 +23,9 @@ export default function Watermark({ logo, schoolName }: WatermarkProps) {
         transform: 'translate(-50%, -50%)',
         zIndex: 0,
         pointerEvents: 'none',
-        opacity: 0.04,
-        width: '420px',
-        height: '420px',
+        opacity: 0.1,
+        width: '500px',
+        height: '500px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -35,8 +35,8 @@ export default function Watermark({ logo, schoolName }: WatermarkProps) {
       <img
         src={logo}
         alt=""
-        width={420}
-        height={420}
+        width={500}
+        height={500}
         style={{ objectFit: 'contain', position: 'absolute', inset: 0 }}
         onError={(e) => {
           // Hide broken image; fallback SVG is underneath

@@ -82,7 +82,6 @@ function SchoolHeader({ result }: { result: StudentResult }) {
         gridTemplateColumns: "64px 1fr 64px",
         alignItems: "center",
         paddingBottom: "8px",
-        borderBottom: "1.5px solid #4a7aa8",
         marginBottom: "8px",
       }}
     >
@@ -164,13 +163,13 @@ function SchoolHeader({ result }: { result: StudentResult }) {
 }
 
 // ── Exam title block ─────────────────────────────────────────────────────────
-function ExamTitle() {
+function ExamTitle({ examName }: { examName?: string }) {
   return (
     <div
       style={{
         textAlign: "center",
         padding: "5px 0 3px",
-        borderBottom: "1px solid #4a7aa8",
+        // borderBottom: "1px solid #4a7aa8",
         marginBottom: "8px",
         fontFamily: "Arial, sans-serif",
       }}
@@ -184,7 +183,7 @@ function ExamTitle() {
           textTransform: "uppercase",
         }}
       >
-        FINAL EXAMINATION
+        {examName || "FINAL EXAMINATION"}
       </div>
       <div
         style={{
@@ -193,7 +192,7 @@ function ExamTitle() {
           color: "#1f5e9d",
           letterSpacing: "2px",
           textTransform: "uppercase",
-          marginTop: "1px",
+          marginTop: "8px",
         }}
       >
         GRADE SHEET
@@ -208,31 +207,119 @@ export default function GradeSheet({
   showPrintButton = true,
 }: GradeSheetProps) {
   const handlePrint = () => {
-    document.body.classList.add("printing-grade-sheet");
-    window.print();
-    window.addEventListener(
-      "afterprint",
-      () => document.body.classList.remove("printing-grade-sheet"),
-      { once: true },
+    const root = document.querySelector<HTMLElement>(".grade-sheet-root");
+    if (!root) {
+      console.warn("[GradeSheet] .grade-sheet-root not found in DOM");
+      return;
+    }
+
+    // Collect all stylesheets and inline styles from the current document
+    const styleNodes = Array.from(
+      document.querySelectorAll('style, link[rel="stylesheet"]'),
+    )
+      .map((el) => el.outerHTML)
+      .join("\n");
+
+    const printHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Grade Sheet - Print</title>
+  ${styleNodes}
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: white;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    .no-print { display: none !important; }
+    .grade-sheet-root {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      box-shadow: none !important;
+    }
+    @media print {
+      @page { size: A4 portrait; margin: 0; }
+      html, body { margin: 0; padding: 0; }
+      .no-print { display: none !important; }
+      .grade-sheet-root { box-shadow: none !important; }
+    }
+  </style>
+</head>
+<body>
+  ${root.outerHTML}
+</body>
+</html>`;
+
+    const printWindow = window.open(
+      "",
+      "_blank",
+      "width=900,height=1200,menubar=no,toolbar=no,location=no,status=no",
     );
+    if (!printWindow) {
+      // Popup blocked — fallback: use iframe approach
+      let iframe = document.getElementById(
+        "grade-sheet-print-iframe",
+      ) as HTMLIFrameElement;
+      if (!iframe) {
+        iframe = document.createElement("iframe");
+        iframe.id = "grade-sheet-print-iframe";
+        Object.assign(iframe.style, {
+          position: "fixed",
+          right: "0",
+          bottom: "0",
+          width: "1px",
+          height: "1px",
+          border: "none",
+        });
+        document.body.appendChild(iframe);
+      }
+      const iframeDoc = iframe.contentWindow?.document;
+      if (!iframeDoc) return;
+      iframeDoc.open();
+      iframeDoc.write(printHTML);
+      iframeDoc.close();
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      }, 500);
+      return;
+    }
+
+    printWindow.document.open();
+    printWindow.document.write(printHTML);
+    printWindow.document.close();
+
+    // Wait for images/fonts to load before printing
+    printWindow.onload = () => {
+      printWindow.focus();
+      printWindow.print();
+      // Auto-close after print dialog is dismissed
+      printWindow.onafterprint = () => printWindow.close();
+    };
+
+    // Safety net: if onload doesn't fire (some browsers)
+    setTimeout(() => {
+      if (!printWindow.closed) {
+        printWindow.focus();
+        printWindow.print();
+        printWindow.onafterprint = () => printWindow.close();
+      }
+    }, 1000);
   };
 
   return (
     <>
       {/* ── Print styles (injected once in the page) ── */}
       <style>{`
+        /* Minimal screen overrides */
         @media print {
-          body > *:not(.grade-sheet-root) { display: none !important; }
           .no-print { display: none !important; }
-          .grade-sheet-root {
-            box-shadow: none !important;
-            margin: 0 !important;
-          }
-          * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          @page { size: A4 portrait; margin: 0; }
         }
       `}</style>
 
@@ -304,7 +391,7 @@ export default function GradeSheet({
             <div
               style={{
                 border: "1px solid #4a7aa8",
-                margin: "4px",
+                margin: "3px",
                 flex: 1,
                 display: "flex",
                 flexDirection: "column",
@@ -315,7 +402,7 @@ export default function GradeSheet({
               <SchoolHeader result={result} />
 
               {/* "FINAL EXAMINATION / GRADE SHEET" */}
-              <ExamTitle />
+              <ExamTitle examName={result.examName} />
 
               {/* Student info sentence */}
               <StudentInfo

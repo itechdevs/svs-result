@@ -8,12 +8,22 @@ import {
   useStudentEvaluationResults,
 } from "@/hooks/use-evaluations";
 import { useProfile } from "@/hooks/use-profile";
+import { useGradeLevelCategories } from "@/hooks/use-grade-level-categories";
 import {
   ClipboardList,
   AlertCircle,
   ArrowRight,
+  PenLine,
+  MessageSquareText,
 } from "lucide-react";
 import TeacherDashboardSkeleton from "@/components/teacher/TeacherDashboardSkeleton";
+
+function getSchoolLevel(
+  gradeLevel: string,
+  dbMap: Map<string, string>,
+): string {
+  return dbMap.get(gradeLevel) ?? "PRIMARY";
+}
 
 export default function DashboardPage() {
   const { data: templatesData = [], isLoading: isTemplatesLoading } =
@@ -23,15 +33,42 @@ export default function DashboardPage() {
       limit: 1000,
     });
   const { data: profile, isLoading: isProfileLoading } = useProfile();
+  const { data: categories } = useGradeLevelCategories();
 
   const isLoading =
     isTemplatesLoading ||
     isResultsLoading ||
     isProfileLoading;
 
+  const dbMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of categories ?? []) {
+      map.set(c.gradeLevel, c.schoolLevel);
+    }
+    return map;
+  }, [categories]);
+
   const assignedSubjectIds = useMemo(() => {
     return new Set(profile?.syncedTeacher?.subjects.map((s) => s.id) ?? []);
   }, [profile]);
+
+  const subjectsByLevel = useMemo(() => {
+    const subjects = profile?.syncedTeacher?.subjects ?? [];
+    const grouped: Record<string, typeof subjects> = {
+      PRE_PRIMARY: [],
+      PRIMARY: [],
+      SECONDARY: [],
+    };
+    for (const s of subjects) {
+      const level = getSchoolLevel(s.gradeLevel, dbMap);
+      if (level === "SECONDARY" || level === "HIGHER") {
+        grouped.SECONDARY.push(s);
+      } else {
+        grouped[level].push(s);
+      }
+    }
+    return grouped;
+  }, [profile, dbMap]);
 
   const filteredTemplates = useMemo(() => {
     if (!profile?.syncedTeacher) return [];
@@ -40,22 +77,27 @@ export default function DashboardPage() {
     );
   }, [templatesData, profile, assignedSubjectIds]);
 
-  const totalEvaluations = useMemo(() => {
-    const keys = new Set(
-      filteredTemplates.map((t) => {
-        const evalTitleMatch = t.name.match(/^\[([^\]]+)\]\[/);
-        const rawEvalPart = evalTitleMatch ? evalTitleMatch[1] : "__legacy__";
-        const evalTitle = rawEvalPart.split("|")[0];
-        return `${t.gradeConfigId}::${t.syncedSubjectId}::${evalTitle}`;
-      }),
-    );
-    return keys.size;
-  }, [filteredTemplates]);
+  const evalCountByLevel = useMemo(() => {
+    const counts: Record<string, number> = {
+      PRE_PRIMARY: 0,
+      PRIMARY: 0,
+      SECONDARY: 0,
+    };
+    for (const t of filteredTemplates) {
+      const gradeLevel = t.gradeConfig?.gradeLevel ?? t.syncedSubject?.gradeLevel ?? "";
+      const level = getSchoolLevel(gradeLevel, dbMap);
+      if (level === "SECONDARY" || level === "HIGHER") {
+        counts.SECONDARY++;
+      } else if (level === "PRE_PRIMARY" || level === "PRIMARY") {
+        counts[level]++;
+      }
+    }
+    return counts;
+  }, [filteredTemplates, dbMap]);
 
   const pendingReExam = useMemo(() => {
     if (!profile?.syncedTeacher) return 0;
     const validTemplateIds = new Set(filteredTemplates.map((t) => t.id));
-    // Mirror ReExamPortalTab's groupedRows: failed, no reExamResult yet, grouped by student+evalCard
     const grouped = new Set<string>();
     for (const r of allResults) {
       if (r.marksObtained === null || r.marksObtained === undefined) continue;
@@ -63,7 +105,6 @@ export default function DashboardPage() {
       const passMarks = Number(r.evaluationTemplate?.passMarks ?? 0);
       if (Number(r.marksObtained) >= passMarks) continue;
       if (r.reExamResult != null) continue;
-      // Determine the cardId (same logic as ReExamPortalTab)
       const rawName = r.evaluationTemplate?.name ?? '';
       const newFmt = rawName.match(/^\[([^\]]+)\]\[/);
       const evalTitle = newFmt ? newFmt[1] : undefined;
@@ -74,39 +115,72 @@ export default function DashboardPage() {
     return grouped.size;
   }, [allResults, filteredTemplates, profile]);
 
+  const isClassTeacher = !!profile?.syncedTeacher?.classTeacherId;
+  const hasPrePrimary = subjectsByLevel.PRE_PRIMARY.length > 0;
+  const hasPrimary = subjectsByLevel.PRIMARY.length > 0;
+  const hasSecondary = subjectsByLevel.SECONDARY.length > 0;
+
   const recentEvaluations = filteredTemplates.slice(0, 4);
 
-  const kpis = [
+  const kpis: {
+    label: string;
+    value: string;
+    sub: string;
+    icon: React.ReactNode;
+    danger: boolean;
+    href?: string;
+    colorClass: string;
+    show: boolean;
+  }[] = [
     {
-      label: "Total evaluations",
-      value: String(totalEvaluations),
-      sub: "Completed this semester",
-      icon: <ClipboardList className="w-5 h-5" />,
+      label: "Pre-Primary Evaluations",
+      value: String(evalCountByLevel.PRE_PRIMARY),
+      sub: hasPrePrimary 
+        ? `${subjectsByLevel.PRE_PRIMARY.length} subject${subjectsByLevel.PRE_PRIMARY.length !== 1 ? "s" : ""}`
+        : "No pre-primary subjects",
+      icon: <MessageSquareText className="w-5 h-5" />,
       danger: false,
-      colorClass:
-        "text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40",
+      colorClass: "text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/40",
+      show: hasPrePrimary,
     },
     {
-      label: "Pending re-exams",
+      label: "Primary Evaluations",
+      value: String(evalCountByLevel.PRIMARY),
+      sub: hasPrimary
+        ? `${subjectsByLevel.PRIMARY.length} subject${subjectsByLevel.PRIMARY.length !== 1 ? "s" : ""}`
+        : "No primary subjects",
+      icon: <ClipboardList className="w-5 h-5" />,
+      danger: false,
+      colorClass: "text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40",
+      show: hasPrimary,
+    },
+    {
+      label: "Pending Re-Exams",
       value: String(pendingReExam),
-      sub: "Require action",
+      sub: pendingReExam > 0 ? "Require action" : "All clear",
       icon: <AlertCircle className="w-5 h-5" />,
       danger: true,
       href: "/teacher/re-exam-portal",
-      colorClass:
-        "text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/40",
+      colorClass: "text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/40",
+      show: hasPrePrimary || hasPrimary,
     },
-    // {
-    //   label: "Re-exams scheduled",
-    //   value: String(reExamScheduled),
-    //   sub: "Upcoming this week",
-    //   icon: <CalendarClock className="w-5 h-5" />,
-    //   danger: false,
-    //   href: "/teacher/re-exam-portal",
-    //   colorClass:
-    //     "text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40",
-    // },
+    {
+      label: "Secondary Subjects",
+      value: String(subjectsByLevel.SECONDARY.length),
+      sub: hasSecondary ? "Mark entry required" : "No secondary subjects",
+      icon: <PenLine className="w-5 h-5" />,
+      danger: false,
+      href: "/teacher/secondary/mark-entry",
+      colorClass: "text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40",
+      show: hasSecondary,
+    },
   ];
+
+  const visibleKpis = kpis.filter((k) => k.show);
+
+  if (isLoading) {
+    return <TeacherDashboardSkeleton />;
+  }
 
   if (isLoading) {
     return <TeacherDashboardSkeleton />;
@@ -130,34 +204,48 @@ export default function DashboardPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-        {kpis.map((kpi) => (
-          <div
-            key={kpi.label}
-            className="bg-card rounded-xl border border-border p-4 sm:p-5 relative overflow-hidden hover:border-primary/50 hover:shadow-md transition-all group flex flex-col justify-between min-h-[90px]"
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground mb-1">
-                  {kpi.label}
-                </p>
-                <p
-                  className={`text-2xl sm:text-3xl font-extrabold ${kpi.danger ? "text-destructive" : "text-foreground"}`}
-                >
-                  {kpi.value}
-                </p>
+        {visibleKpis.map((kpi) => {
+          const content = (
+            <div
+              key={kpi.label}
+              className="bg-card rounded-xl border border-border p-4 sm:p-5 relative overflow-hidden hover:border-primary/50 hover:shadow-md transition-all group flex flex-col justify-between min-h-[90px]"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground mb-1">
+                    {kpi.label}
+                  </p>
+                  <p
+                    className={`text-2xl sm:text-3xl font-extrabold ${kpi.danger ? "text-destructive" : "text-foreground"}`}
+                  >
+                    {kpi.value}
+                  </p>
+                </div>
+                <div className={`p-2 sm:p-2.5 rounded-xl ${kpi.colorClass}`}>
+                  {kpi.icon}
+                </div>
               </div>
-              <div className={`p-2 sm:p-2.5 rounded-xl ${kpi.colorClass}`}>
-                {kpi.icon}
+              <div className="mt-3 sm:mt-4 flex items-center justify-between">
+                <p className="text-xs font-medium text-muted-foreground">
+                  {kpi.sub}
+                </p>
+                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors opacity-0 group-hover:opacity-100 transform translate-x-[-10px] group-hover:translate-x-0 transition-all duration-300" />
               </div>
             </div>
-            <div className="mt-3 sm:mt-4 flex items-center justify-between">
-              <p className="text-xs font-medium text-muted-foreground">
-                {kpi.sub}
-              </p>
-              <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors opacity-0 group-hover:opacity-100 transform translate-x-[-10px] group-hover:translate-x-0 transition-all duration-300" />
-            </div>
+          );
+          return kpi.href ? (
+            <Link key={kpi.label} href={kpi.href}>
+              {content}
+            </Link>
+          ) : (
+            <div key={kpi.label}>{content}</div>
+          );
+        })}
+        {visibleKpis.length === 0 && (
+          <div className="col-span-full text-center py-8 text-muted-foreground text-sm">
+            No subjects assigned yet. Contact your administrator.
           </div>
-        ))}
+        )}
       </div>
 
       {/* Main content */}

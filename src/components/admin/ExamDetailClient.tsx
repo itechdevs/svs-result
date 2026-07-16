@@ -43,10 +43,13 @@ import {
 import { useExam, useUpdateExam, useDeleteExam } from "@/hooks/use-exams";
 import { useAcademicYears } from "@/hooks/use-academic-config";
 import { useGradeLevels } from "@/hooks/use-subjects";
+import { useGradeLevelCategories } from "@/hooks/use-grade-level-categories";
 import SanskarLoader from "@/components/shared/SanskarLoader";
 import { ROUTES } from "@/lib/constants";
 import ExamResultCompilation from "@/components/admin/ExamResultCompilation";
 import { toast } from "sonner";
+
+type SchoolLevel = "PRE_PRIMARY" | "PRIMARY" | "SECONDARY" | "HIGHER";
 
 interface Props {
   examId: string;
@@ -57,6 +60,7 @@ export default function ExamDetailClient({ examId }: Props) {
   const { data: exam, isLoading, error } = useExam(examId);
   const { data: academicYears } = useAcademicYears();
   const { data: gradeLevels } = useGradeLevels();
+  const { data: categories } = useGradeLevelCategories();
   const updateExam = useUpdateExam();
   const deleteExam = useDeleteExam();
 
@@ -75,6 +79,17 @@ export default function ExamDetailClient({ examId }: Props) {
     () => exam?.evaluationTemplates ?? [],
     [exam],
   );
+
+  // Determine school level for this exam's grade level
+  const schoolLevel = useMemo((): SchoolLevel | null => {
+    if (!exam?.gradeLevel) return null;
+    const dbMap = new Map<string, string>();
+    for (const c of categories ?? []) {
+      dbMap.set(c.gradeLevel, c.schoolLevel);
+    }
+    const level = (dbMap.get(exam.gradeLevel) ?? "PRIMARY") as SchoolLevel;
+    return level === "HIGHER" ? "SECONDARY" : level;
+  }, [exam?.gradeLevel, categories]);
 
   const openEditDialog = useCallback(() => {
     if (!exam) return;
@@ -226,6 +241,7 @@ export default function ExamDetailClient({ examId }: Props) {
         gradeLevel={exam.gradeLevel}
         academicYearId={exam.academicYearId}
         linkedTemplates={linkedTemplates}
+        schoolLevel={schoolLevel}
       />
 
       {/* ─── Edit Dialog ─── */}

@@ -102,6 +102,8 @@ export interface Student {
   remarks: string;
   scores: StudentScore[];
   dist: Record<string, number>;
+  rank?: number;
+  examName?: string;
 }
 
 export interface ReExamOutcome {

@@ -4,14 +4,16 @@
 
 export interface Subject {
   name: string
-  creditHourTheory: number
-  creditHourInternal: number
+  creditHourTheory?: number
+  creditHourInternal?: number
   gpTheory: number
   gradeTheory: string
-  gpInternal: number
-  gradeInternal: string
+  gpInternal?: number
+  gradeInternal?: string
   finalGrade: string
   remarks: string
+  marksObtained?: number
+  maxMarks?: number
 }
 
 export interface StudentResult {
@@ -31,6 +33,7 @@ export interface StudentResult {
   gpa: number
   rank: number
   subjects: Subject[]
+  examName?: string
 }
 
 export interface GradeInterval {

@@ -17,7 +17,7 @@ function SigBlock({ label }: { label: string }) {
       }}
     >
       {/* Blank space for actual signature */}
-      <div style={{ height: '32px' }} />
+      <div style={{ height: '16px' }} />
       <div
         style={{
           borderTop: '1px solid #1f5e9d',
@@ -36,18 +36,20 @@ function SigBlock({ label }: { label: string }) {
 
 export default function SignatureSection({ issueDate, issueDateAD }: SignatureSectionProps) {
   return (
-    <div style={{ marginTop: 'auto', paddingTop: '8px', fontFamily: 'Arial, sans-serif' }}>
+    <div style={{ marginTop: 'auto', paddingTop: '2px', fontFamily: 'Arial, sans-serif' }}>
       {/* Signature row */}
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'flex-end',
+          paddingLeft: '90px',
+          paddingRight: '90px',
+          marginTop: '6px',
+          marginBottom: '20px',
         }}
       >
         <SigBlock label="CLASS TEACHER" />
-        {/* Center spacer — intentionally empty */}
-        <div />
         <SigBlock label="PRINCIPAL" />
       </div>
 
@@ -55,20 +57,16 @@ export default function SignatureSection({ issueDate, issueDateAD }: SignatureSe
       <div
         style={{
           marginTop: '8px',
-          paddingTop: '5px',
-          borderTop: '1px dashed #aac4dd',
-          fontSize: '9.5px',
+          fontSize: '10px',
           fontWeight: 700,
-          color: '#1f5e9d',
+          fontFamily: 'Arial, sans-serif',
           display: 'flex',
-          gap: '6px',
           alignItems: 'center',
+          gap: '4px',
         }}
       >
-        <span>DATE OF ISSUE:</span>
-        <span>{issueDate} B.S.</span>
-        <span style={{ color: '#4a7aa8' }}>/</span>
-        <span>{issueDateAD} A.D.</span>
+        <span style={{ color: '#1f5e9d' }}>DATE OF ISSUE:</span>
+        <span style={{ color: '#000000', fontWeight: 800 }}>{issueDate}</span>
       </div>
     </div>
   )

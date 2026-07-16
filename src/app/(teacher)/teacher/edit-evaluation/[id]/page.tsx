@@ -24,8 +24,13 @@ export default function EditEvaluationPage() {
 
   const selectedClass = searchParams.get('class') ?? '';
   const selectedSubject = searchParams.get('subject') ?? '';
-  const backUrl = `/teacher/evaluations${selectedClass || selectedSubject
-    ? `?${new URLSearchParams({ ...(selectedClass && { class: selectedClass }), ...(selectedSubject && { subject: selectedSubject }) })}`
+  const selectedSection = searchParams.get('section') ?? '';
+  const backUrl = `/teacher/evaluations${selectedClass || selectedSubject || selectedSection
+    ? `?${new URLSearchParams({
+        ...(selectedClass && { class: selectedClass }),
+        ...(selectedSubject && { subject: selectedSubject }),
+        ...(selectedSection && { section: selectedSection }),
+      })}`
     : ''}`;
 
   const { data: template, isLoading: isTemplateLoading } = useEvaluationTemplate(id);

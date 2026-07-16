@@ -4,6 +4,7 @@ import React from 'react';
 import { Student } from '@/types/academic';
 import GradeSheet from '@/components/grade-sheet/components/GradeSheet';
 import { StudentResult, Subject, DEFAULT_GRADE_INTERVALS } from '@/components/grade-sheet/types';
+import { toBSDate, formatToBSDateString } from '@/lib/bs-calendar';
 
 interface BulkGradeSheetsModalProps {
   students: Student[];
@@ -12,15 +13,20 @@ interface BulkGradeSheetsModalProps {
 
 function getGradeDetails(pct: number) {
   for (const row of DEFAULT_GRADE_INTERVALS) {
-    const [low, high] = row.interval.replace('–', '-').split(' – ').map(s => {
+    const parts = row.interval.split(/\s*–\s*/);
+    const [low, high] = parts.map(s => {
       const match = s.match(/(\d+)/);
       return match ? Number(match[1]) : 0;
     });
     if (pct >= low && pct <= high) {
-      return { grade: row.grade, gp: row.gradePoint === '–' ? 0 : Number(row.gradePoint) };
+      return {
+        grade: row.grade,
+        gp: row.gradePoint === '–' ? 0 : Number(row.gradePoint),
+        description: row.description,
+      };
     }
   }
-  return { grade: 'NG', gp: 0 };
+  return { grade: 'NG', gp: 0, description: 'Not Graded' };
 }
 
 function toStudentResult(student: Student): StudentResult {
@@ -35,22 +41,28 @@ function toStudentResult(student: Student): StudentResult {
 
   const subjects: Subject[] = Object.entries(groups).map(([name, data]) => {
     const pct = data.totalMax > 0 ? (data.totalObtained / data.totalMax) * 100 : 0;
-    const { grade, gp } = getGradeDetails(pct);
+    const { grade, gp, description } = getGradeDetails(pct);
     return {
       name,
-      creditHourTheory: data.totalMax,
-      creditHourInternal: 0,
       gpTheory: gp,
       gradeTheory: grade,
-      gpInternal: 0,
-      gradeInternal: '–',
       finalGrade: grade,
-      remarks: student.remarks || '–',
+      remarks: description,
+      marksObtained: data.totalObtained,
+      maxMarks: data.totalMax,
     };
   });
 
-  const gpValues = subjects.map((s) => s.gpTheory).filter((v) => v > 0);
-  const gpa = gpValues.length > 0 ? gpValues.reduce((a, b) => a + b, 0) / gpValues.length : 0;
+  const gpValues = subjects.map((s) => s.gpTheory);
+  const gpa = gpValues.length > 0
+    ? gpValues.reduce((a, b) => a + b, 0) / gpValues.length
+    : 0;
+
+  const now = new Date();
+  const bsNow = toBSDate(now);
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  const issueDateAD = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const issueDate = formatToBSDateString(now);
 
   return {
     schoolName: 'SANSKAR VIDHYAPITH SCHOOL',
@@ -61,13 +73,14 @@ function toStudentResult(student: Student): StudentResult {
     studentName: student.name,
     rollNo: student.rollNo,
     grade: student.class,
-    nepaliYear: '2082',
-    englishYear: '2026',
-    issueDate: '2082-12-28',
-    issueDateAD: '2026-04-10',
+    nepaliYear: String(bsNow.bsYear),
+    englishYear: String(now.getFullYear()),
+    issueDate,
+    issueDateAD,
     gpa,
-    rank: 1,
+    rank: student.rank ?? 1,
     subjects,
+    examName: student.examName,
   };
 }
 

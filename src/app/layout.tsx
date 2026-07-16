@@ -91,7 +91,13 @@ export default function RootLayout({
                 <NextTopLoader />
                 {children}
                 <Toaster />
-                <SonnerToaster position="top-right" richColors />
+                <SonnerToaster 
+                  position="top-right" 
+                  richColors 
+                  closeButton
+                  duration={2500}
+                  visibleToasts={3}
+                />
               </TooltipProvider>
             </NuqsAdapter>
           </QueryProvider>

@@ -63,6 +63,13 @@ enum ResultStatus {
   FAILED
   PROBATION // Passed overall but failed in some subjects
   WITHHELD
+  NG_BLOCKED // student has ≥1 NG subject, cannot be promoted
+}
+
+enum SecondaryComponentType {
+  INTERNAL
+  THEORY
+  PRACTICAL
 }
 
 enum GradeType {
@@ -95,6 +102,13 @@ enum SyncEventStatus {
   IGNORED
 }
 
+enum SchoolLevel {
+  PRE_PRIMARY
+  PRIMARY
+  SECONDARY
+  HIGHER
+}
+
 // =============================================================================
 // 1. USER & AUTH
 //    Users are LOCAL to the result system — not synced from school management.
@@ -110,28 +124,28 @@ enum SyncEventStatus {
 // =============================================================================
 
 model User {
-  id               String    @id @default(cuid())
-  email            String    @unique
-  passwordHash     String
-  role             UserRole
-  name             String
-  isActive         Boolean   @default(true)
-  emailVerified    DateTime? // NextAuth email verification
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  lastLoginAt      DateTime?
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  role          UserRole
+  name          String
+  isActive      Boolean   @default(true)
+  emailVerified DateTime? // NextAuth email verification
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastLoginAt   DateTime?
 
   // Only set for TEACHER role — links to the SyncedTeacher mirror
   syncedTeacherId String? @unique // SyncedTeacher.id (not sourceId)
 
-  sessions               Session[]
-  passwordResetTokens    PasswordResetToken[]
-  verificationTokens     VerificationToken[]
-  loginAttempts          LoginAttempt[]
-  auditLogs              AuditLog[]
+  sessions            Session[]
+  passwordResetTokens PasswordResetToken[]
+  verificationTokens  VerificationToken[]
+  loginAttempts       LoginAttempt[]
+  auditLogs           AuditLog[]
 
   // Teacher-specific relations (null for ADMIN)
-  syncedTeacher      SyncedTeacher?      @relation(fields: [syncedTeacherId], references: [id], onDelete: SetNull)
+  syncedTeacher SyncedTeacher? @relation(fields: [syncedTeacherId], references: [id], onDelete: SetNull)
 
   // Audit: who verified which evaluation results
   verifiedResults     StudentEvaluationResult[] @relation("VerifiedBy")
@@ -142,7 +156,14 @@ model User {
   generatedMarksheets Marksheet[]               @relation("GeneratedBy")
 
   // Teacher compilations
-  teacherCompilations  TeacherSubjectCompilation[]
+  teacherCompilations TeacherSubjectCompilation[]
+
+  // Secondary Level Relations
+  secEnteredMarks        SecondaryComponentMark[] @relation("SecEnteredBy")
+  secVerifiedMarks       SecondaryComponentMark[] @relation("SecVerifiedBy")
+  secPublishedResults    SecondaryTermResult[]    @relation("SecPublishedBy")
+  secAnnualPublished     SecondaryAnnualResult[]  @relation("SecAnnualPublishedBy")
+  secGeneratedMarksheets SecondaryMarksheet[]     @relation("SecGeneratedBy")
 
   // Observation results entered by this teacher
   observationResults StudentObservationResult[]
@@ -237,44 +258,67 @@ model AuditLog {
 
 /// Mirror of school management → Student
 model SyncedStudent {
-  id         String   @id @default(cuid())
-  sourceId   String   @unique // Student.id from school DB
-  name       String
-  rollNumber String
-  class      String // "Rabbit (Playgroup)", "Panda (L.K.G.)", etc.
-  section    String
-  isActive   Boolean  @default(true)
-  syncedAt   DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id          String    @id @default(cuid())
+  sourceId    String    @unique // Student.id from school DB
+  name        String
+  rollNumber  String
+  class       String // "Rabbit (Playgroup)", "Panda (L.K.G.)", etc.
+  section     String
+  dateOfBirth DateTime?
+  isActive    Boolean   @default(true)
+  syncedAt    DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  evaluationResults StudentEvaluationResult[]
-  subjectResults    SubjectResult[]
-  finalResults      FinalResult[]
-  marksheets        Marksheet[]
+  evaluationResults  StudentEvaluationResult[]
+  subjectResults     SubjectResult[]
+  finalResults       FinalResult[]
+  marksheets         Marksheet[]
   compilationResults TeacherSubjectCompilationResult[]
-  observationResults StudentObservationResult[]
+
+  // Secondary Level Relations
+  secondaryComponentMarks       SecondaryComponentMark[]
+  secondaryHeadingMarks         SecondaryPracticalHeadingMark[]
+  secondarySubjectResults       SecondarySubjectResult[]
+  secondaryTermResults          SecondaryTermResult[]
+  secondaryAnnualResults        SecondaryAnnualResult[]
+  secondaryAnnualSubjectResults SecondaryAnnualSubjectResult[]
+  secondaryMarksheets           SecondaryMarksheet[]
+  observationResults            StudentObservationResult[]
 
   @@index([class, section])
   @@index([isActive])
   @@map("synced_students")
 }
 
-/// Mirror of school management → Teacher
-/// One SyncedTeacher can be linked to at most one User (the teacher's login).
-model SyncedTeacher {
+model SyncedClassroom {
   id        String   @id @default(cuid())
-  sourceId  String   @unique // Teacher.id from school DB
   name      String
-  email     String?
-  phone     String?
-  imageUrl  String?
-  /// The classroom sourceId where this teacher is the class teacher
-  classTeacherId String?
-  /// Display name of the class this teacher is class teacher of (e.g. "Penguin - B")
-  classTeacherClassName String?
+  section   String
   isActive  Boolean  @default(true)
   syncedAt  DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([name, section])
+  @@index([isActive])
+  @@map("synced_classrooms")
+}
+
+/// Mirror of school management → Teacher
+/// One SyncedTeacher can be linked to at most one User (the teacher's login).
+model SyncedTeacher {
+  id                    String   @id @default(cuid())
+  sourceId              String   @unique // Teacher.id from school DB
+  name                  String
+  email                 String?
+  phone                 String?
+  imageUrl              String?
+  /// The classroom sourceId where this teacher is the class teacher
+  classTeacherId        String?
+  /// Display name of the class this teacher is class teacher of (e.g. "Penguin - B")
+  classTeacherClassName String?
+  isActive              Boolean  @default(true)
+  syncedAt              DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   // Back-relation to the result-system login account
   user     User?           @relation
@@ -290,6 +334,7 @@ model SyncedSubject {
   name       String
   code       String
   gradeLevel String
+  section    String?  // e.g. "A", "B" — null means not section-specific
   isActive   Boolean  @default(true)
   syncedAt   DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -299,7 +344,11 @@ model SyncedSubject {
   subjectResults      SubjectResult[]
   teacherCompilations TeacherSubjectCompilation[]
 
+  // Secondary Level Relations
+  secondarySubjectConfigs SecondarySubjectConfig[]
+
   @@index([gradeLevel])
+  @@index([gradeLevel, section])
   @@map("synced_subjects")
 }
 
@@ -321,9 +370,16 @@ model Exam {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  academicYear         AcademicYear         @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
-  evaluationTemplates  EvaluationTemplate[]
-  observationResults   StudentObservationResult[]
+  academicYear        AcademicYear         @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  evaluationTemplates EvaluationTemplate[]
+
+  // Secondary Level Relations
+  secondaryComponentMarks SecondaryComponentMark[]
+  secondaryHeadingMarks   SecondaryPracticalHeadingMark[]
+  secondarySubjectResults SecondarySubjectResult[]
+  secondaryTermResults    SecondaryTermResult[]
+  secondaryTermWeights    SecondaryTermWeight[]
+  observationResults      StudentObservationResult[]
 
   @@unique([academicYearId, gradeLevel, name])
   @@index([academicYearId, gradeLevel])
@@ -343,11 +399,18 @@ model AcademicYear {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  exams                Exam[]
-  gradeConfigs         GradeConfig[]
-  finalResults         FinalResult[]
-  marksheets           Marksheet[]
-  teacherCompilations  TeacherSubjectCompilation[]
+  exams               Exam[]
+  gradeConfigs        GradeConfig[]
+  finalResults        FinalResult[]
+  marksheets          Marksheet[]
+  teacherCompilations TeacherSubjectCompilation[]
+
+  // Secondary Level Relations
+  secondarySubjectConfigs SecondarySubjectConfig[]
+  secondaryTermResults    SecondaryTermResult[]
+  secondaryAnnualResults  SecondaryAnnualResult[]
+  secondaryTermWeights    SecondaryTermWeight[]
+  secondaryMarksheets     SecondaryMarksheet[]
 
   @@map("academic_years")
 }
@@ -393,6 +456,21 @@ model GradeScale {
   @@unique([gradeConfigId, minPercent, maxPercent])
   @@index([gradeConfigId])
   @@map("grade_scales")
+}
+
+// =============================================================================
+// 6B. GRADE LEVEL CATEGORY
+//    Maps each gradeLevel string to a SchoolLevel (PRE_PRIMARY, PRIMARY, etc.)
+//    so result calculation logic can differ per level.
+// =============================================================================
+
+model GradeLevelCategory {
+  id          String      @id @default(cuid())
+  gradeLevel  String      @unique
+  schoolLevel SchoolLevel
+  updatedAt   DateTime    @updatedAt
+
+  @@map("grade_level_categories")
 }
 
 // =============================================================================
@@ -652,22 +730,22 @@ model Marksheet {
 // =============================================================================
 
 model TeacherSubjectCompilation {
-  id                    String             @id @default(cuid())
-  teacherId             String             // User.id of the TEACHER
+  id                    String            @id @default(cuid())
+  teacherId             String // User.id of the TEACHER
   syncedSubjectId       String
   academicYearId        String
   gradeLevel            String
-  evaluationTemplateIds Json               // Array of selected EvaluationTemplate IDs
-  status                CompilationStatus  @default(DRAFT)
+  evaluationTemplateIds Json // Array of selected EvaluationTemplate IDs
+  status                CompilationStatus @default(DRAFT)
   submittedAt           DateTime?
-  computedAt            DateTime           @default(now())
-  createdAt             DateTime           @default(now())
-  updatedAt             DateTime           @updatedAt
+  computedAt            DateTime          @default(now())
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
 
-  teacher   User            @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  subject   SyncedSubject   @relation(fields: [syncedSubjectId], references: [id], onDelete: Cascade)
-  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
-  results   TeacherSubjectCompilationResult[]
+  teacher      User                              @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  subject      SyncedSubject                     @relation(fields: [syncedSubjectId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear                      @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  results      TeacherSubjectCompilationResult[]
 
   @@unique([teacherId, syncedSubjectId, academicYearId, gradeLevel])
   @@index([teacherId])
@@ -678,21 +756,21 @@ model TeacherSubjectCompilation {
 }
 
 model TeacherSubjectCompilationResult {
-  id                String  @id @default(cuid())
+  id                String   @id @default(cuid())
   compilationId     String
   syncedStudentId   String
-  totalFullMarks    Decimal @db.Decimal(8, 2)
-  obtainedMarks     Decimal @db.Decimal(8, 2)
-  percentage        Decimal @db.Decimal(5, 2)
+  totalFullMarks    Decimal  @db.Decimal(8, 2)
+  obtainedMarks     Decimal  @db.Decimal(8, 2)
+  percentage        Decimal  @db.Decimal(5, 2)
   grade             String?
   gradePoint        Decimal? @db.Decimal(3, 2)
   isPassed          Boolean
-  failedEvaluations Int     @default(0)
+  failedEvaluations Int      @default(0)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
   compilation TeacherSubjectCompilation @relation(fields: [compilationId], references: [id], onDelete: Cascade)
-  student     SyncedStudent              @relation(fields: [syncedStudentId], references: [id], onDelete: Cascade)
+  student     SyncedStudent             @relation(fields: [syncedStudentId], references: [id], onDelete: Cascade)
 
   @@unique([compilationId, syncedStudentId])
   @@index([compilationId])
@@ -721,17 +799,17 @@ model ObservationCategory {
 }
 
 model ObservationItem {
-  id                   String   @id @default(cuid())
+  id                    String   @id @default(cuid())
   observationCategoryId String
-  description          String
+  description           String
   /// JSON array of descriptive options, e.g. ["Pays attention", "Easily distracted"]
-  choices              Json?
-  displayOrder         Int      @default(0)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  choices               Json?
+  displayOrder          Int      @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
-  category ObservationCategory @relation(fields: [observationCategoryId], references: [id], onDelete: Cascade)
-  results StudentObservationResult[]
+  category ObservationCategory        @relation(fields: [observationCategoryId], references: [id], onDelete: Cascade)
+  results  StudentObservationResult[]
 
   @@index([observationCategoryId, displayOrder])
   @@map("observation_items")
@@ -803,4 +881,281 @@ model SyncLog {
   @@index([entity, sourceId])
   @@index([syncedAt])
   @@map("sync_logs")
+}
+
+// =============================================================================
+// SECONDARY LEVEL (GRADES 6–10) MODELS
+// =============================================================================
+
+model SecondaryGradeScale {
+  id         String  @id @default(cuid())
+  minPercent Decimal @db.Decimal(5, 2)
+  maxPercent Decimal @db.Decimal(5, 2)
+  grade      String // "A+", "A", "B+", "B", "C+", "C", "D", "NG"
+  gradePoint Decimal @db.Decimal(3, 2)
+  isNG       Boolean @default(false)
+
+  @@unique([minPercent, maxPercent])
+  @@map("secondary_grade_scales")
+}
+
+model SecondarySubjectConfig {
+  id              String   @id @default(cuid())
+  syncedSubjectId String
+  academicYearId  String
+  gradeLevel      String // "Grade 6"…"Grade 10"
+  creditHours     Int // totalFullMarks / 25
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  syncedSubject                 SyncedSubject                  @relation(fields: [syncedSubjectId], references: [id], onDelete: Cascade)
+  academicYear                  AcademicYear                   @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  components                    SecondarySubjectComponent[]
+  secondarySubjectResults       SecondarySubjectResult[]
+  secondaryAnnualSubjectResults SecondaryAnnualSubjectResult[]
+
+  @@unique([syncedSubjectId, academicYearId, gradeLevel])
+  @@map("secondary_subject_configs")
+}
+
+model SecondarySubjectComponent {
+  id              String                 @id @default(cuid())
+  subjectConfigId String
+  type            SecondaryComponentType
+  fullMarks       Decimal                @db.Decimal(6, 2)
+  passMarks       Decimal                @db.Decimal(6, 2)
+  displayOrder    Int                    @default(0)
+  isActive        Boolean                @default(true)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  subjectConfig     SecondarySubjectConfig      @relation(fields: [subjectConfigId], references: [id], onDelete: Cascade)
+  componentMarks    SecondaryComponentMark[]
+  practicalHeadings SecondaryPracticalHeading[]
+
+  @@unique([subjectConfigId, type])
+  @@map("secondary_subject_components")
+}
+
+model SecondaryPracticalHeading {
+  id           String   @id @default(cuid())
+  componentId  String
+  name         String // "Experiment", "Viva", "Lab Record", "Attendance"
+  fullMarks    Decimal  @db.Decimal(6, 2)
+  passMarks    Decimal  @db.Decimal(6, 2) @default(0)
+  displayOrder Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  component    SecondarySubjectComponent       @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  headingMarks SecondaryPracticalHeadingMark[]
+
+  @@unique([componentId, name])
+  @@map("secondary_practical_headings")
+}
+
+model SecondaryPracticalHeadingMark {
+  id              String   @id @default(cuid())
+  syncedStudentId String
+  headingId       String
+  examId          String // Term exam
+  marksObtained   Decimal  @db.Decimal(6, 2)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  syncedStudent SyncedStudent             @relation(fields: [syncedStudentId], references: [id], onDelete: Cascade)
+  heading       SecondaryPracticalHeading @relation(fields: [headingId], references: [id], onDelete: Cascade)
+  exam          Exam                      @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@unique([syncedStudentId, headingId, examId])
+  @@map("secondary_practical_heading_marks")
+}
+
+model SecondaryComponentMark {
+  id              String      @id @default(cuid())
+  syncedStudentId String
+  componentId     String
+  examId          String
+  enteredById     String
+  marksObtained   Decimal?    @db.Decimal(6, 2) // null if absent
+  isAbsent        Boolean     @default(false)
+  status          MarksStatus @default(DRAFT)
+  submittedAt     DateTime?
+  verifiedById    String?
+  verifiedAt      DateTime?
+  remarks         String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  syncedStudent SyncedStudent             @relation(fields: [syncedStudentId], references: [id], onDelete: Cascade)
+  component     SecondarySubjectComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  exam          Exam                      @relation(fields: [examId], references: [id], onDelete: Cascade)
+  enteredBy     User                      @relation("SecEnteredBy", fields: [enteredById], references: [id], onDelete: Restrict)
+  verifiedBy    User?                     @relation("SecVerifiedBy", fields: [verifiedById], references: [id], onDelete: SetNull)
+
+  @@unique([syncedStudentId, componentId, examId])
+  @@index([examId, status])
+  @@map("secondary_component_marks")
+}
+
+model SecondarySubjectResult {
+  id              String   @id @default(cuid())
+  syncedStudentId String
+  subjectConfigId String
+  examId          String
+  internalMarks   Decimal? @db.Decimal(6, 2)
+  theoryMarks     Decimal? @db.Decimal(6, 2)
+  practicalMarks  Decimal? @db.Decimal(6, 2)
+  totalObtained   Decimal  @db.Decimal(8, 2)
+  totalFullMarks  Decimal  @db.Decimal(8, 2)
+  percentage      Decimal  @db.Decimal(5, 2)
+  grade           String
+  gradePoint      Decimal  @db.Decimal(3, 2)
+  isNG            Boolean  @default(false)
+  creditHours     Int
+  weightedPoint   Decimal  @db.Decimal(6, 2) // creditHours × gradePoint
+  remarks         String?
+  computedAt      DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  syncedStudent SyncedStudent          @relation(fields: [syncedStudentId], references: [id], onDelete: Cascade)
+  subjectConfig SecondarySubjectConfig @relation(fields: [subjectConfigId], references: [id], onDelete: Cascade)
+  exam          Exam                   @relation(fields: [examId], references: [id], onDelete: Cascade)
+  finalResult   SecondaryTermResult?   @relation(fields: [finalResultId], references: [id], onDelete: SetNull)
+  finalResultId String?
+
+  @@unique([syncedStudentId, subjectConfigId, examId])
+  @@map("secondary_subject_results")
+}
+
+model SecondaryTermResult {
+  id                  String       @id @default(cuid())
+  syncedStudentId     String
+  examId              String
+  academicYearId      String
+  totalSubjects       Int
+  passedSubjects      Int
+  ngSubjects          Int
+  totalCreditHours    Int
+  totalWeightedPoints Decimal      @db.Decimal(8, 2)
+  gpa                 Decimal      @db.Decimal(4, 2)
+  classRank           Int?
+  resultStatus        ResultStatus @default(PENDING)
+  hasNG               Boolean      @default(false)
+  isPublished         Boolean      @default(false)
+  publishedAt         DateTime?
+  publishedById       String?
+  remarks             String?
+  computedAt          DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  syncedStudent  SyncedStudent            @relation(fields: [syncedStudentId], references: [id], onDelete: Cascade)
+  exam           Exam                     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  academicYear   AcademicYear             @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  publishedBy    User?                    @relation("SecPublishedBy", fields: [publishedById], references: [id], onDelete: SetNull)
+  subjectResults SecondarySubjectResult[]
+  marksheet      SecondaryMarksheet?
+
+  @@unique([syncedStudentId, examId])
+  @@index([examId, resultStatus])
+  @@map("secondary_term_results")
+}
+
+model SecondaryTermWeight {
+  id             String   @id @default(cuid())
+  academicYearId String
+  gradeLevel     String
+  examId         String // The term exam
+  termName       String // "First Term", "Second Term", etc.
+  weightPercent  Decimal  @db.Decimal(5, 2) // Must sum to 100 across all terms
+  displayOrder   Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  exam         Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@unique([academicYearId, gradeLevel, examId])
+  @@map("secondary_term_weights")
+}
+
+model SecondaryAnnualResult {
+  id                  String       @id @default(cuid())
+  syncedStudentId     String
+  academicYearId      String
+  totalSubjects       Int
+  passedSubjects      Int
+  ngSubjects          Int
+  totalCreditHours    Int
+  totalWeightedPoints Decimal      @db.Decimal(8, 2)
+  gpa                 Decimal      @db.Decimal(4, 2) // Credit-hour weighted
+  classRank           Int?
+  resultStatus        ResultStatus @default(PENDING)
+  hasNG               Boolean      @default(false)
+  isPublished         Boolean      @default(false)
+  publishedAt         DateTime?
+  publishedById       String?
+  remarks             String?
+  computedAt          DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  syncedStudent  SyncedStudent                  @relation(fields: [syncedStudentId], references: [id], onDelete: Cascade)
+  academicYear   AcademicYear                   @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  publishedBy    User?                          @relation("SecAnnualPublishedBy", fields: [publishedById], references: [id], onDelete: SetNull)
+  subjectResults SecondaryAnnualSubjectResult[]
+  marksheet      SecondaryMarksheet?            @relation("AnnualMarksheet")
+
+  @@unique([syncedStudentId, academicYearId])
+  @@map("secondary_annual_results")
+}
+
+model SecondaryAnnualSubjectResult {
+  id                    String   @id @default(cuid())
+  annualResultId        String
+  subjectConfigId       String
+  syncedStudentId       String
+  // Weighted marks from each term
+  weightedTotalObtained Decimal  @db.Decimal(8, 2)
+  weightedTotalFull     Decimal  @db.Decimal(8, 2)
+  percentage            Decimal  @db.Decimal(5, 2)
+  grade                 String
+  gradePoint            Decimal  @db.Decimal(3, 2)
+  isNG                  Boolean  @default(false)
+  creditHours           Int
+  weightedPoint         Decimal  @db.Decimal(6, 2)
+  remarks               String?
+  computedAt            DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  annualResult  SecondaryAnnualResult  @relation(fields: [annualResultId], references: [id], onDelete: Cascade)
+  subjectConfig SecondarySubjectConfig @relation(fields: [subjectConfigId], references: [id], onDelete: Cascade)
+  syncedStudent SyncedStudent          @relation(fields: [syncedStudentId], references: [id], onDelete: Cascade)
+
+  @@unique([annualResultId, subjectConfigId])
+  @@map("secondary_annual_subject_results")
+}
+
+model SecondaryMarksheet {
+  id              String   @id @default(cuid())
+  syncedStudentId String
+  termResultId    String?  @unique // For term marksheet
+  annualResultId  String?  @unique // For annual marksheet
+  examId          String?
+  academicYearId  String
+  generatedById   String
+  generatedAt     DateTime @default(now())
+  fileUrl         String?
+  metadata        Json // Full snapshot
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  syncedStudent SyncedStudent          @relation(fields: [syncedStudentId], references: [id], onDelete: Cascade)
+  termResult    SecondaryTermResult?   @relation(fields: [termResultId], references: [id], onDelete: Cascade)
+  annualResult  SecondaryAnnualResult? @relation("AnnualMarksheet", fields: [annualResultId], references: [id], onDelete: Cascade)
+  academicYear  AcademicYear           @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  generatedBy   User                   @relation("SecGeneratedBy", fields: [generatedById], references: [id], onDelete: Restrict)
+
+  @@map("secondary_marksheets")
 }

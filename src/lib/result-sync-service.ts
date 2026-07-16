@@ -4,6 +4,17 @@ import { Prisma } from "@prisma/client";
 type SyncEntityType = "STUDENT" | "TEACHER" | "SUBJECT" | "TEACHER_SUBJECT_LINK";
 type SyncAction = "UPSERT" | "DEACTIVATE";
 
+/**
+ * Splits "1 - A", "1-A", "Grade 7 - B" into { gradeLevel, section }.
+ * Handles spaces around the dash (the school API sends "1 - A").
+ */
+const parseGradeLevel = (raw: string | undefined | null): { gradeLevel: string; section: string | null } => {
+  if (!raw) return { gradeLevel: "General", section: null };
+  const match = raw.match(/^(.+?)\s*-\s*([A-Za-z]{1,2})$/);
+  if (match) return { gradeLevel: match[1].trim(), section: match[2].toUpperCase() };
+  return { gradeLevel: raw, section: null };
+};
+
 type StudentPayload = {
   sourceStudentId: string;
   name: string;
@@ -11,6 +22,7 @@ type StudentPayload = {
   class: string;
   section: string;
   grade: string;
+  dateOfBirth?: string | null;
   updatedAt: string;
 };
 
@@ -99,6 +111,7 @@ const syncStudent = async (action: SyncAction, rawPayload: Record<string, unknow
       rollNumber: payload.rollNumber || "",
       class: payload.class || "",
       section: payload.section || "A",
+      dateOfBirth: payload.dateOfBirth ? new Date(payload.dateOfBirth) : null,
       isActive: true,
     },
     update: {
@@ -106,9 +119,22 @@ const syncStudent = async (action: SyncAction, rawPayload: Record<string, unknow
       rollNumber: payload.rollNumber || "",
       class: payload.class || "",
       section: payload.section || "A",
+      dateOfBirth: payload.dateOfBirth ? new Date(payload.dateOfBirth) : null,
       isActive: true,
     },
   });
+
+  // Keep SyncedClassroom in sync — upsert by (name, section) so every class
+  // that has at least one student is represented here.
+  const className = (payload.class || "").trim();
+  const sectionName = (payload.section || "A").trim();
+  if (className && sectionName) {
+    await prisma.syncedClassroom.upsert({
+      where: { name_section: { name: className, section: sectionName } },
+      create: { name: className, section: sectionName, isActive: true },
+      update: { isActive: true, syncedAt: new Date() },
+    });
+  }
 
   await prisma.syncLog.create({
     data: {
@@ -228,6 +254,8 @@ const syncTeacher = async (action: SyncAction, rawPayload: Record<string, unknow
 
   // Set teacher-subject M2M relationships from subjectSourceIds
   if (Array.isArray(payload.subjectSourceIds)) {
+    // findMany by sourceId can return multiple rows when the same subject
+    // was assigned to multiple sections (each stored as a separate row).
     const syncedSubjects = await prisma.syncedSubject.findMany({
       where: { sourceId: { in: payload.subjectSourceIds } },
     });
@@ -286,24 +314,43 @@ const syncSubject = async (action: SyncAction, rawPayload: Record<string, unknow
     throw new Error("Subject payload requires name and code for UPSERT");
   }
 
-  // Upsert subject
-  const syncedSubject = await prisma.syncedSubject.upsert({
+  const { gradeLevel: parsedGrade, section: parsedSection } = parseGradeLevel(payload.gradeLevel);
+
+  // Find existing subject by sourceId — there may be multiple rows if the same
+  // subject was assigned to multiple sections (each gets its own row).
+  // For a plain SUBJECT event we upsert the first/only matching row.
+  const existing = await prisma.syncedSubject.findFirst({
     where: { sourceId: payload.sourceSubjectId },
-    update: {
-      name: payload.name,
-      code: payload.code,
-      gradeLevel: payload.gradeLevel || "General",
-      isActive: payload.isActive ?? true,
-      syncedAt: new Date(),
-    },
-    create: {
-      sourceId: payload.sourceSubjectId,
-      name: payload.name,
-      code: payload.code,
-      gradeLevel: payload.gradeLevel || "General",
-      isActive: payload.isActive ?? true,
-    },
+    orderBy: { syncedAt: "asc" },
   });
+
+  let syncedSubject;
+  if (existing) {
+    // Preserve existing section if the new event doesn't carry one
+    const effectiveSection = parsedSection ?? existing.section;
+    syncedSubject = await prisma.syncedSubject.update({
+      where: { id: existing.id },
+      data: {
+        name: payload.name,
+        code: payload.code,
+        gradeLevel: parsedGrade,
+        section: effectiveSection,
+        isActive: payload.isActive ?? true,
+        syncedAt: new Date(),
+      },
+    });
+  } else {
+    syncedSubject = await prisma.syncedSubject.create({
+      data: {
+        sourceId: payload.sourceSubjectId,
+        name: payload.name,
+        code: payload.code,
+        gradeLevel: parsedGrade,
+        section: parsedSection,
+        isActive: payload.isActive ?? true,
+      },
+    });
+  }
 
   // Connect teachers if teacherSourceIds provided
   if (Array.isArray(payload.teacherSourceIds) && payload.teacherSourceIds.length > 0) {
