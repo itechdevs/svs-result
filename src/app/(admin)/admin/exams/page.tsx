@@ -368,204 +368,116 @@ export default function ExamsPage() {
                     align="start"
                     className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-[400px] overflow-y-auto"
                   >
-                    <DropdownMenuItem
-                      onSelect={(e) => {
-                        e.preventDefault();
-                        if (selectedGrades.length === gradeLevels?.length) {
-                          setSelectedGrades([]);
-                        } else {
-                          setSelectedGrades(gradeLevels || []);
-                        }
-                      }}
-                      className="font-semibold"
-                    >
-                      <div
-                        className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${
-                          selectedGrades.length === gradeLevels?.length
-                            ? "bg-primary text-primary-foreground"
-                            : "opacity-50"
-                        }`}
-                      >
-                        {selectedGrades.length === gradeLevels?.length && (
-                          <Check className="h-3 w-3" />
-                        )}
-                      </div>
-                      {selectedGrades.length === gradeLevels?.length
-                        ? "Unselect All"
-                        : "Select All"}
-                    </DropdownMenuItem>
+                    {(() => {
+                      // When a category filter is active, only show grades for that category.
+                      // Otherwise show all categories.
+                      const categoryLabels: Record<string, string> = {
+                        PRE_PRIMARY: "Pre-Primary",
+                        PRIMARY: "Primary (1-5)",
+                        SECONDARY: "Secondary (6-10)",
+                        HIGHER: "Higher Secondary (11-12)",
+                      };
 
-                    {groupedGrades && (
-                      <>
-                        {/* Pre-Primary Section */}
-                        {groupedGrades.PRE_PRIMARY.length > 0 && (
-                          <>
-                            <div className="h-px bg-border my-1 mx-1" />
-                            <div className="px-2 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                              Pre-Primary
+                      const categoriesToShow = categoryFilter
+                        ? [categoryFilter]
+                        : ["PRE_PRIMARY", "PRIMARY", "SECONDARY", "HIGHER"];
+
+                      // Grades visible in the dropdown (respects category filter)
+                      const visibleGrades = groupedGrades
+                        ? categoriesToShow.flatMap(
+                            (cat) => groupedGrades[cat] ?? [],
+                          )
+                        : gradeLevels ?? [];
+
+                      const allVisibleSelected =
+                        visibleGrades.length > 0 &&
+                        visibleGrades.every((g) => selectedGrades.includes(g));
+
+                      return (
+                        <>
+                          {/* Select / Unselect All (scoped to visible grades) */}
+                          <DropdownMenuItem
+                            onSelect={(e) => {
+                              e.preventDefault();
+                              if (allVisibleSelected) {
+                                setSelectedGrades((prev) =>
+                                  prev.filter(
+                                    (g) => !visibleGrades.includes(g),
+                                  ),
+                                );
+                              } else {
+                                setSelectedGrades((prev) => [
+                                  ...new Set([...prev, ...visibleGrades]),
+                                ]);
+                              }
+                            }}
+                            className="font-semibold"
+                          >
+                            <div
+                              className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${
+                                allVisibleSelected
+                                  ? "bg-primary text-primary-foreground"
+                                  : "opacity-50"
+                              }`}
+                            >
+                              {allVisibleSelected && (
+                                <Check className="h-3 w-3" />
+                              )}
                             </div>
-                            {groupedGrades.PRE_PRIMARY.map((level) => {
-                              const isChecked = selectedGrades.includes(level);
+                            {allVisibleSelected ? "Unselect All" : "Select All"}
+                          </DropdownMenuItem>
+
+                          {groupedGrades &&
+                            categoriesToShow.map((cat) => {
+                              const levels = groupedGrades[cat] ?? [];
+                              if (levels.length === 0) return null;
                               return (
-                                <DropdownMenuItem
-                                  key={level}
-                                  onSelect={(e) => {
-                                    e.preventDefault();
-                                    if (isChecked) {
-                                      setSelectedGrades((prev) =>
-                                        prev.filter((g) => g !== level),
-                                      );
-                                    } else {
-                                      setSelectedGrades((prev) => [
-                                        ...prev,
-                                        level,
-                                      ]);
-                                    }
-                                  }}
-                                >
-                                  <div
-                                    className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${
-                                      isChecked
-                                        ? "bg-primary text-primary-foreground"
-                                        : "opacity-50"
-                                    }`}
-                                  >
-                                    {isChecked && <Check className="h-3 w-3" />}
+                                <span key={cat}>
+                                  <div className="h-px bg-border my-1 mx-1" />
+                                  <div className="px-2 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                                    {categoryLabels[cat]}
                                   </div>
-                                  {level}
-                                </DropdownMenuItem>
+                                  {levels.map((level) => {
+                                    const isChecked =
+                                      selectedGrades.includes(level);
+                                    return (
+                                      <DropdownMenuItem
+                                        key={level}
+                                        onSelect={(e) => {
+                                          e.preventDefault();
+                                          if (isChecked) {
+                                            setSelectedGrades((prev) =>
+                                              prev.filter((g) => g !== level),
+                                            );
+                                          } else {
+                                            setSelectedGrades((prev) => [
+                                              ...prev,
+                                              level,
+                                            ]);
+                                          }
+                                        }}
+                                      >
+                                        <div
+                                          className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${
+                                            isChecked
+                                              ? "bg-primary text-primary-foreground"
+                                              : "opacity-50"
+                                          }`}
+                                        >
+                                          {isChecked && (
+                                            <Check className="h-3 w-3" />
+                                          )}
+                                        </div>
+                                        {level}
+                                      </DropdownMenuItem>
+                                    );
+                                  })}
+                                </span>
                               );
                             })}
-                          </>
-                        )}
-
-                        {/* Primary Section */}
-                        {groupedGrades.PRIMARY.length > 0 && (
-                          <>
-                            <div className="h-px bg-border my-1 mx-1" />
-                            <div className="px-2 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                              Primary (1-5)
-                            </div>
-                            {groupedGrades.PRIMARY.map((level) => {
-                              const isChecked = selectedGrades.includes(level);
-                              return (
-                                <DropdownMenuItem
-                                  key={level}
-                                  onSelect={(e) => {
-                                    e.preventDefault();
-                                    if (isChecked) {
-                                      setSelectedGrades((prev) =>
-                                        prev.filter((g) => g !== level),
-                                      );
-                                    } else {
-                                      setSelectedGrades((prev) => [
-                                        ...prev,
-                                        level,
-                                      ]);
-                                    }
-                                  }}
-                                >
-                                  <div
-                                    className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${
-                                      isChecked
-                                        ? "bg-primary text-primary-foreground"
-                                        : "opacity-50"
-                                    }`}
-                                  >
-                                    {isChecked && <Check className="h-3 w-3" />}
-                                  </div>
-                                  {level}
-                                </DropdownMenuItem>
-                              );
-                            })}
-                          </>
-                        )}
-
-                        {/* Secondary Section */}
-                        {groupedGrades.SECONDARY.length > 0 && (
-                          <>
-                            <div className="h-px bg-border my-1 mx-1" />
-                            <div className="px-2 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                              Secondary (6-10)
-                            </div>
-                            {groupedGrades.SECONDARY.map((level) => {
-                              const isChecked = selectedGrades.includes(level);
-                              return (
-                                <DropdownMenuItem
-                                  key={level}
-                                  onSelect={(e) => {
-                                    e.preventDefault();
-                                    if (isChecked) {
-                                      setSelectedGrades((prev) =>
-                                        prev.filter((g) => g !== level),
-                                      );
-                                    } else {
-                                      setSelectedGrades((prev) => [
-                                        ...prev,
-                                        level,
-                                      ]);
-                                    }
-                                  }}
-                                >
-                                  <div
-                                    className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${
-                                      isChecked
-                                        ? "bg-primary text-primary-foreground"
-                                        : "opacity-50"
-                                    }`}
-                                  >
-                                    {isChecked && <Check className="h-3 w-3" />}
-                                  </div>
-                                  {level}
-                                </DropdownMenuItem>
-                              );
-                            })}
-                          </>
-                        )}
-
-                        {/* Higher Secondary Section */}
-                        {groupedGrades.HIGHER.length > 0 && (
-                          <>
-                            <div className="h-px bg-border my-1 mx-1" />
-                            <div className="px-2 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                              Higher Secondary (11-12)
-                            </div>
-                            {groupedGrades.HIGHER.map((level) => {
-                              const isChecked = selectedGrades.includes(level);
-                              return (
-                                <DropdownMenuItem
-                                  key={level}
-                                  onSelect={(e) => {
-                                    e.preventDefault();
-                                    if (isChecked) {
-                                      setSelectedGrades((prev) =>
-                                        prev.filter((g) => g !== level),
-                                      );
-                                    } else {
-                                      setSelectedGrades((prev) => [
-                                        ...prev,
-                                        level,
-                                      ]);
-                                    }
-                                  }}
-                                >
-                                  <div
-                                    className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${
-                                      isChecked
-                                        ? "bg-primary text-primary-foreground"
-                                        : "opacity-50"
-                                    }`}
-                                  >
-                                    {isChecked && <Check className="h-3 w-3" />}
-                                  </div>
-                                  {level}
-                                </DropdownMenuItem>
-                              );
-                            })}
-                          </>
-                        )}
-                      </>
-                    )}
+                        </>
+                      );
+                    })()}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>

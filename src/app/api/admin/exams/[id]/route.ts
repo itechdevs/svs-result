@@ -48,10 +48,10 @@ export const PATCH = withHandler(
 
 export const DELETE = withHandler(
   async (_req, { params }) => {
-    await prisma.exam.update({
-      where: { id: params.id },
-      data: { isActive: false },
-    });
+    const exam = await prisma.exam.findUnique({ where: { id: params.id } });
+    if (!exam) return notFound("Exam not found");
+
+    await prisma.exam.delete({ where: { id: params.id } });
 
     return ok(null, "Exam deleted");
   },

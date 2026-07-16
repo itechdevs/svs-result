@@ -146,6 +146,7 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
   const { data: existingCompilations = [] } = useTeacherSubjectCompilations({
     academicYearId: selectedAcademicYear || undefined,
     gradeLevel: selectedClass || undefined,
+    examId: selectedExam || undefined,
   });
 
   const students = useMemo(() => studentsData?.students ?? [], [studentsData]);
@@ -159,6 +160,8 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
   }, [profile, selectedClass]);
 
   // Filtered templates for selected subject + exam
+  // When an exam is selected, ONLY show templates that belong to that exam.
+  // This ensures the teacher only sees eval plans for the chosen exam.
   const filteredTemplates = useMemo(() => {
     if (!selectedSubject) return [];
     return templatesData.filter((t) => {
@@ -169,7 +172,10 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
         t.gradeConfig.academicYear.id !== selectedAcademicYear
       )
         return false;
-      if (selectedExam && t.examId && t.examId !== selectedExam) return false;
+      // If an exam is selected, only include templates linked to that exam
+      if (selectedExam) {
+        return t.examId === selectedExam;
+      }
       return true;
     });
   }, [templatesData, selectedSubject, selectedAcademicYear, selectedExam]);
@@ -340,8 +346,8 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
   };
 
   const handleSaveDraft = async () => {
-    if (!selectedSubject || !selectedClass || !selectedAcademicYear || selectedTemplateIds.length === 0) {
-      toast.error('Please select all filters and at least one evaluation plan');
+    if (!selectedSubject || !selectedClass || !selectedAcademicYear || !selectedExam || selectedTemplateIds.length === 0) {
+      toast.error('Please select exam, academic year, and at least one evaluation plan');
       return;
     }
     const subjectObj = subjects.find((s) => s.name === selectedSubject);
@@ -350,14 +356,15 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
       syncedSubjectId: subjectObj.id,
       academicYearId: selectedAcademicYear,
       gradeLevel: selectedClass,
+      examId: selectedExam,
       evaluationTemplateIds: selectedTemplateIds,
     });
     toast.success('Draft saved successfully');
   };
 
   const handleSubmit = async () => {
-    if (!selectedSubject || !selectedClass || !selectedAcademicYear || selectedTemplateIds.length === 0) {
-      toast.error('Please select all filters and at least one evaluation plan');
+    if (!selectedSubject || !selectedClass || !selectedAcademicYear || !selectedExam || selectedTemplateIds.length === 0) {
+      toast.error('Please select exam, academic year, and at least one evaluation plan');
       return;
     }
     const subjectObj = subjects.find((s) => s.name === selectedSubject);
@@ -366,6 +373,7 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
       syncedSubjectId: subjectObj.id,
       academicYearId: selectedAcademicYear,
       gradeLevel: selectedClass,
+      examId: selectedExam,
       evaluationTemplateIds: selectedTemplateIds,
     });
     if (result?.id) {
@@ -374,17 +382,18 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
     }
   };
 
-  // Find existing compilation for current selection
+  // Find existing compilation for current selection (including exam)
   const existingCompilation = useMemo(() => {
     const subjectObj = subjects.find((s) => s.name === selectedSubject);
-    if (!subjectObj || !selectedAcademicYear) return null;
+    if (!subjectObj || !selectedAcademicYear || !selectedExam) return null;
     return existingCompilations.find(
       (c) =>
         c.syncedSubjectId === subjectObj.id &&
         c.academicYearId === selectedAcademicYear &&
-        c.gradeLevel === selectedClass,
+        c.gradeLevel === selectedClass &&
+        (c as any).examId === selectedExam,
     );
-  }, [existingCompilations, selectedSubject, selectedClass, selectedAcademicYear, subjects]);
+  }, [existingCompilations, selectedSubject, selectedClass, selectedAcademicYear, selectedExam, subjects]);
 
   const activeGroups = evalPlanGroups.filter((g) => selectedPlanTitles.includes(g.planTitle));
 

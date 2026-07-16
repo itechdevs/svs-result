@@ -402,6 +402,7 @@ export const createTeacherCompilationSchema = z.object({
   syncedSubjectId: z.string().min(1, "Subject is required"),
   academicYearId: z.string().min(1, "Academic year is required"),
   gradeLevel: z.string().min(1, "Grade level is required"),
+  examId: z.string().optional(), // Exam this compilation is submitted to
   evaluationTemplateIds: z
     .array(z.string())
     .min(1, "At least one evaluation template is required"),
@@ -411,6 +412,7 @@ export const listTeacherCompilationsSchema = z.object({
   syncedSubjectId: z.string().optional(),
   academicYearId: z.string().optional(),
   gradeLevel: z.string().optional(),
+  examId: z.string().optional(), // Filter by exam
   status: z.enum(["DRAFT", "SUBMITTED"]).optional(),
 });
 
