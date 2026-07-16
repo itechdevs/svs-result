@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence } from 'motion/react';
 import { useCreateTeacherEvaluationPlan } from '@/hooks/use-evaluations';
 import { useProfile } from '@/hooks/use-profile';
 import { useExams } from '@/hooks/use-exams';
+import { useAcademicYears } from '@/hooks/use-academic-config';
 import CreateEvaluationTab from '@/components/teacher/CreateEvaluationTab';
 import { toast } from 'sonner';
 
@@ -19,6 +20,7 @@ export default function CreateEvaluationPage() {
   const selectedSubject = searchParams.get('subject') ?? '';
   const selectedSection = searchParams.get('section') ?? '';
   const [selectedExamId, setSelectedExamId] = useState(searchParams.get('examId') ?? '');
+  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState('');
 
   const [newEvalTitle, setNewEvalTitle] = useState('');
   const [newEvalSubject, setNewEvalSubject] = useState(selectedSubject || '');
@@ -31,8 +33,24 @@ export default function CreateEvaluationPage() {
 
   const { data: profile } = useProfile();
   const createPlan = useCreateTeacherEvaluationPlan();
+  const { data: academicYears } = useAcademicYears();
+
+  // Auto-select the current academic year once loaded
+  useEffect(() => {
+    if (!academicYears || selectedAcademicYearId) return;
+    const current = academicYears.find((y) => y.isCurrent);
+    if (current) setSelectedAcademicYearId(current.id);
+  }, [academicYears, selectedAcademicYearId]);
+
+  // Reset exam selection when academic year changes
+  const handleAcademicYearChange = (id: string) => {
+    setSelectedAcademicYearId(id);
+    setSelectedExamId('');
+  };
+
   const { data: exams = [] } = useExams({
     gradeLevel: selectedClass,
+    ...(selectedAcademicYearId && { academicYearId: selectedAcademicYearId }),
     isActive: true,
   });
 
@@ -111,6 +129,9 @@ export default function CreateEvaluationPage() {
         selectedExamId={selectedExamId}
         setSelectedExamId={setSelectedExamId}
         exams={exams}
+        academicYears={academicYears}
+        selectedAcademicYearId={selectedAcademicYearId}
+        setSelectedAcademicYearId={handleAcademicYearChange}
         targetMarks={targetMarks}
         setTargetMarks={setTargetMarks}
         newOutcomes={newOutcomes}
