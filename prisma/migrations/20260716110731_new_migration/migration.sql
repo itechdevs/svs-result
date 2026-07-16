@@ -1,0 +1,2 @@
+-- RenameIndex
+ALTER INDEX "teacher_subject_compilations_teacherId_syncedSubjectId_exam_key" RENAME TO "teacher_subject_compilations_teacherId_syncedSubjectId_acad_key";
