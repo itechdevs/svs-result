@@ -34,6 +34,8 @@ export interface StudentResult {
   rank: number
   subjects: Subject[]
   examName?: string
+  dateOfBirth?: string
+  dateOfBirthAD?: string
 }
 
 export interface GradeInterval {

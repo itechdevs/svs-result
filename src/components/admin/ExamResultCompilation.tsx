@@ -23,6 +23,7 @@ import { useStudents } from "@/hooks/use-students";
 import { useAdminTeacherCompilations } from "@/hooks/use-teacher-compilations";
 import { useFinalResults } from "@/hooks/use-final-results";
 import { useGradeConfigs, type GradeScale } from "@/hooks/use-academic-config";
+import { formatToBSDateString } from "@/lib/bs-calendar";
 import { Button } from "@/components/shared/ui/button";
 import {
   Table,
@@ -109,6 +110,12 @@ function toStudentObj(
   students: any[],
   examName?: string,
 ): Student {
+  const studentRecord = students.find((s) => s.id === result.studentId);
+  const dobAD = studentRecord?.dateOfBirth
+    ? new Date(studentRecord.dateOfBirth).toLocaleDateString("en-CA")
+    : undefined;
+  const dobBS = formatToBSDateString(studentRecord?.dateOfBirth);
+
   return {
     id: result.studentId,
     name: result.studentName,
@@ -141,6 +148,8 @@ function toStudentObj(
     dist: {},
     rank: result.rank ?? 1,
     examName,
+    dateOfBirth: dobBS,
+    dateOfBirthAD: dobAD,
   };
 }
 
@@ -175,7 +184,9 @@ export default function ExamResultCompilation({
     null,
   );
   const [observationMap, setObservationMap] = useState<ObservationMap>({});
-  const [customRemarksMap, setCustomRemarksMap] = useState<Record<string, string>>({});
+  const [customRemarksMap, setCustomRemarksMap] = useState<
+    Record<string, string>
+  >({});
   const [isLoadingObservations, setIsLoadingObservations] = useState(false);
   // For pre-primary single modal
   const [prePrimaryModal, setPrePrimaryModal] =
@@ -219,7 +230,9 @@ export default function ExamResultCompilation({
     }
     // Fallback: filter allTemplates by examId
     return allTemplates.filter(
-      (t) => (t as any).examId === examId && t.syncedSubject?.gradeLevel === gradeLevel,
+      (t) =>
+        (t as any).examId === examId &&
+        t.syncedSubject?.gradeLevel === gradeLevel,
     );
   }, [linkedTemplates, allTemplates, examId, gradeLevel]);
 
@@ -315,7 +328,9 @@ export default function ExamResultCompilation({
     return Array.from(subjectMap.entries()).map(([name, id]) => ({ name, id }));
   }, [templates]);
 
-  const dataReady = students.length > 0 && (templates.length > 0 || submittedSubjects.length > 0);
+  const dataReady =
+    students.length > 0 &&
+    (templates.length > 0 || submittedSubjects.length > 0);
 
   useEffect(() => {
     if (
@@ -382,7 +397,8 @@ export default function ExamResultCompilation({
     (percent: number): string => {
       if (gradeScales.length > 0) {
         const scale = gradeScales.find(
-          (s) => percent >= Number(s.minPercent) && percent <= Number(s.maxPercent),
+          (s) =>
+            percent >= Number(s.minPercent) && percent <= Number(s.maxPercent),
         );
         return scale?.grade ?? "N/A";
       }
@@ -411,8 +427,12 @@ export default function ExamResultCompilation({
       // Only compile subjects that teachers actually submitted to THIS exam
       for (const subject of submittedSubjects) {
         // Get only the templates for this subject that are linked to this exam
-        const subjectTemplates = (templatesBySubject.get(subject.name) ?? []).filter(
-          (t) => (t as any).examId === examId || linkedTemplates.some((lt) => lt.id === t.id),
+        const subjectTemplates = (
+          templatesBySubject.get(subject.name) ?? []
+        ).filter(
+          (t) =>
+            (t as any).examId === examId ||
+            linkedTemplates.some((lt) => lt.id === t.id),
         );
         if (subjectTemplates.length === 0) continue;
 
@@ -478,7 +498,16 @@ export default function ExamResultCompilation({
         hasReExam: studentsWithReExam.has(student.id),
       };
     });
-  }, [students, submittedSubjects, templatesBySubject, marksLookup, studentsWithReExam, lookupGrade, examId, linkedTemplates]);
+  }, [
+    students,
+    submittedSubjects,
+    templatesBySubject,
+    marksLookup,
+    studentsWithReExam,
+    lookupGrade,
+    examId,
+    linkedTemplates,
+  ]);
 
   const toggleSort = (column: "rank" | "rollNo" | "studentName") => {
     if (sortColumn === column) {
@@ -500,7 +529,9 @@ export default function ExamResultCompilation({
 
     const others = compiledResults
       .filter((r) => r.result !== "Pass")
-      .sort((a, b) => a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true }));
+      .sort((a, b) =>
+        a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true }),
+      );
 
     const groups = [regularPass, reExamPass, others];
 
@@ -514,7 +545,9 @@ export default function ExamResultCompilation({
     const all = [...regularPass, ...reExamPass, ...others];
 
     if (sortColumn === "rollNo") {
-      all.sort((a, b) => a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true }));
+      all.sort((a, b) =>
+        a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true }),
+      );
     } else if (sortColumn === "studentName") {
       all.sort((a, b) => a.studentName.localeCompare(b.studentName));
     }
@@ -666,26 +699,36 @@ export default function ExamResultCompilation({
     result: CompiledResult,
     obsMap: ObservationMap = observationMap,
     remarksMap: Record<string, string> = customRemarksMap,
-  ): PrePrimaryStudentData => ({
-    studentId: result.studentId,
-    studentName: result.studentName,
-    rollNo: result.rollNo,
-    className: gradeLevel,
-    section: "",
-    subjects: Object.values(result.subjects).map((s) => ({
-      subjectName: s.subjectName,
-      grade: s.grade,
-      gradePoint: null,
-      remarks: null,
-    })),
-    gpa: null,
-    rank: result.rank ?? null,
-    attendance: "",
-    observationResults: obsMap[result.studentId] ?? [],
-    customRemark: remarksMap[result.studentId] ?? null,
-    examName,
-    academicYear: "",
-  });
+  ): PrePrimaryStudentData => {
+    const studentRecord = students.find((s) => s.id === result.studentId);
+    // dateOfBirth from the DB is a Date ISO string; format it as YYYY-MM-DD for display
+    const dobAD = studentRecord?.dateOfBirth
+      ? new Date(studentRecord.dateOfBirth).toLocaleDateString("en-CA") // YYYY-MM-DD
+      : undefined;
+    const dobBS = formatToBSDateString(studentRecord?.dateOfBirth);
+    return {
+      studentId: result.studentId,
+      studentName: result.studentName,
+      rollNo: result.rollNo,
+      className: gradeLevel,
+      section: "",
+      dateOfBirth: dobBS,
+      dateOfBirthAD: dobAD,
+      subjects: Object.values(result.subjects).map((s) => ({
+        subjectName: s.subjectName,
+        grade: s.grade,
+        gradePoint: null,
+        remarks: null,
+      })),
+      gpa: null,
+      rank: result.rank ?? null,
+      attendance: "",
+      observationResults: obsMap[result.studentId] ?? [],
+      customRemark: remarksMap[result.studentId] ?? null,
+      examName,
+      academicYear: "",
+    };
+  };
 
   /** Called when admin clicks "View Grade Sheet" in observation mode */
   const handleViewPrePrimaryGradeSheet = async (result: CompiledResult) => {
@@ -706,7 +749,9 @@ export default function ExamResultCompilation({
       obs = await loadObservations();
       remarks = await loadCustomRemarks();
     }
-    setPrePrimaryBulk(sortedResults.map((r) => toPrePrimaryData(r, obs, remarks)));
+    setPrePrimaryBulk(
+      sortedResults.map((r) => toPrePrimaryData(r, obs, remarks)),
+    );
   };
 
   if (isLoading) {
@@ -727,8 +772,10 @@ export default function ExamResultCompilation({
               No evaluation plans linked to this exam
             </p>
             <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
-              Teachers need to submit their subject compilations for this exam before results can be compiled.
-              Ask teachers to go to Result Compilation, select this exam, choose their evaluation plans and submit.
+              Teachers need to submit their subject compilations for this exam
+              before results can be compiled. Ask teachers to go to Result
+              Compilation, select this exam, choose their evaluation plans and
+              submit.
             </p>
           </div>
         </div>

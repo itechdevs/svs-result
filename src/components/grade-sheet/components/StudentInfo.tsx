@@ -8,6 +8,8 @@ interface StudentInfoProps {
   grade: string;
   nepaliYear: string;
   englishYear: string;
+  dateOfBirth?: string;
+  dateOfBirthAD?: string;
 }
 
 export default function StudentInfo({
@@ -16,6 +18,8 @@ export default function StudentInfo({
   grade,
   nepaliYear,
   englishYear,
+  dateOfBirth,
+  dateOfBirthAD,
 }: StudentInfoProps) {
   const labelStyle: React.CSSProperties = {
     whiteSpace: "nowrap",
@@ -40,32 +44,54 @@ export default function StudentInfo({
         fontWeight: 600,
         fontFamily: "Arial, sans-serif",
         margin: "6px 0",
-        lineHeight: 2,
+        padding: "8px 0",
+        lineHeight: "1.6",
       }}
     >
       <div
         style={{
           display: "flex",
-          alignItems: "baseline",
-          flexWrap: "wrap",
+          alignItems: "flex-end",
+          gap: "4px",
           width: "100%",
-          marginBottom: "2px",
+          marginBottom: "6px",
         }}
       >
-        <span style={labelStyle}>THE GRADE(S) SECURED BY: </span>
+        <span style={labelStyle}>THE FOLLOWING ARE THE GRADE BY:</span>
         <span
           style={{
             ...underlineStyle,
             fontWeight: 800,
-            flex: 1,
+            flex: 2,
             minWidth: "80px",
           }}
         >
           {studentName}
         </span>
-        <span style={labelStyle}>&nbsp;&nbsp;ROLL NO: </span>
+        <span style={labelStyle}>DATE OF BIRTH:</span>
+        <span style={{ ...underlineStyle, flex: 1, minWidth: "60px" }}>
+          {dateOfBirth || '\u00A0'}
+        </span>
+        <span style={labelStyle}>B. S.</span>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-end",
+          gap: "4px",
+          width: "100%",
+          marginBottom: "6px",
+        }}
+      >
+        <span style={labelStyle}>(</span>
+        <span style={{ ...underlineStyle, flex: 1, minWidth: "60px" }}>
+          {dateOfBirthAD || '\u00A0'}
+        </span>
+        <span style={labelStyle}>A.D.)</span>
+        <span style={labelStyle}>ROLL NO:</span>
         <span style={{ ...underlineStyle, minWidth: "30px" }}>{rollNo}</span>
-        <span style={labelStyle}>&nbsp;&nbsp;GRADE: </span>
+        <span style={labelStyle}>GRADE:</span>
         <span
           style={{
             ...underlineStyle,
@@ -76,24 +102,22 @@ export default function StudentInfo({
         >
           {grade}
         </span>
+        <span style={labelStyle}>IN THE</span>
       </div>
 
       <div
         style={{
           display: "flex",
-          alignItems: "baseline",
-          flexWrap: "wrap",
+          alignItems: "flex-end",
+          gap: "4px",
           width: "100%",
-          marginTop: "2px",
         }}
       >
-        <span style={labelStyle}>IN THE EXAMINATION CONDUCTED IN </span>
+        <span style={labelStyle}>EXAMINATION CONDUCTED IN</span>
         <span style={{ ...underlineStyle, minWidth: "38px" }}>
           {nepaliYear}
         </span>
-        <span style={labelStyle}>&nbsp;B.S. (&nbsp;</span>
-        {/* <span style={{ ...underlineStyle, minWidth: '38px' }}>{englishYear}</span> */}
-        <span style={labelStyle}>&nbsp;A.D.) ARE GIVEN BELOW.</span>
+        <span style={labelStyle}>B.S. ARE GIVEN BELOW.</span>
       </div>
     </div>
   );

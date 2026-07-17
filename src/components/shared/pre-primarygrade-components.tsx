@@ -134,7 +134,8 @@ export function TitleBlock({ evaluationName }: { evaluationName: string }) {
 
 // ─── StudentInfoRow ───────────────────────────────────────────────────────────
 // Single line: "THE FOLLOWING ARE THE GRADE BY: ___ DATE OF BIRTH: ___ B.S."
-// Second line: "( ___ A.D.) ROLL NO: ___ GRADE: ___ IN THE"
+// Second 
+// line: "( ___ A.D.) ROLL NO: ___ GRADE: ___ IN THE"
 
 export function StudentInfoRow({ data }: { data: PrePrimaryGradeSheetData }) {
   const labelStyle: React.CSSProperties = {
@@ -186,11 +187,11 @@ export function StudentInfoRow({ data }: { data: PrePrimaryGradeSheetData }) {
         <span style={{ ...underlineBase, flex: 2, minWidth: '80px', textAlign: 'center' }}>
           {data.studentName || '\u00A0'}
         </span>
-        {/* <span style={labelStyle}>DATE OF BIRTH:</span>
-        <span style={{ ...underlineBase, flex: 1, minWidth: '60px' }}>
+        <span style={labelStyle}>DATE OF BIRTH:</span>
+        <span style={{ ...underlineBase, flex: 1, minWidth: '60px', textAlign: 'center' }}>
           {data.dateOfBirth || '\u00A0'}
         </span>
-        <span style={labelStyle}>B. S.</span> */}
+        <span style={labelStyle}>B. S.</span>
       </div>
 
       {/* Line 2: ROLL NO: _roll_ GRADE: _class_ IN THE */}
@@ -202,11 +203,11 @@ export function StudentInfoRow({ data }: { data: PrePrimaryGradeSheetData }) {
           width: '100%',
         }}
       >
-        {/* <span style={labelStyle}>(</span>
-        <span style={{ ...underlineBase, flex: 1, minWidth: '60px' }}>
-          {data.dateOfBirth || '\u00A0'}
+        <span style={labelStyle}>(</span>
+        <span style={{ ...underlineBase, flex: 1, minWidth: '60px', textAlign: 'center' }}>
+          {data.dateOfBirthAD || '\u00A0'}
         </span>
-        <span style={labelStyle}>A.D.) </span> */}
+        <span style={labelStyle}>A.D.) </span>
         <span style={labelStyle}> ROLL NO:</span>
         <span style={{ ...underlineBase, flex: 1, minWidth: '50px', textAlign: 'center' }}>
           {data.rollNo || '\u00A0'}
