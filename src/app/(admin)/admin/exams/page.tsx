@@ -64,7 +64,7 @@ import {
   useDeleteExam,
 } from "@/hooks/use-exams";
 import { useAcademicYears } from "@/hooks/use-academic-config";
-import { useGradeLevels } from "@/hooks/use-subjects";
+import { useGradeLevelsWithSection } from "@/hooks/use-subjects";
 import { useGradeLevelCategories } from "@/hooks/use-grade-level-categories";
 import SanskarLoader from "@/components/shared/SanskarLoader";
 
@@ -93,7 +93,8 @@ export default function ExamsPage() {
     ...(gradeLevelFilter && { gradeLevel: gradeLevelFilter }),
   });
   const { data: academicYears } = useAcademicYears();
-  const { data: gradeLevels, isLoading: isLoadingGrades } = useGradeLevels();
+  const { data: gradeLevels, isLoading: isLoadingGrades } =
+    useGradeLevelsWithSection();
   const { data: gradeLevelCategories } = useGradeLevelCategories();
   const createExam = useCreateExam();
   const deleteExam = useDeleteExam();
@@ -119,21 +120,40 @@ export default function ExamsPage() {
   }, [exams, categoryFilter, gradeLevelToSchoolLevel]);
 
   // Group grade levels by DB-driven categories
+  // gradeLevels is now GradeLevelWithSection[] — gradeLevel field is the SyncedClassroom.name
+  // which matches GradeLevelCategory keys exactly.
   const groupedGrades = useMemo(() => {
     if (!gradeLevels) return null;
-    const groups: Record<string, string[]> = {
+    type GradeItem = {
+      gradeLevel: string;
+      section: string;
+      displayName: string;
+    };
+    const groups: Record<string, GradeItem[]> = {
       PRE_PRIMARY: [],
       PRIMARY: [],
       SECONDARY: [],
       HIGHER: [],
     };
-    gradeLevels.forEach((level) => {
-      const cat = gradeLevelToSchoolLevel.get(level) ?? "PRIMARY";
-      groups[cat]?.push(level);
+    // dedupe by gradeLevel (classroom name is already unique per section)
+    const seen = new Set<string>();
+    gradeLevels.forEach((item) => {
+      if (seen.has(item.gradeLevel)) return;
+      seen.add(item.gradeLevel);
+      const cat = gradeLevelToSchoolLevel.get(item.gradeLevel) ?? "PRIMARY";
+      groups[cat].push(item);
     });
     return groups;
   }, [gradeLevels, gradeLevelToSchoolLevel]);
 
+  // Map gradeLevel → displayName for the trigger button label
+  const gradeLevelDisplayMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const item of gradeLevels ?? []) {
+      map.set(item.gradeLevel, item.displayName);
+    }
+    return map;
+  }, [gradeLevels]);
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editingExam, setEditingExam] = useState<any>(null);
@@ -247,10 +267,6 @@ export default function ExamsPage() {
     }
   };
 
-  if (isLoading) {
-    return <SanskarLoader message="Loading exams..." />;
-  }
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
@@ -284,7 +300,10 @@ export default function ExamsPage() {
               Create Exam
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent
+            className="sm:max-w-[500px]"
+            aria-describedby={undefined}
+          >
             <DialogHeader>
               <DialogTitle>Create New Exam</DialogTitle>
             </DialogHeader>
@@ -353,7 +372,9 @@ export default function ExamsPage() {
                           </span>
                         ) : selectedGrades.length <= 3 ? (
                           <span className="text-foreground">
-                            {selectedGrades.join(", ")}
+                            {selectedGrades
+                              .map((g) => gradeLevelDisplayMap.get(g) ?? g)
+                              .join(", ")}
                           </span>
                         ) : (
                           <span className="text-foreground">
@@ -373,9 +394,9 @@ export default function ExamsPage() {
                       // Otherwise show all categories.
                       const categoryLabels: Record<string, string> = {
                         PRE_PRIMARY: "Pre-Primary",
-                        PRIMARY: "Primary (1-5)",
-                        SECONDARY: "Secondary (6-10)",
-                        HIGHER: "Higher Secondary (11-12)",
+                        PRIMARY: "Primary",
+                        SECONDARY: "Secondary",
+                        HIGHER: "Higher",
                       };
 
                       const categoriesToShow = categoryFilter
@@ -387,11 +408,13 @@ export default function ExamsPage() {
                         ? categoriesToShow.flatMap(
                             (cat) => groupedGrades[cat] ?? [],
                           )
-                        : gradeLevels ?? [];
+                        : (gradeLevels ?? []);
 
                       const allVisibleSelected =
                         visibleGrades.length > 0 &&
-                        visibleGrades.every((g) => selectedGrades.includes(g));
+                        visibleGrades.every((g) =>
+                          selectedGrades.includes(g.gradeLevel),
+                        );
 
                       return (
                         <>
@@ -402,23 +425,28 @@ export default function ExamsPage() {
                               if (allVisibleSelected) {
                                 setSelectedGrades((prev) =>
                                   prev.filter(
-                                    (g) => !visibleGrades.includes(g),
+                                    (g) =>
+                                      !visibleGrades.some(
+                                        (vg) => vg.gradeLevel === g,
+                                      ),
                                   ),
                                 );
                               } else {
                                 setSelectedGrades((prev) => [
-                                  ...new Set([...prev, ...visibleGrades]),
+                                  ...new Set([
+                                    ...prev,
+                                    ...visibleGrades.map((vg) => vg.gradeLevel),
+                                  ]),
                                 ]);
                               }
                             }}
                             className="font-semibold"
                           >
                             <div
-                              className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${
-                                allVisibleSelected
+                                className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${allVisibleSelected
                                   ? "bg-primary text-primary-foreground"
                                   : "opacity-50"
-                              }`}
+                                }`}
                             >
                               {allVisibleSelected && (
                                 <Check className="h-3 w-3" />
@@ -429,46 +457,48 @@ export default function ExamsPage() {
 
                           {groupedGrades &&
                             categoriesToShow.map((cat) => {
-                              const levels = groupedGrades[cat] ?? [];
-                              if (levels.length === 0) return null;
+                              const items = groupedGrades[cat] ?? [];
+                              if (items.length === 0) return null;
                               return (
                                 <span key={cat}>
                                   <div className="h-px bg-border my-1 mx-1" />
                                   <div className="px-2 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                                     {categoryLabels[cat]}
                                   </div>
-                                  {levels.map((level) => {
-                                    const isChecked =
-                                      selectedGrades.includes(level);
+                                  {items.map((item) => {
+                                    const isChecked = selectedGrades.includes(
+                                      item.gradeLevel,
+                                    );
                                     return (
                                       <DropdownMenuItem
-                                        key={level}
+                                        key={item.gradeLevel}
                                         onSelect={(e) => {
                                           e.preventDefault();
                                           if (isChecked) {
                                             setSelectedGrades((prev) =>
-                                              prev.filter((g) => g !== level),
+                                              prev.filter(
+                                                (g) => g !== item.gradeLevel,
+                                              ),
                                             );
                                           } else {
                                             setSelectedGrades((prev) => [
                                               ...prev,
-                                              level,
+                                              item.gradeLevel,
                                             ]);
                                           }
                                         }}
                                       >
                                         <div
-                                          className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${
-                                            isChecked
-                                              ? "bg-primary text-primary-foreground"
-                                              : "opacity-50"
-                                          }`}
+                                          className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${isChecked
+                                            ? "bg-primary text-primary-foreground"
+                                            : "opacity-50"
+                                            }`}
                                         >
                                           {isChecked && (
                                             <Check className="h-3 w-3" />
                                           )}
                                         </div>
-                                        {level}
+                                        <span>{item.gradeLevel} {item.section}</span>
                                       </DropdownMenuItem>
                                     );
                                   })}
@@ -526,7 +556,10 @@ export default function ExamsPage() {
           </DialogContent>
         </Dialog>
         <Dialog open={editOpen} onOpenChange={setEditOpen}>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent
+            className="sm:max-w-[500px]"
+            aria-describedby={undefined}
+          >
             <DialogHeader>
               <DialogTitle>Edit Exam</DialogTitle>
             </DialogHeader>
@@ -587,9 +620,9 @@ export default function ExamsPage() {
                     <SelectValue placeholder="Select grade level" />
                   </SelectTrigger>
                   <SelectContent>
-                    {gradeLevels?.map((level) => (
-                      <SelectItem key={level} value={level}>
-                        {level}
+                    {gradeLevels?.map((item) => (
+                      <SelectItem key={item.gradeLevel} value={item.gradeLevel}>
+                        {item.displayName}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -675,9 +708,10 @@ export default function ExamsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Grade Levels</SelectItem>
-                {gradeLevels?.map((level) => (
-                  <SelectItem key={level} value={level}>
-                    {level}
+                {/* {JSON.stringify(gradeLevels)} */}
+                {gradeLevels?.map((item) => (
+                  <SelectItem key={item.displayName || `${item.gradeLevel}-${item.section || ''}`} value={item.gradeLevel}>
+                    {item.displayName || item.gradeLevel}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -687,7 +721,11 @@ export default function ExamsPage() {
       </div>
 
       <div className="bg-card border border-border rounded-xl shadow-sm overflow-x-auto w-full">
-        {filteredExams && filteredExams.length > 0 ? (
+        {isLoading ? (
+          <div className="flex justify-center py-20">
+            <SanskarLoader message="Loading exams..." />
+          </div>
+        ) : filteredExams && filteredExams.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow>
@@ -701,110 +739,112 @@ export default function ExamsPage() {
             </TableHeader>
             <TableBody>
               {filteredExams.map((exam) => {
-                const schoolLevel = gradeLevelToSchoolLevel.get(exam.gradeLevel);
+                const schoolLevel = gradeLevelToSchoolLevel.get(
+                  exam.gradeLevel,
+                );
                 const isSecondaryOrHigher =
                   schoolLevel === "SECONDARY" || schoolLevel === "HIGHER";
 
                 return (
-                <TableRow
-                  key={exam.id}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => {
-                    if (isSecondaryOrHigher) {
-                      router.push(
-                        `/admin/secondary/result-compilation?year=${exam.academicYearId}&grade=${exam.gradeLevel}&exam=${exam.id}&tab=term`,
-                      );
-                    } else {
-                      router.push(`/admin/exams/${exam.id}`);
-                    }
-                  }}
-                >
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      <BookOpen className="w-4 h-4 text-primary" />
-                      {exam.name}
-                    </div>
-                  </TableCell>
-                  <TableCell>{exam.gradeLevel}</TableCell>
-                  <TableCell>{exam.academicYear?.name}</TableCell>
-                  <TableCell className="text-center">
-                    <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-xs font-bold text-primary">
-                      {exam._count?.evaluationTemplates ?? 0}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    {exam.startDate ? (
-                      <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center gap-1 text-sm font-semibold text-foreground">
-                          <Calendar className="w-3.5 h-3.5 text-primary" />
-                          {formatToBSFullString(exam.startDate)}
-                          {exam.endDate && (
-                            <> — {formatToBSFullString(exam.endDate)}</>
-                          )}
-                        </div>
-                        <div className="text-[10px] text-muted-foreground pl-4.5">
-                          {new Date(exam.startDate).toLocaleDateString()}
-                          {exam.endDate && (
-                            <>
-                              {" "}
-                              — {new Date(exam.endDate).toLocaleDateString()}
-                            </>
-                          )}
-                        </div>
+                  <TableRow
+                    key={exam.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => {
+                      if (isSecondaryOrHigher) {
+                        router.push(
+                          `/admin/secondary/result-compilation?year=${exam.academicYearId}&grade=${exam.gradeLevel}&exam=${exam.id}&tab=term`,
+                        );
+                      } else {
+                        router.push(`/admin/exams/${exam.id}`);
+                      }
+                    }}
+                  >
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="w-4 h-4 text-primary" />
+                        {exam.name}
                       </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div
-                      className="flex items-center justify-end gap-1"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-primary"
-                        onClick={() => openEditDialog(exam)}
+                    </TableCell>
+                    <TableCell>{exam.gradeLevel}</TableCell>
+                    <TableCell>{exam.academicYear?.name}</TableCell>
+                    <TableCell className="text-center">
+                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-xs font-bold text-primary">
+                        {exam._count?.evaluationTemplates ?? 0}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      {exam.startDate ? (
+                        <div className="flex flex-col gap-0.5">
+                          <div className="flex items-center gap-1 text-sm font-semibold text-foreground">
+                            <Calendar className="w-3.5 h-3.5 text-primary" />
+                            {formatToBSFullString(exam.startDate)}
+                            {exam.endDate && (
+                              <> — {formatToBSFullString(exam.endDate)}</>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground pl-4.5">
+                            {new Date(exam.startDate).toLocaleDateString()}
+                            {exam.endDate && (
+                              <>
+                                {" "}
+                                — {new Date(exam.endDate).toLocaleDateString()}
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div
+                        className="flex items-center justify-end gap-1"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Exam</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete "{exam.name}"?
-                              This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel className="text-xs">
-                              Cancel
-                            </AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDelete(exam.id)}
-                              className="bg-destructive text-destructive-foreground text-xs"
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-primary"
+                          onClick={() => openEditDialog(exam)}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive"
                             >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Exam</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete "{exam.name}"?
+                                This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel className="text-xs">
+                                Cancel
+                              </AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDelete(exam.id)}
+                                className="bg-destructive text-destructive-foreground text-xs"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         ) : (

@@ -137,11 +137,29 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
     }
   }, [selectedAcademicYear]);
 
-  const { data: exams = [] } = useExams(
+  const { data: allExams = [] } = useExams(
     selectedAcademicYear
       ? { academicYearId: selectedAcademicYear }
       : undefined,
   );
+
+  // Match exams whose gradeLevel equals the classroom name.
+  // SyncedSubject stores gradeLevel="Penguin" section="A" (split),
+  // but Exam.gradeLevel stores the SyncedClassroom.name e.g. "Penguin - A" or "Penguin A".
+  // Try exact match first, then combined variants.
+  const exams = useMemo(() => {
+    if (!selectedClass) return allExams;
+    return allExams.filter((exam) => {
+      const g = exam.gradeLevel;
+      if (g === selectedClass) return true;
+      if (selectedSection) {
+        if (g === `${selectedClass} - ${selectedSection}`) return true;
+        if (g === `${selectedClass} ${selectedSection}`) return true;
+        if (g === `${selectedClass}-${selectedSection}`) return true;
+      }
+      return false;
+    });
+  }, [allExams, selectedClass, selectedSection]);
   const { data: templatesData = [] } = useEvaluationTemplates(
     selectedAcademicYear ? { academicYearId: selectedAcademicYear } : {},
   );
@@ -167,8 +185,10 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
   }, [profile, selectedClass]);
 
   // Filtered templates for selected subject + exam
-  // When an exam is selected, ONLY show templates that belong to that exam.
-  // This ensures the teacher only sees eval plans for the chosen exam.
+  // When an exam is selected:
+  //   - include templates explicitly linked to that exam (t.examId === selectedExam)
+  //   - also include templates with no examId (created before exam linking was introduced,
+  //     or created when no exam was available in the dropdown)
   const filteredTemplates = useMemo(() => {
     if (!selectedSubject) return [];
     return templatesData.filter((t) => {
@@ -179,9 +199,9 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
         t.gradeConfig.academicYear.id !== selectedAcademicYear
       )
         return false;
-      // If an exam is selected, only include templates linked to that exam
       if (selectedExam) {
-        return t.examId === selectedExam;
+        // Show templates for this exam OR unlinked templates (examId null/undefined)
+        return t.examId === selectedExam || !t.examId;
       }
       return true;
     });
