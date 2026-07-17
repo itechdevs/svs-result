@@ -413,6 +413,7 @@ export default function GradeSheet({
                 englishYear={result.englishYear}
                 dateOfBirth={result.dateOfBirth}
                 dateOfBirthAD={result.dateOfBirthAD}
+                examName={result.examName}
               />
 
               {/* Marks table */}

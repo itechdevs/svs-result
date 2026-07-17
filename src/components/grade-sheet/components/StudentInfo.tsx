@@ -10,6 +10,7 @@ interface StudentInfoProps {
   englishYear: string;
   dateOfBirth?: string;
   dateOfBirthAD?: string;
+  examName?: string;
 }
 
 export default function StudentInfo({
@@ -20,6 +21,7 @@ export default function StudentInfo({
   englishYear,
   dateOfBirth,
   dateOfBirthAD,
+  examName,
 }: StudentInfoProps) {
   const labelStyle: React.CSSProperties = {
     whiteSpace: 'nowrap',
@@ -40,23 +42,25 @@ export default function StudentInfo({
     <div
       style={{
         width: '100%',
+        fontSize: '10px',
+        fontWeight: 700,
+        fontFamily: '"Arial", sans-serif',
         color: '#1f5e9d',
-        fontFamily: 'Arial, sans-serif',
-        margin: '8px 0',
+        padding: '8px 0',
+        lineHeight: '1.6',
         display: 'flex',
         flexDirection: 'column',
         gap: '4px',
-        lineHeight: 1.6,
       }}
     >
       {/* Line 1: Name + DOB BS */}
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', width: '100%' }}>
         <span style={labelStyle}>THE FOLLOWING ARE THE GRADE BY:</span>
-        <span style={{ ...underlineBase, fontWeight: 800, flex: 2, minWidth: '120px' }}>
+        <span style={{ ...underlineBase, flex: 2, minWidth: '120px', textAlign: 'center' }}>
           {studentName}
         </span>
         <span style={labelStyle}>DATE OF BIRTH:</span>
-        <span style={{ ...underlineBase, flex: 1, minWidth: '60px' }}>
+        <span style={{ ...underlineBase, flex: 1, minWidth: '60px', textAlign: 'center' }}>
           {dateOfBirth || '\u00A0'}
         </span>
         <span style={labelStyle}>B. S.</span>
@@ -65,26 +69,28 @@ export default function StudentInfo({
       {/* Line 2: DOB AD + Roll + Grade */}
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', width: '100%' }}>
         <span style={labelStyle}>(</span>
-        <span style={{ ...underlineBase, minWidth: '70px' }}>
+        <span style={{ ...underlineBase, minWidth: '70px', textAlign: 'center' }}>
           {dateOfBirthAD || '\u00A0'}
         </span>
-        <span style={labelStyle}>A.D.)</span>
-
+        <span style={labelStyle}>&nbsp;A.D.)&nbsp;&nbsp;</span>
         <span style={labelStyle}>ROLL NO:</span>
-        <span style={{ ...underlineBase, flex: 0.5, minWidth: '40px' }}>
+        <span style={{ ...underlineBase, flex: 0.5, minWidth: '40px', textAlign: 'center' }}>
           {rollNo}
         </span>
         <span style={labelStyle}>GRADE:</span>
-        <span style={{ ...underlineBase, fontWeight: 800, flex: 0.5, minWidth: '50px' }}>
+        <span style={{ ...underlineBase, flex: 0.5, minWidth: '50px', textAlign: 'center' }}>
           {grade}
         </span>
         <span style={labelStyle}>IN THE</span>
       </div>
 
       {/* Line 3: Exam Year */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', width: '100%' }}>
-        <span style={labelStyle}>EXAMINATION CONDUCTED IN</span>
-        <span style={{ ...underlineBase, minWidth: '45px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', width: '100%', marginTop: '6px' }}>
+        <span style={{ ...labelStyle, fontWeight: 900, marginRight: '4px' }}>
+          {examName ? examName.toUpperCase() : 'EXAMINATION'}
+        </span>
+        <span style={labelStyle}>CONDUCTED IN</span>
+        <span style={{ ...underlineBase, minWidth: '45px', textAlign: 'center' }}>
           {nepaliYear}
         </span>
         <span style={labelStyle}>B.S. ARE GIVEN BELOW.</span>
