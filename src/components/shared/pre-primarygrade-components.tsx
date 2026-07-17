@@ -208,8 +208,8 @@ export function StudentInfoRow({ data }: { data: PrePrimaryGradeSheetData }) {
         <span style={{ ...underlineBase, minWidth: '70px', textAlign: 'center' }}>
           {data.dateOfBirthAD || '\u00A0'}
         </span>
-        <span style={labelStyle}>A.D.) </span>
-        <span style={labelStyle}> ROLL NO:</span>
+        <span style={labelStyle}>&nbsp;A.D.)&nbsp;&nbsp;</span>
+        <span style={labelStyle}>ROLL NO:</span>
         <span style={{ ...underlineBase, flex: 0.5, minWidth: '40px', textAlign: 'center' }}>
           {data.rollNo || '\u00A0'}
         </span>
@@ -235,14 +235,14 @@ export function DeclarationLine({ evaluationName }: { evaluationName: string }) 
         fontWeight: 700,
         color: textColor,
         fontFamily: FONT,
-        marginTop: '-9px',
+        marginTop: '6px',
         marginBottom: '10px',
       }}
     >
-      <span style={{ fontWeight: 900 }}>
+      <span style={{ fontWeight: 900, marginRight: '4px' }}>
         {evaluationName ? evaluationName.toUpperCase() : 'FIRST TERMINAL EXAMINATION'}
       </span>
-      &nbsp;CONDUCTED BY SCHOOL ARE GIVEN BELOW.
+      <span>CONDUCTED BY SCHOOL ARE GIVEN BELOW.</span>
     </div>
   );
 }

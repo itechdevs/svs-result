@@ -57,7 +57,7 @@ const tableHeaderCell: React.CSSProperties = {
   border: "0.5px solid #1f5e9d",
   padding: "4px 6px",
   textAlign: "center",
-  fontWeight: 700,
+  fontWeight: 800,
   fontSize: "8px",
   color: "#1f5e9d",
   fontFamily: "Arial, sans-serif",
@@ -68,7 +68,6 @@ const tableBodyCell: React.CSSProperties = {
   border: "0.5px solid #1f5e9d",
   padding: "2px 6px",
   textAlign: "center",
-  fontWeight: 700,
   height: "18px",
   color: "#1f5e9d",
   fontSize: "8px",
@@ -173,7 +172,7 @@ export default function GradeLegend({
         <div
           style={{
             color: "#1f5e9d",
-            fontWeight: 700,
+            fontWeight: 800,
             fontSize: "9.5px",
             textAlign: "center",
             marginBottom: "4px",
