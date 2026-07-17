@@ -555,6 +555,17 @@ export const updateObservationCategorySchema = z.object({
   displayOrder: z.number().int().min(0).optional(),
 });
 
+// Custom Student Remarks
+export const saveCustomRemarksSchema = z.object({
+  examId: z.string().min(1),
+  remarks: z.array(
+    z.object({
+      syncedStudentId: z.string().min(1),
+      remark: z.string().max(2000).trim(),
+    })
+  ),
+});
+
 export const listObservationCategoriesSchema = z.object({
   includeItems: z
     .string()

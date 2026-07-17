@@ -46,9 +46,10 @@ export const GET = withHandler(async (req: NextRequest, { user }) => {
 
 export const POST = withHandler(async (req: NextRequest, { user }) => {
   const body = await req.json();
-  const { examId, results } = body as {
+  const { examId, results, remarks } = body as {
     examId: string;
     results: { syncedStudentId: string; observationItemId: string; selectedOption: string }[];
+    remarks?: { syncedStudentId: string; remark: string }[];
   };
 
   if (!examId || !Array.isArray(results)) {
@@ -127,6 +128,39 @@ export const POST = withHandler(async (req: NextRequest, { user }) => {
       );
     }
   });
+
+  // 3. Save custom remarks
+  if (remarks && remarks.length > 0) {
+    for (const r of remarks) {
+      if (r.remark.trim().length === 0) {
+        await prisma.studentRemark.deleteMany({
+          where: {
+            syncedStudentId: r.syncedStudentId,
+            examId,
+          },
+        });
+      } else {
+        await prisma.studentRemark.upsert({
+          where: {
+            syncedStudentId_examId: {
+              syncedStudentId: r.syncedStudentId,
+              examId,
+            },
+          },
+          update: {
+            remark: r.remark,
+            enteredById: user.id,
+          },
+          create: {
+            syncedStudentId: r.syncedStudentId,
+            examId,
+            remark: r.remark,
+            enteredById: user.id,
+          },
+        });
+      }
+    }
+  }
 
   return ok({ count: results.length }, "Observation results saved");
 }, ["TEACHER"]);

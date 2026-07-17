@@ -49,7 +49,6 @@ export default function CreateEvaluationPage() {
   };
 
   const { data: exams = [] } = useExams({
-    gradeLevel: selectedClass,
     ...(selectedAcademicYearId && { academicYearId: selectedAcademicYearId }),
     isActive: true,
   });
