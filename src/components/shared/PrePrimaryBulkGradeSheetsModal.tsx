@@ -117,7 +117,8 @@ export default function PrePrimaryBulkGradeSheetsModal({ students, onClose }: Pr
                                 rollNumber: student.rollNo,
                                 class: student.className,
                                 section: student.section,
-
+                                dateOfBirth: student.dateOfBirth,
+                                dateOfBirthAD: student.dateOfBirthAD,
                             },
                             exam: { name: student.examName },
                             academicYear: { name: student.academicYear },
@@ -131,6 +132,7 @@ export default function PrePrimaryBulkGradeSheetsModal({ students, onClose }: Pr
                             finalResult: { cgpa: student.gpa, classRank: student.rank },
                             attendance: student.attendance,
                             observationResults: student.observationResults,
+                            customRemark: student.customRemark,
                         });
 
                         return (

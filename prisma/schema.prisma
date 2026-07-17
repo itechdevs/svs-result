@@ -167,6 +167,7 @@ model User {
 
   // Observation results entered by this teacher
   observationResults StudentObservationResult[]
+  studentRemarks     StudentRemark[]
 
   @@index([role, isActive])
   @@index([email])
@@ -284,6 +285,7 @@ model SyncedStudent {
   secondaryAnnualSubjectResults SecondaryAnnualSubjectResult[]
   secondaryMarksheets           SecondaryMarksheet[]
   observationResults            StudentObservationResult[]
+  studentRemarks                  StudentRemark[]
 
   @@index([class, section])
   @@index([isActive])
@@ -381,6 +383,7 @@ model Exam {
   secondaryTermResults    SecondaryTermResult[]
   secondaryTermWeights    SecondaryTermWeight[]
   observationResults      StudentObservationResult[]
+  studentRemarks           StudentRemark[]
 
   @@unique([academicYearId, gradeLevel, name])
   @@index([academicYearId, gradeLevel])
@@ -841,6 +844,27 @@ model StudentObservationResult {
   @@index([examId])
   @@index([syncedStudentId])
   @@map("student_observation_results")
+}
+
+// Class teacher enters a free-text custom remark per student per exam
+// for pre-primary grade sheet display.
+model StudentRemark {
+  id              String   @id @default(cuid())
+  syncedStudentId String
+  examId          String
+  enteredById     String
+  remark          String   @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  syncedStudent SyncedStudent @relation(fields: [syncedStudentId], references: [id], onDelete: Cascade)
+  exam          Exam          @relation(fields: [examId], references: [id], onDelete: Cascade)
+  enteredBy     User          @relation(fields: [enteredById], references: [id])
+
+  @@unique([syncedStudentId, examId])
+  @@index([examId])
+  @@index([syncedStudentId])
+  @@map("student_remarks")
 }
 
 // =============================================================================

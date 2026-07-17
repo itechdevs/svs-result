@@ -16,6 +16,7 @@ import {
     SummarySection,
     ObservationSection,
     FooterSection,
+    CustomRemarkSection,
 } from './pre-primarygrade-components';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -45,6 +46,7 @@ export interface PrePrimaryGradeSheetData {
     evaluationName: string;
     studentName: string;
     dateOfBirth: string;
+    dateOfBirthAD?: string;
     rollNo: string;
     admissionNo: string;
     className: string;
@@ -74,6 +76,8 @@ export interface PrePrimaryGradeSheetData {
      * instead of the fixed attention/homework/… fields.
      */
     rawObservations?: StudentObservationEntry[];
+    /** Class teacher's custom remark for this student on this exam */
+    customRemark?: string | null;
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -117,6 +121,7 @@ export const EMPTY_DATA: PrePrimaryGradeSheetData = {
     neatness: '',
     homework: '',
     remarks: '',
+    customRemark: '',
     classTeacher: '',
     principal: '',
     dateOfIssue: '',
@@ -140,6 +145,8 @@ export function buildPrePrimaryData(params: {
         rollNumber: string;
         class: string;
         section: string;
+        dateOfBirth?: string;
+        dateOfBirthAD?: string;
     };
     academicYear?: { name: string };
     exam?: { name: string };
@@ -182,6 +189,8 @@ export function buildPrePrimaryData(params: {
     attendance?: string;
     /** Observation results for this specific student from the DB */
     observationResults?: StudentObservationEntry[];
+    /** Class teacher's custom remark for this student */
+    customRemark?: string | null;
 }): PrePrimaryGradeSheetData {
     const {
         syncedStudent,
@@ -194,6 +203,7 @@ export function buildPrePrimaryData(params: {
         gradeScales = [],
         attendance = '',
         observationResults = [],
+        customRemark = null,
     } = params;
 
     // ── Pass observation results straight through — no keyword mapping ────────
@@ -287,7 +297,8 @@ export function buildPrePrimaryData(params: {
         academicYear: academicYear?.name || '',
         evaluationName: exam?.name || 'FIRST TERM EXAM',
         studentName: syncedStudent?.name || '',
-        dateOfBirth: '',
+        dateOfBirth: syncedStudent?.dateOfBirth || '',
+        dateOfBirthAD: syncedStudent?.dateOfBirthAD || '',
         rollNo: syncedStudent?.rollNumber || '',
         admissionNo: '',
         className: syncedStudent?.class || '',
@@ -312,6 +323,7 @@ export function buildPrePrimaryData(params: {
         dateOfIssue: '',
         dateOfIssueAD: '',
         rawObservations: observationResults.length > 0 ? observationResults : undefined,
+        customRemark,
     };
 }
 
@@ -521,6 +533,7 @@ export default function PrePrimaryGradeSheet({
 
                     <SummarySection gpa={data.gpa} rank={data.rank} attendance={data.attendance} />
                     <ObservationSection data={data} />
+                    <CustomRemarkSection data={data} />
                     <FooterSection data={data} />
                 </div>
             </div>

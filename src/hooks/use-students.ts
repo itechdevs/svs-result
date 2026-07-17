@@ -11,6 +11,7 @@ export interface SyncedStudent {
   isActive: boolean;
   syncedAt: string;
   updatedAt: string;
+  dateOfBirth?: string | null;
 }
 
 export interface ListStudentsFilters {

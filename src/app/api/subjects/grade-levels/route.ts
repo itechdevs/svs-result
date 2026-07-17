@@ -52,11 +52,20 @@ export const GET = withHandler(async (req: NextRequest) => {
       orderBy: [{ name: "asc" }, { section: "asc" }],
     });
 
-    const classSections = classrooms.map((c) => ({
-      gradeLevel: c.name,
-      section: c.section,
-      displayName: `${c.name} ${c.section}`.trim(),
-    }));
+    const classSections = classrooms.map((c) => {
+      // Avoid duplicating the section when it's already part of the classroom name
+      // e.g. "Penguin - B" + "B" → "Penguin - B"  (not "Penguin - B B")
+      //      "1"           + "A" → "1 - A"
+      const sectionEmbedded = c.name.toUpperCase().endsWith(c.section.toUpperCase());
+      const displayName = sectionEmbedded
+        ? c.name
+        : `${c.name} - ${c.section}`;
+      return {
+        gradeLevel: c.name,
+        section: c.section,
+        displayName,
+      };
+    });
 
     classSections.sort((a, b) => {
       const gradeCmp = compareGradeLevels(a.gradeLevel, b.gradeLevel, dbMap);

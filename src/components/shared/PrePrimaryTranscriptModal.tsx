@@ -21,12 +21,16 @@ export interface PrePrimaryStudentData {
     rollNo: string;
     className: string;
     section: string;
+    dateOfBirth?: string;
+    dateOfBirthAD?: string;
     subjects: PrePrimarySubjectResult[];
     gpa: number | null;
     rank: number | null;
     attendance: string;
     /** Per-student observation entries fetched from the DB */
     observationResults: StudentObservationEntry[];
+    /** Class teacher's custom remark for this student */
+    customRemark?: string | null;
     examName: string;
     academicYear: string;
 }
@@ -45,6 +49,8 @@ export default function PrePrimaryTranscriptModal({ student, onClose }: Props) {
             rollNumber: student.rollNo,
             class: student.className,
             section: student.section,
+            dateOfBirth: student.dateOfBirth,
+            dateOfBirthAD: student.dateOfBirthAD,
         },
         exam: { name: student.examName },
         academicYear: { name: student.academicYear },
@@ -58,6 +64,7 @@ export default function PrePrimaryTranscriptModal({ student, onClose }: Props) {
         finalResult: { cgpa: student.gpa, classRank: student.rank },
         attendance: student.attendance,
         observationResults: student.observationResults,
+        customRemark: student.customRemark,
     });
 
     return (

@@ -88,6 +88,8 @@ function toStudentResult(student: Student): StudentResult {
     rank: student.rank ?? 1,
     subjects,
     examName: student.examName,
+    dateOfBirth: student.dateOfBirth,
+    dateOfBirthAD: student.dateOfBirthAD,
   };
 }
 

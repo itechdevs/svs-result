@@ -39,6 +39,7 @@ import dynamic from "next/dynamic";
 import ExamResultCompilationSkeleton from "./ExamResultCompilationSkeleton";
 import type { PrePrimaryStudentData } from "@/components/shared/PrePrimaryTranscriptModal";
 import type { StudentObservationEntry } from "@/components/shared/pre-primarygrade";
+import { formatToBSDateString } from "@/lib/bs-calendar";
 
 const TranscriptModal = dynamic(
   () => import("@/components/shared/TranscriptModal"),
@@ -109,6 +110,22 @@ function toStudentObj(
   students: any[],
   examName?: string,
 ): Student {
+  // Look up the matched student record to get the date of birth
+  const matched = students.find((s) => s.id === result.studentId);
+  const rawDob = matched?.dateOfBirth ?? null;
+
+  // Convert DB date → BS string; keep raw AD string for display
+  let dateOfBirth: string | undefined;
+  let dateOfBirthAD: string | undefined;
+  if (rawDob) {
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    const d = typeof rawDob === "string" ? new Date(rawDob) : rawDob;
+    if (!isNaN(d.getTime())) {
+      dateOfBirth = formatToBSDateString(d) || undefined;
+      dateOfBirthAD = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    }
+  }
+
   return {
     id: result.studentId,
     name: result.studentName,
@@ -141,6 +158,8 @@ function toStudentObj(
     dist: {},
     rank: result.rank ?? 1,
     examName,
+    dateOfBirth,
+    dateOfBirthAD,
   };
 }
 
@@ -175,6 +194,9 @@ export default function ExamResultCompilation({
     null,
   );
   const [observationMap, setObservationMap] = useState<ObservationMap>({});
+  const [customRemarksMap, setCustomRemarksMap] = useState<
+    Record<string, string>
+  >({});
   const [isLoadingObservations, setIsLoadingObservations] = useState(false);
   // For pre-primary single modal
   const [prePrimaryModal, setPrePrimaryModal] =
@@ -189,6 +211,7 @@ export default function ExamResultCompilation({
     if (schoolLevel === "PRE_PRIMARY" && includeObservation === null) {
       setIncludeObservation(true);
       loadObservations();
+      loadCustomRemarks();
     } else if (
       (schoolLevel === "SECONDARY" || schoolLevel === "HIGHER") &&
       includeObservation === null
@@ -217,7 +240,9 @@ export default function ExamResultCompilation({
     }
     // Fallback: filter allTemplates by examId
     return allTemplates.filter(
-      (t) => (t as any).examId === examId && t.syncedSubject?.gradeLevel === gradeLevel,
+      (t) =>
+        (t as any).examId === examId &&
+        t.syncedSubject?.gradeLevel === gradeLevel,
     );
   }, [linkedTemplates, allTemplates, examId, gradeLevel]);
 
@@ -313,7 +338,9 @@ export default function ExamResultCompilation({
     return Array.from(subjectMap.entries()).map(([name, id]) => ({ name, id }));
   }, [templates]);
 
-  const dataReady = students.length > 0 && (templates.length > 0 || submittedSubjects.length > 0);
+  const dataReady =
+    students.length > 0 &&
+    (templates.length > 0 || submittedSubjects.length > 0);
 
   useEffect(() => {
     if (
@@ -380,7 +407,8 @@ export default function ExamResultCompilation({
     (percent: number): string => {
       if (gradeScales.length > 0) {
         const scale = gradeScales.find(
-          (s) => percent >= Number(s.minPercent) && percent <= Number(s.maxPercent),
+          (s) =>
+            percent >= Number(s.minPercent) && percent <= Number(s.maxPercent),
         );
         return scale?.grade ?? "N/A";
       }
@@ -409,8 +437,12 @@ export default function ExamResultCompilation({
       // Only compile subjects that teachers actually submitted to THIS exam
       for (const subject of submittedSubjects) {
         // Get only the templates for this subject that are linked to this exam
-        const subjectTemplates = (templatesBySubject.get(subject.name) ?? []).filter(
-          (t) => (t as any).examId === examId || linkedTemplates.some((lt) => lt.id === t.id),
+        const subjectTemplates = (
+          templatesBySubject.get(subject.name) ?? []
+        ).filter(
+          (t) =>
+            (t as any).examId === examId ||
+            linkedTemplates.some((lt) => lt.id === t.id),
         );
         if (subjectTemplates.length === 0) continue;
 
@@ -476,7 +508,16 @@ export default function ExamResultCompilation({
         hasReExam: studentsWithReExam.has(student.id),
       };
     });
-  }, [students, submittedSubjects, templatesBySubject, marksLookup, studentsWithReExam, lookupGrade, examId, linkedTemplates]);
+  }, [
+    students,
+    submittedSubjects,
+    templatesBySubject,
+    marksLookup,
+    studentsWithReExam,
+    lookupGrade,
+    examId,
+    linkedTemplates,
+  ]);
 
   const toggleSort = (column: "rank" | "rollNo" | "studentName") => {
     if (sortColumn === column) {
@@ -498,7 +539,9 @@ export default function ExamResultCompilation({
 
     const others = compiledResults
       .filter((r) => r.result !== "Pass")
-      .sort((a, b) => a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true }));
+      .sort((a, b) =>
+        a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true }),
+      );
 
     const groups = [regularPass, reExamPass, others];
 
@@ -512,7 +555,9 @@ export default function ExamResultCompilation({
     const all = [...regularPass, ...reExamPass, ...others];
 
     if (sortColumn === "rollNo") {
-      all.sort((a, b) => a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true }));
+      all.sort((a, b) =>
+        a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true }),
+      );
     } else if (sortColumn === "studentName") {
       all.sort((a, b) => a.studentName.localeCompare(b.studentName));
     }
@@ -641,6 +686,21 @@ export default function ExamResultCompilation({
     }
   };
 
+  /** Fetch custom remarks from the DB for the current exam + grade level */
+  const loadCustomRemarks = async (): Promise<Record<string, string>> => {
+    try {
+      const res = (await apiClient.get(
+        `/admin/custom-remarks?examId=${examId}&class=${encodeURIComponent(gradeLevel)}`,
+      )) as { remarks: Record<string, string> };
+      const map = res.remarks ?? {};
+      setCustomRemarksMap(map);
+      return map;
+    } catch {
+      toast.error("Could not load custom remarks");
+      return {};
+    }
+  };
+
   /**
    * Build a PrePrimaryStudentData object for a single compiled result.
    * obsMap defaults to the current observationMap state.
@@ -648,42 +708,68 @@ export default function ExamResultCompilation({
   const toPrePrimaryData = (
     result: CompiledResult,
     obsMap: ObservationMap = observationMap,
-  ): PrePrimaryStudentData => ({
-    studentId: result.studentId,
-    studentName: result.studentName,
-    rollNo: result.rollNo,
-    className: gradeLevel,
-    section: "",
-    subjects: Object.values(result.subjects).map((s) => ({
-      subjectName: s.subjectName,
-      grade: s.grade,
-      gradePoint: null,
-      remarks: null,
-    })),
-    gpa: null,
-    rank: result.rank ?? null,
-    attendance: "",
-    observationResults: obsMap[result.studentId] ?? [],
-    examName,
-    academicYear: "",
-  });
+    remarksMap: Record<string, string> = customRemarksMap,
+  ): PrePrimaryStudentData => {
+    const matched = students.find((s) => s.id === result.studentId);
+    const rawDob = matched?.dateOfBirth ?? null;
+
+    let dateOfBirth: string | undefined;
+    let dateOfBirthAD: string | undefined;
+    if (rawDob) {
+      const pad = (n: number) => n.toString().padStart(2, "0");
+      const d = typeof rawDob === "string" ? new Date(rawDob) : rawDob;
+      if (!isNaN(d.getTime())) {
+        dateOfBirth = formatToBSDateString(d) || undefined;
+        dateOfBirthAD = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      }
+    }
+
+    return {
+      studentId: result.studentId,
+      studentName: result.studentName,
+      rollNo: result.rollNo,
+      className: gradeLevel,
+      section: "",
+      dateOfBirth,
+      dateOfBirthAD,
+      subjects: Object.values(result.subjects).map((s) => ({
+        subjectName: s.subjectName,
+        grade: s.grade,
+        gradePoint: null,
+        remarks: null,
+      })),
+      gpa: null,
+      rank: result.rank ?? null,
+      attendance: "",
+      observationResults: obsMap[result.studentId] ?? [],
+      customRemark: remarksMap[result.studentId] ?? null,
+      examName,
+      academicYear: "",
+    };
+  };
 
   /** Called when admin clicks "View Grade Sheet" in observation mode */
   const handleViewPrePrimaryGradeSheet = async (result: CompiledResult) => {
     let obs = observationMap;
+    let remarks = customRemarksMap;
     if (Object.keys(obs).length === 0) {
       obs = await loadObservations();
+      remarks = await loadCustomRemarks();
     }
-    setPrePrimaryModal(toPrePrimaryData(result, obs));
+    setPrePrimaryModal(toPrePrimaryData(result, obs, remarks));
   };
 
   /** Called when admin clicks "View All Grade Sheets" in observation mode */
   const handleViewAllPrePrimaryGradeSheets = async () => {
     let obs = observationMap;
+    let remarks = customRemarksMap;
     if (Object.keys(obs).length === 0) {
       obs = await loadObservations();
+      remarks = await loadCustomRemarks();
     }
-    setPrePrimaryBulk(sortedResults.map((r) => toPrePrimaryData(r, obs)));
+    setPrePrimaryBulk(
+      sortedResults.map((r) => toPrePrimaryData(r, obs, remarks)),
+    );
   };
 
   if (isLoading) {
@@ -704,8 +790,10 @@ export default function ExamResultCompilation({
               No evaluation plans linked to this exam
             </p>
             <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
-              Teachers need to submit their subject compilations for this exam before results can be compiled.
-              Ask teachers to go to Result Compilation, select this exam, choose their evaluation plans and submit.
+              Teachers need to submit their subject compilations for this exam
+              before results can be compiled. Ask teachers to go to Result
+              Compilation, select this exam, choose their evaluation plans and
+              submit.
             </p>
           </div>
         </div>
@@ -802,6 +890,7 @@ export default function ExamResultCompilation({
                 onClick={async () => {
                   setIncludeObservation(true);
                   await loadObservations();
+                  await loadCustomRemarks();
                 }}
                 className="flex items-center gap-2 bg-primary text-primary-foreground"
               >
