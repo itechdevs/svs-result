@@ -21,6 +21,8 @@ export interface PrePrimaryStudentData {
     rollNo: string;
     className: string;
     section: string;
+    dateOfBirth?: string;
+    dateOfBirthAD?: string;
     subjects: PrePrimarySubjectResult[];
     gpa: number | null;
     rank: number | null;
@@ -47,6 +49,8 @@ export default function PrePrimaryTranscriptModal({ student, onClose }: Props) {
             rollNumber: student.rollNo,
             class: student.className,
             section: student.section,
+            dateOfBirth: student.dateOfBirth,
+            dateOfBirthAD: student.dateOfBirthAD,
         },
         exam: { name: student.examName },
         academicYear: { name: student.academicYear },

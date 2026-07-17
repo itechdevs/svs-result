@@ -411,6 +411,9 @@ export default function GradeSheet({
                 grade={result.grade}
                 nepaliYear={result.nepaliYear}
                 englishYear={result.englishYear}
+                dateOfBirth={result.dateOfBirth}
+                dateOfBirthAD={result.dateOfBirthAD}
+                examName={result.examName}
               />
 
               {/* Marks table */}

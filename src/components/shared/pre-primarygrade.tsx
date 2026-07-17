@@ -46,6 +46,7 @@ export interface PrePrimaryGradeSheetData {
     evaluationName: string;
     studentName: string;
     dateOfBirth: string;
+    dateOfBirthAD?: string;
     rollNo: string;
     admissionNo: string;
     className: string;
@@ -144,6 +145,8 @@ export function buildPrePrimaryData(params: {
         rollNumber: string;
         class: string;
         section: string;
+        dateOfBirth?: string;
+        dateOfBirthAD?: string;
     };
     academicYear?: { name: string };
     exam?: { name: string };
@@ -294,7 +297,8 @@ export function buildPrePrimaryData(params: {
         academicYear: academicYear?.name || '',
         evaluationName: exam?.name || 'FIRST TERM EXAM',
         studentName: syncedStudent?.name || '',
-        dateOfBirth: '',
+        dateOfBirth: syncedStudent?.dateOfBirth || '',
+        dateOfBirthAD: syncedStudent?.dateOfBirthAD || '',
         rollNo: syncedStudent?.rollNumber || '',
         admissionNo: '',
         className: syncedStudent?.class || '',
