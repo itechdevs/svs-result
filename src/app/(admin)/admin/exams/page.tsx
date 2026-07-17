@@ -443,11 +443,10 @@ export default function ExamsPage() {
                             className="font-semibold"
                           >
                             <div
-                              className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${
-                                allVisibleSelected
+                                className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${allVisibleSelected
                                   ? "bg-primary text-primary-foreground"
                                   : "opacity-50"
-                              }`}
+                                }`}
                             >
                               {allVisibleSelected && (
                                 <Check className="h-3 w-3" />
@@ -490,17 +489,16 @@ export default function ExamsPage() {
                                         }}
                                       >
                                         <div
-                                          className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${
-                                            isChecked
-                                              ? "bg-primary text-primary-foreground"
-                                              : "opacity-50"
-                                          }`}
+                                          className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${isChecked
+                                            ? "bg-primary text-primary-foreground"
+                                            : "opacity-50"
+                                            }`}
                                         >
                                           {isChecked && (
                                             <Check className="h-3 w-3" />
                                           )}
                                         </div>
-                                        <span>{item.displayName}</span>
+                                        <span>{item.gradeLevel} {item.section}</span>
                                       </DropdownMenuItem>
                                     );
                                   })}
@@ -624,7 +622,7 @@ export default function ExamsPage() {
                   <SelectContent>
                     {gradeLevels?.map((item) => (
                       <SelectItem key={item.gradeLevel} value={item.gradeLevel}>
-                        {item.gradeLevel} {item.sectionName}
+                        {item.displayName}
                       </SelectItem>
                     ))}
                   </SelectContent>
