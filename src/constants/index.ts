@@ -29,6 +29,7 @@ export const ROUTES = {
   ADMIN_MARK_ENTRY: "/admin/mark-entry",
   ADMIN_RESULT_COMPILATION: "/admin/result-compilation",
   ADMIN_SYNC: "/admin/sync",
+  ADMIN_SYNCED_STUDENTS: "/admin/synced-students",
   ADMIN_SECONDARY_SUBJECT_CONFIG: "/admin/secondary/subject-config",
   ADMIN_SECONDARY_TERM_WEIGHTS: "/admin/secondary/term-weights",
   ADMIN_SECONDARY_RESULT_COMPILATION: "/admin/secondary/result-compilation",
