@@ -104,8 +104,6 @@ export interface Student {
   dist: Record<string, number>;
   rank?: number;
   examName?: string;
-  dateOfBirth?: string;
-  dateOfBirthAD?: string;
 }
 
 export interface ReExamOutcome {

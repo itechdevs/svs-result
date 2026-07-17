@@ -8,10 +8,10 @@ export interface SyncedStudent {
   rollNumber: string;
   class: string;
   section: string;
-  dateOfBirth?: string | null;
   isActive: boolean;
   syncedAt: string;
   updatedAt: string;
+  dateOfBirth?: string | null;
 }
 
 export interface ListStudentsFilters {

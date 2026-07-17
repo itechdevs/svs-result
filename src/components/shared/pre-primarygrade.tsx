@@ -145,8 +145,8 @@ export function buildPrePrimaryData(params: {
         rollNumber: string;
         class: string;
         section: string;
-        dateOfBirth?: string | null;
-        dateOfBirthAD?: string | null;
+        dateOfBirth?: string;
+        dateOfBirthAD?: string;
     };
     academicYear?: { name: string };
     exam?: { name: string };

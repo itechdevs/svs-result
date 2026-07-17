@@ -23,7 +23,6 @@ import { useStudents } from "@/hooks/use-students";
 import { useAdminTeacherCompilations } from "@/hooks/use-teacher-compilations";
 import { useFinalResults } from "@/hooks/use-final-results";
 import { useGradeConfigs, type GradeScale } from "@/hooks/use-academic-config";
-import { formatToBSDateString } from "@/lib/bs-calendar";
 import { Button } from "@/components/shared/ui/button";
 import {
   Table,
@@ -40,6 +39,7 @@ import dynamic from "next/dynamic";
 import ExamResultCompilationSkeleton from "./ExamResultCompilationSkeleton";
 import type { PrePrimaryStudentData } from "@/components/shared/PrePrimaryTranscriptModal";
 import type { StudentObservationEntry } from "@/components/shared/pre-primarygrade";
+import { formatToBSDateString } from "@/lib/bs-calendar";
 
 const TranscriptModal = dynamic(
   () => import("@/components/shared/TranscriptModal"),
@@ -110,11 +110,21 @@ function toStudentObj(
   students: any[],
   examName?: string,
 ): Student {
-  const studentRecord = students.find((s) => s.id === result.studentId);
-  const dobAD = studentRecord?.dateOfBirth
-    ? new Date(studentRecord.dateOfBirth).toLocaleDateString("en-CA")
-    : undefined;
-  const dobBS = formatToBSDateString(studentRecord?.dateOfBirth);
+  // Look up the matched student record to get the date of birth
+  const matched = students.find((s) => s.id === result.studentId);
+  const rawDob = matched?.dateOfBirth ?? null;
+
+  // Convert DB date → BS string; keep raw AD string for display
+  let dateOfBirth: string | undefined;
+  let dateOfBirthAD: string | undefined;
+  if (rawDob) {
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    const d = typeof rawDob === "string" ? new Date(rawDob) : rawDob;
+    if (!isNaN(d.getTime())) {
+      dateOfBirth = formatToBSDateString(d) || undefined;
+      dateOfBirthAD = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    }
+  }
 
   return {
     id: result.studentId,
@@ -148,8 +158,8 @@ function toStudentObj(
     dist: {},
     rank: result.rank ?? 1,
     examName,
-    dateOfBirth: dobBS,
-    dateOfBirthAD: dobAD,
+    dateOfBirth,
+    dateOfBirthAD,
   };
 }
 
@@ -700,20 +710,28 @@ export default function ExamResultCompilation({
     obsMap: ObservationMap = observationMap,
     remarksMap: Record<string, string> = customRemarksMap,
   ): PrePrimaryStudentData => {
-    const studentRecord = students.find((s) => s.id === result.studentId);
-    // dateOfBirth from the DB is a Date ISO string; format it as YYYY-MM-DD for display
-    const dobAD = studentRecord?.dateOfBirth
-      ? new Date(studentRecord.dateOfBirth).toLocaleDateString("en-CA") // YYYY-MM-DD
-      : undefined;
-    const dobBS = formatToBSDateString(studentRecord?.dateOfBirth);
+    const matched = students.find((s) => s.id === result.studentId);
+    const rawDob = matched?.dateOfBirth ?? null;
+
+    let dateOfBirth: string | undefined;
+    let dateOfBirthAD: string | undefined;
+    if (rawDob) {
+      const pad = (n: number) => n.toString().padStart(2, "0");
+      const d = typeof rawDob === "string" ? new Date(rawDob) : rawDob;
+      if (!isNaN(d.getTime())) {
+        dateOfBirth = formatToBSDateString(d) || undefined;
+        dateOfBirthAD = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      }
+    }
+
     return {
       studentId: result.studentId,
       studentName: result.studentName,
       rollNo: result.rollNo,
       className: gradeLevel,
       section: "",
-      dateOfBirth: dobBS,
-      dateOfBirthAD: dobAD,
+      dateOfBirth,
+      dateOfBirthAD,
       subjects: Object.values(result.subjects).map((s) => ({
         subjectName: s.subjectName,
         grade: s.grade,

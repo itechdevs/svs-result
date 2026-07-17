@@ -55,15 +55,13 @@ const DEFAULT_NOTES = [
 
 const tableHeaderCell: React.CSSProperties = {
   border: "0.5px solid #1f5e9d",
-  padding: "5px 6px",
+  padding: "4px 6px",
   textAlign: "center",
-  fontWeight: 800,
+  fontWeight: 700,
   fontSize: "8px",
   color: "#1f5e9d",
   fontFamily: "Arial, sans-serif",
   whiteSpace: "pre-wrap",
-  textTransform: "uppercase",
-  letterSpacing: "0.3px",
 };
 
 const tableBodyCell: React.CSSProperties = {
@@ -175,7 +173,7 @@ export default function GradeLegend({
         <div
           style={{
             color: "#1f5e9d",
-            fontWeight: 800,
+            fontWeight: 700,
             fontSize: "9.5px",
             textAlign: "center",
             marginBottom: "4px",

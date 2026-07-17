@@ -134,8 +134,7 @@ export function TitleBlock({ evaluationName }: { evaluationName: string }) {
 
 // ─── StudentInfoRow ───────────────────────────────────────────────────────────
 // Single line: "THE FOLLOWING ARE THE GRADE BY: ___ DATE OF BIRTH: ___ B.S."
-// Second 
-// line: "( ___ A.D.) ROLL NO: ___ GRADE: ___ IN THE"
+// Second line: "( ___ A.D.) ROLL NO: ___ GRADE: ___ IN THE"
 
 export function StudentInfoRow({ data }: { data: PrePrimaryGradeSheetData }) {
   const labelStyle: React.CSSProperties = {
@@ -164,13 +163,16 @@ export function StudentInfoRow({ data }: { data: PrePrimaryGradeSheetData }) {
   return (
     <div
       style={{
-        fontFamily: FONT,
-        marginTop: '12px',
-        marginBottom: '10px',
+        width: '100%',
         fontSize: '10px',
+        fontWeight: 700,
+        fontFamily: FONT,
         color: textColor,
         padding: '8px 0',
         lineHeight: '1.6',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px',
       }}
     >
       {/* Line 1: THE FOLLOWING ARE THE GRADE BY: _name_ DATE OF BIRTH: _dob_ B.S. */}
@@ -180,11 +182,10 @@ export function StudentInfoRow({ data }: { data: PrePrimaryGradeSheetData }) {
           alignItems: 'flex-end',
           gap: '4px',
           width: '100%',
-          marginBottom: '6px',
         }}
       >
         <span style={labelStyle}>THE FOLLOWING ARE THE GRADE BY:</span>
-        <span style={{ ...underlineBase, flex: 2, minWidth: '80px', textAlign: 'center' }}>
+        <span style={{ ...underlineBase, flex: 2, minWidth: '120px', textAlign: 'center' }}>
           {data.studentName || '\u00A0'}
         </span>
         <span style={labelStyle}>DATE OF BIRTH:</span>
@@ -194,7 +195,7 @@ export function StudentInfoRow({ data }: { data: PrePrimaryGradeSheetData }) {
         <span style={labelStyle}>B. S.</span>
       </div>
 
-      {/* Line 2: ROLL NO: _roll_ GRADE: _class_ IN THE */}
+      {/* Line 2: (AD) ROLL NO: _roll_ GRADE: _class_ IN THE */}
       <div
         style={{
           display: 'flex',
@@ -204,16 +205,16 @@ export function StudentInfoRow({ data }: { data: PrePrimaryGradeSheetData }) {
         }}
       >
         <span style={labelStyle}>(</span>
-        <span style={{ ...underlineBase, flex: 1, minWidth: '60px', textAlign: 'center' }}>
+        <span style={{ ...underlineBase, minWidth: '70px', textAlign: 'center' }}>
           {data.dateOfBirthAD || '\u00A0'}
         </span>
         <span style={labelStyle}>A.D.) </span>
         <span style={labelStyle}> ROLL NO:</span>
-        <span style={{ ...underlineBase, flex: 1, minWidth: '50px', textAlign: 'center' }}>
+        <span style={{ ...underlineBase, flex: 0.5, minWidth: '40px', textAlign: 'center' }}>
           {data.rollNo || '\u00A0'}
         </span>
         <span style={labelStyle}>GRADE:</span>
-        <span style={{ ...underlineBase, flex: 1, minWidth: '50px', textAlign: 'center' }}>
+        <span style={{ ...underlineBase, flex: 0.5, minWidth: '50px', textAlign: 'center' }}>
           {data.className || '\u00A0'}
           {data.section ? ` (${data.section})` : ''}
         </span>
@@ -241,7 +242,7 @@ export function DeclarationLine({ evaluationName }: { evaluationName: string }) 
       <span style={{ fontWeight: 900 }}>
         {evaluationName ? evaluationName.toUpperCase() : 'FIRST TERMINAL EXAMINATION'}
       </span>
-      {' '}CONDCTED BY SCHOOL ARE GIVEN BELOW.
+      &nbsp;CONDUCTED BY SCHOOL ARE GIVEN BELOW.
     </div>
   );
 }

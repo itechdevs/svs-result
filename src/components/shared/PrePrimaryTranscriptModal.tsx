@@ -21,8 +21,8 @@ export interface PrePrimaryStudentData {
     rollNo: string;
     className: string;
     section: string;
-    dateOfBirth?: string | null;
-    dateOfBirthAD?: string | null;
+    dateOfBirth?: string;
+    dateOfBirthAD?: string;
     subjects: PrePrimarySubjectResult[];
     gpa: number | null;
     rank: number | null;
