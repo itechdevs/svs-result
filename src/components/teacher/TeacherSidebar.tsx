@@ -34,7 +34,7 @@ const LEVEL_LABELS: Record<SchoolLevelKey, string> = {
   PRE_PRIMARY: "Pre-Primary Evaluation",
   PRIMARY: "Primary Evaluation",
   SECONDARY: "Secondary Marks Entry",
-  HIGHER: "Secondary Marks Entry",
+  HIGHER: "Higher Marks Entry",
 };
 
 type SubjectPair = {
@@ -54,11 +54,38 @@ function buildSchoolLevelMap(
   return map;
 }
 
+/**
+ * Look up the school level for a subject's gradeLevel+section pair.
+ *
+ * SyncedSubject stores gradeLevel="Penguin" section="B" (split by parseGradeLevel),
+ * but GradeLevelCategory keys are stored as "Penguin - B" (the SyncedClassroom.name).
+ * So we try several key variants before falling back to PRIMARY:
+ *   1. exact gradeLevel (handles numeric grades like "1", "2", etc.)
+ *   2. "gradeLevel - section"  (e.g. "Penguin - B")
+ *   3. "gradeLevel section"    (e.g. "Penguin B")
+ */
 function getSchoolLevel(
   gradeLevel: string,
+  section: string | null | undefined,
   dbMap: Map<string, SchoolLevelKey>,
 ): SchoolLevelKey {
-  return dbMap.get(gradeLevel) ?? "PRIMARY";
+  // 1. exact match
+  const exact = dbMap.get(gradeLevel);
+  if (exact) return exact;
+
+  if (section) {
+    // 2. "Grade - Section" format
+    const dashKey = `${gradeLevel} - ${section}`;
+    const dashMatch = dbMap.get(dashKey);
+    if (dashMatch) return dashMatch;
+
+    // 3. "Grade Section" format (no dash)
+    const spaceKey = `${gradeLevel} ${section}`;
+    const spaceMatch = dbMap.get(spaceKey);
+    if (spaceMatch) return spaceMatch;
+  }
+
+  return "PRIMARY";
 }
 
 export function TeacherSidebar() {
@@ -73,6 +100,7 @@ export function TeacherSidebar() {
     "pre-primary": true,
     primary: true,
     secondary: true,
+    higher: true,
   });
 
   const { data: profile } = useProfile();
@@ -113,20 +141,16 @@ export function TeacherSidebar() {
       HIGHER: [],
     };
     for (const pair of subjectPairs) {
-      const level = getSchoolLevel(pair.className, dbMap);
-      if (level === "HIGHER") {
-        groups.SECONDARY.push(pair);
-      } else {
-        groups[level].push(pair);
-      }
+      const level = getSchoolLevel(pair.className, pair.section, dbMap);
+      groups[level].push(pair);
     }
     return groups;
   }, [subjectPairs, dbMap]);
 
   const hasPrePrimary = groupedPairs.PRE_PRIMARY.length > 0;
   const hasPrimary = groupedPairs.PRIMARY.length > 0;
-  const hasSecondary =
-    groupedPairs.SECONDARY.length > 0 || groupedPairs.HIGHER.length > 0;
+  const hasSecondary = groupedPairs.SECONDARY.length > 0;
+  const hasHigher = groupedPairs.HIGHER.length > 0;
 
   const toggleSection = (key: string) => {
     setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -443,7 +467,19 @@ export function TeacherSidebar() {
             "secondary",
             "Secondary Marks Entry",
             PenLine,
-            [...groupedPairs.SECONDARY, ...groupedPairs.HIGHER],
+            groupedPairs.SECONDARY,
+            "secondary",
+            false,
+            false,
+          )}
+
+        {/* Higher Marks Entry */}
+        {hasHigher &&
+          renderSection(
+            "higher",
+            "Higher Marks Entry",
+            PenLine,
+            groupedPairs.HIGHER,
             "secondary",
             false,
             false,
