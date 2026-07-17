@@ -47,8 +47,13 @@ export default function MarkEntryOverviewTable() {
   const router = useRouter();
 
   const selectedClass = searchParams.get("class") ?? "";
+  const selectedSection = searchParams.get("section") ?? "";
   const selectedSubject = searchParams.get("subject") ?? "";
   const selectedEvalPlan = searchParams.get("eval") ?? "";
+
+  const studentClassFilter = selectedSection
+    ? `${selectedClass} - ${selectedSection}`
+    : selectedClass;
   const [page, setPage] = useState(1);
   const [confirmPublish, setConfirmPublish] = useState(false);
   const [sortField, setSortField] = useState<"rollNumber" | "name">("rollNumber");
@@ -66,7 +71,7 @@ export default function MarkEntryOverviewTable() {
   };
 
   const { data: studentsData, isLoading: isStudentsLoading } = useStudents(
-    selectedClass ? { class: selectedClass, limit: 9999 } : { limit: 1 },
+    selectedClass ? { class: studentClassFilter, limit: 9999 } : { limit: 1 },
   );
 
   // For teachers: resolve via their assigned subjects.
