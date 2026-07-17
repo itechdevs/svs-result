@@ -16,6 +16,7 @@ import {
   GraduationCap,
   School,
   FlaskConical,
+  Users,
 } from "lucide-react";
 import { ROUTES } from "@/lib/constants";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -82,6 +83,11 @@ const NAV_ITEMS: NavItem[] = [
     label: "Grade Levels",
     href: "/admin/grade-levels",
     icon: Layers,
+  },
+  {
+    label: "Synced Students",
+    href: ROUTES.ADMIN_SYNCED_STUDENTS,
+    icon: Users,
   },
   {
     label: "Pre-Primary",
