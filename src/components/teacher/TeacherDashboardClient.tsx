@@ -18,11 +18,24 @@ import {
 } from "lucide-react";
 import TeacherDashboardSkeleton from "@/components/teacher/TeacherDashboardSkeleton";
 
+/**
+ * Look up school level for a subject's gradeLevel+section.
+ * Tries: exact key → "grade - section" → "grade section" → fallback PRIMARY.
+ */
 function getSchoolLevel(
   gradeLevel: string,
   dbMap: Map<string, string>,
+  section?: string | null,
 ): string {
-  return dbMap.get(gradeLevel) ?? "PRIMARY";
+  const exact = dbMap.get(gradeLevel);
+  if (exact) return exact;
+  if (section) {
+    const dashMatch = dbMap.get(`${gradeLevel} - ${section}`);
+    if (dashMatch) return dashMatch;
+    const spaceMatch = dbMap.get(`${gradeLevel} ${section}`);
+    if (spaceMatch) return spaceMatch;
+  }
+  return "PRIMARY";
 }
 
 export default function DashboardPage() {
@@ -58,13 +71,14 @@ export default function DashboardPage() {
       PRE_PRIMARY: [],
       PRIMARY: [],
       SECONDARY: [],
+      HIGHER: [],
     };
     for (const s of subjects) {
-      const level = getSchoolLevel(s.gradeLevel, dbMap);
-      if (level === "SECONDARY" || level === "HIGHER") {
-        grouped.SECONDARY.push(s);
-      } else {
+      const level = getSchoolLevel(s.gradeLevel, dbMap, s.section);
+      if (level === "PRE_PRIMARY" || level === "PRIMARY" || level === "SECONDARY" || level === "HIGHER") {
         grouped[level].push(s);
+      } else {
+        grouped.PRIMARY.push(s);
       }
     }
     return grouped;
@@ -82,14 +96,16 @@ export default function DashboardPage() {
       PRE_PRIMARY: 0,
       PRIMARY: 0,
       SECONDARY: 0,
+      HIGHER: 0,
     };
     for (const t of filteredTemplates) {
       const gradeLevel = t.gradeConfig?.gradeLevel ?? t.syncedSubject?.gradeLevel ?? "";
-      const level = getSchoolLevel(gradeLevel, dbMap);
-      if (level === "SECONDARY" || level === "HIGHER") {
-        counts.SECONDARY++;
-      } else if (level === "PRE_PRIMARY" || level === "PRIMARY") {
+      // Templates don't carry section; try exact match first, section-less lookup second
+      const level = getSchoolLevel(gradeLevel, dbMap, null);
+      if (level === "PRE_PRIMARY" || level === "PRIMARY" || level === "SECONDARY" || level === "HIGHER") {
         counts[level]++;
+      } else {
+        counts.PRIMARY++;
       }
     }
     return counts;
@@ -119,6 +135,7 @@ export default function DashboardPage() {
   const hasPrePrimary = subjectsByLevel.PRE_PRIMARY.length > 0;
   const hasPrimary = subjectsByLevel.PRIMARY.length > 0;
   const hasSecondary = subjectsByLevel.SECONDARY.length > 0;
+  const hasHigher = subjectsByLevel.HIGHER.length > 0;
 
   const recentEvaluations = filteredTemplates.slice(0, 4);
 
@@ -174,13 +191,19 @@ export default function DashboardPage() {
       colorClass: "text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40",
       show: hasSecondary,
     },
+    {
+      label: "Higher Subjects",
+      value: String(subjectsByLevel.HIGHER.length),
+      sub: hasHigher ? "Mark entry required" : "No higher subjects",
+      icon: <PenLine className="w-5 h-5" />,
+      danger: false,
+      href: "/teacher/secondary/mark-entry",
+      colorClass: "text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40",
+      show: hasHigher,
+    },
   ];
 
   const visibleKpis = kpis.filter((k) => k.show);
-
-  if (isLoading) {
-    return <TeacherDashboardSkeleton />;
-  }
 
   if (isLoading) {
     return <TeacherDashboardSkeleton />;

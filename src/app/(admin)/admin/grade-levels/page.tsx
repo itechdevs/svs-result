@@ -90,10 +90,19 @@ export default function GradeLevelsPage() {
   }, [uniqueGradeLevels, categories, currentMappings]);
 
   const handleLevelChange = (gradeLevel: string, schoolLevel: string) => {
-    setMappings((prev) => ({
-      ...prev,
-      [gradeLevel]: schoolLevel === "unassigned" ? undefined : schoolLevel,
-    }));
+    // Seed from initialised on first change so all existing assignments are
+    // preserved in the local state (not just the one being changed).
+    setMappings((prev) =>
+      Object.keys(prev).length === 0
+        ? {
+            ...initialised,
+            [gradeLevel]: schoolLevel === "unassigned" ? undefined : schoolLevel,
+          }
+        : {
+            ...prev,
+            [gradeLevel]: schoolLevel === "unassigned" ? undefined : schoolLevel,
+          },
+    );
   };
 
   const handleSave = async () => {
