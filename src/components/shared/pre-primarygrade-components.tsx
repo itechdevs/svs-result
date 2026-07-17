@@ -612,6 +612,41 @@ export function ObservationSection({ data }: { data: PrePrimaryGradeSheetData })
   );
 }
 
+// ─── Custom Remark Section ───────────────────────────────────────────────────
+
+export function CustomRemarkSection({ data }: { data: PrePrimaryGradeSheetData }) {
+  if (!data.customRemark) return null;
+
+  return (
+    <div style={{ marginBottom: '8px', fontFamily: FONT }}>
+      <div
+        style={{
+          fontSize: '9px',
+          fontWeight: 900,
+          color: textColor,
+          marginBottom: '2px',
+          textTransform: 'uppercase',
+          letterSpacing: '0.5px',
+        }}
+      >
+        CLASS TEACHER'S REMARKS
+      </div>
+      <div
+        style={{
+          border: `1px solid ${borderColor}`,
+          padding: '8px 10px',
+          fontSize: '9px',
+          color: textColor,
+          lineHeight: 1.5,
+          minHeight: '30px',
+        }}
+      >
+        {data.customRemark}
+      </div>
+    </div>
+  );
+}
+
 // ─── SignatureBlock ──────────────────────────────────────────────────────────
 
 export function SignatureBlock({ label }: { label: string }) {

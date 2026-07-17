@@ -104,8 +104,13 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
 
   const selectedClass = searchParams.get('class') ?? '';
   const selectedSubject = searchParams.get('subject') ?? '';
+  const selectedSection = searchParams.get('section') ?? '';
   const [selectedAcademicYear, setSelectedAcademicYear] = useState('');
   const [selectedExam, setSelectedExam] = useState('');
+
+  const classQuery = selectedSection
+    ? `${selectedClass} - ${selectedSection}`
+    : selectedClass;
   // Selected plan titles (not template IDs)
   const [selectedPlanTitles, setSelectedPlanTitles] = useState<string[]>([]);
   // Expanded plan titles (for showing sub-outcomes)
@@ -134,14 +139,16 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
 
   const { data: exams = [] } = useExams(
     selectedAcademicYear
-      ? { academicYearId: selectedAcademicYear, gradeLevel: selectedClass || undefined }
+      ? { academicYearId: selectedAcademicYear }
       : undefined,
   );
   const { data: templatesData = [] } = useEvaluationTemplates(
     selectedAcademicYear ? { academicYearId: selectedAcademicYear } : {},
   );
   const { data: resultsData = [] } = useStudentEvaluationResults({ limit: 5000 });
-  const { data: studentsData } = useStudents({ limit: 500 });
+  const { data: studentsData } = useStudents(
+    selectedClass ? { class: classQuery, limit: 9999 } : { limit: 1 },
+  );
 
   const { data: existingCompilations = [] } = useTeacherSubjectCompilations({
     academicYearId: selectedAcademicYear || undefined,
@@ -234,8 +241,8 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
 
   // Students for selected class
   const filteredStudents = useMemo(
-    () => students.filter((s) => s.class === selectedClass),
-    [students, selectedClass],
+    () => students.filter((s) => s.class === classQuery),
+    [students, classQuery],
   );
 
   // Marks lookup: [studentId][templateId] = { marks, hasReExam }

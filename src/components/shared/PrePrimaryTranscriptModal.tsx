@@ -27,6 +27,8 @@ export interface PrePrimaryStudentData {
     attendance: string;
     /** Per-student observation entries fetched from the DB */
     observationResults: StudentObservationEntry[];
+    /** Class teacher's custom remark for this student */
+    customRemark?: string | null;
     examName: string;
     academicYear: string;
 }
@@ -58,6 +60,7 @@ export default function PrePrimaryTranscriptModal({ student, onClose }: Props) {
         finalResult: { cgpa: student.gpa, classRank: student.rank },
         attendance: student.attendance,
         observationResults: student.observationResults,
+        customRemark: student.customRemark,
     });
 
     return (

@@ -131,6 +131,7 @@ export default function PrePrimaryBulkGradeSheetsModal({ students, onClose }: Pr
                             finalResult: { cgpa: student.gpa, classRank: student.rank },
                             attendance: student.attendance,
                             observationResults: student.observationResults,
+                            customRemark: student.customRemark,
                         });
 
                         return (

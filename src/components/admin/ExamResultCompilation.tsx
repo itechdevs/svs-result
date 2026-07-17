@@ -175,6 +175,7 @@ export default function ExamResultCompilation({
     null,
   );
   const [observationMap, setObservationMap] = useState<ObservationMap>({});
+  const [customRemarksMap, setCustomRemarksMap] = useState<Record<string, string>>({});
   const [isLoadingObservations, setIsLoadingObservations] = useState(false);
   // For pre-primary single modal
   const [prePrimaryModal, setPrePrimaryModal] =
@@ -189,6 +190,7 @@ export default function ExamResultCompilation({
     if (schoolLevel === "PRE_PRIMARY" && includeObservation === null) {
       setIncludeObservation(true);
       loadObservations();
+      loadCustomRemarks();
     } else if (
       (schoolLevel === "SECONDARY" || schoolLevel === "HIGHER") &&
       includeObservation === null
@@ -641,6 +643,21 @@ export default function ExamResultCompilation({
     }
   };
 
+  /** Fetch custom remarks from the DB for the current exam + grade level */
+  const loadCustomRemarks = async (): Promise<Record<string, string>> => {
+    try {
+      const res = (await apiClient.get(
+        `/admin/custom-remarks?examId=${examId}&class=${encodeURIComponent(gradeLevel)}`,
+      )) as { remarks: Record<string, string> };
+      const map = res.remarks ?? {};
+      setCustomRemarksMap(map);
+      return map;
+    } catch {
+      toast.error("Could not load custom remarks");
+      return {};
+    }
+  };
+
   /**
    * Build a PrePrimaryStudentData object for a single compiled result.
    * obsMap defaults to the current observationMap state.
@@ -648,6 +665,7 @@ export default function ExamResultCompilation({
   const toPrePrimaryData = (
     result: CompiledResult,
     obsMap: ObservationMap = observationMap,
+    remarksMap: Record<string, string> = customRemarksMap,
   ): PrePrimaryStudentData => ({
     studentId: result.studentId,
     studentName: result.studentName,
@@ -664,6 +682,7 @@ export default function ExamResultCompilation({
     rank: result.rank ?? null,
     attendance: "",
     observationResults: obsMap[result.studentId] ?? [],
+    customRemark: remarksMap[result.studentId] ?? null,
     examName,
     academicYear: "",
   });
@@ -671,19 +690,23 @@ export default function ExamResultCompilation({
   /** Called when admin clicks "View Grade Sheet" in observation mode */
   const handleViewPrePrimaryGradeSheet = async (result: CompiledResult) => {
     let obs = observationMap;
+    let remarks = customRemarksMap;
     if (Object.keys(obs).length === 0) {
       obs = await loadObservations();
+      remarks = await loadCustomRemarks();
     }
-    setPrePrimaryModal(toPrePrimaryData(result, obs));
+    setPrePrimaryModal(toPrePrimaryData(result, obs, remarks));
   };
 
   /** Called when admin clicks "View All Grade Sheets" in observation mode */
   const handleViewAllPrePrimaryGradeSheets = async () => {
     let obs = observationMap;
+    let remarks = customRemarksMap;
     if (Object.keys(obs).length === 0) {
       obs = await loadObservations();
+      remarks = await loadCustomRemarks();
     }
-    setPrePrimaryBulk(sortedResults.map((r) => toPrePrimaryData(r, obs)));
+    setPrePrimaryBulk(sortedResults.map((r) => toPrePrimaryData(r, obs, remarks)));
   };
 
   if (isLoading) {
@@ -802,6 +825,7 @@ export default function ExamResultCompilation({
                 onClick={async () => {
                   setIncludeObservation(true);
                   await loadObservations();
+                  await loadCustomRemarks();
                 }}
                 className="flex items-center gap-2 bg-primary text-primary-foreground"
               >

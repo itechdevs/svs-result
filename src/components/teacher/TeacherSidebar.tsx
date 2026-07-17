@@ -343,7 +343,7 @@ export function TeacherSidebar() {
               >
                 <div className="font-medium flex items-center gap-1.5">
                   <MessageSquareText size={12} />
-                  Observations
+                  Observations &amp; Remarks
                 </div>
                 {pathname === ROUTES.TEACHER_OBSERVATIONS && (
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-sidebar-primary" />
