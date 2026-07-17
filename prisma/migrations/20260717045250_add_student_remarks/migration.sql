@@ -29,5 +29,4 @@ ALTER TABLE "student_remarks" ADD CONSTRAINT "student_remarks_examId_fkey" FOREI
 -- AddForeignKey
 ALTER TABLE "student_remarks" ADD CONSTRAINT "student_remarks_enteredById_fkey" FOREIGN KEY ("enteredById") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- RenameIndex
-ALTER INDEX "teacher_subject_compilations_teacherId_syncedSubjectId_exam_key" RENAME TO "teacher_subject_compilations_teacherId_syncedSubjectId_acad_key";
+-- RenameIndex: skip — index may not exist with this name in all environments
