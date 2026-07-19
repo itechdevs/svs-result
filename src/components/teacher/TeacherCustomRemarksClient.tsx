@@ -229,7 +229,7 @@ export default function TeacherCustomRemarksClient() {
                         <textarea
                           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y min-h-[60px]"
                           rows={3}
-                          maxLength={2000}
+                          maxLength={256}
                           value={current}
                           onChange={(e) =>
                             handleRemarkChange(student.id, e.target.value)
@@ -239,13 +239,13 @@ export default function TeacherCustomRemarksClient() {
                         <div className="flex items-center justify-between mt-1">
                           <span
                             className={cn(
-                              "text-[10px]",
-                              current.length > 1900
-                                ? "text-destructive"
-                                : "text-muted-foreground",
+                              "text-[10px] font-medium tabular-nums",
+                              current.length > 230
+                                ? "text-destructive font-bold"
+                                : "text-foreground/60",
                             )}
                           >
-                            {current.length}/2000
+                            {current.length}/256
                           </span>
                           {isSaved && current.length > 0 && (
                             <span className="text-[10px] text-green-600 flex items-center gap-0.5">
