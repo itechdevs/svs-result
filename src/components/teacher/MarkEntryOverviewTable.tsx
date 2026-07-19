@@ -153,7 +153,7 @@ export default function MarkEntryOverviewTable() {
     const evalIdSet = new Set(evalIds);
     const relevantResults = resultsData.filter(r => evalIdSet.has(r.evaluationTemplateId));
     if (relevantResults.length === 0) return 'NONE';
-    if (relevantResults.some(r => r.status === 'SUBMITTED' || r.status === 'VERIFIED' || r.status === 'LOCKED')) return 'SUBMITTED';
+    if (relevantResults.some(r => r.status === 'SUBMITTED' || r.status === 'VERIFIED')) return 'SUBMITTED';
     if (relevantResults.some(r => r.status === 'DRAFT')) return 'DRAFT';
     return 'NONE';
   }, [evalIds, resultsData]);

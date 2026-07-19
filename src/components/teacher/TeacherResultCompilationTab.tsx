@@ -170,7 +170,7 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
 
   const { data: existingCompilations = [] } = useTeacherSubjectCompilations({
     academicYearId: selectedAcademicYear || undefined,
-    gradeLevel: selectedClass || undefined,
+    gradeLevel: classQuery || undefined,
     examId: selectedExam || undefined,
   });
 
@@ -382,7 +382,7 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
     await createCompilation.mutateAsync({
       syncedSubjectId: subjectObj.id,
       academicYearId: selectedAcademicYear,
-      gradeLevel: selectedClass,
+      gradeLevel: classQuery,
       examId: selectedExam,
       evaluationTemplateIds: selectedTemplateIds,
     });
@@ -399,7 +399,7 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
     const result = await createCompilation.mutateAsync({
       syncedSubjectId: subjectObj.id,
       academicYearId: selectedAcademicYear,
-      gradeLevel: selectedClass,
+      gradeLevel: classQuery,
       examId: selectedExam,
       evaluationTemplateIds: selectedTemplateIds,
     });
@@ -417,10 +417,10 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
       (c) =>
         c.syncedSubjectId === subjectObj.id &&
         c.academicYearId === selectedAcademicYear &&
-        c.gradeLevel === selectedClass &&
+        c.gradeLevel === classQuery &&
         (c as any).examId === selectedExam,
     );
-  }, [existingCompilations, selectedSubject, selectedClass, selectedAcademicYear, selectedExam, subjects]);
+  }, [existingCompilations, selectedSubject, classQuery, selectedAcademicYear, selectedExam, subjects]);
 
   const activeGroups = evalPlanGroups.filter((g) => selectedPlanTitles.includes(g.planTitle));
 

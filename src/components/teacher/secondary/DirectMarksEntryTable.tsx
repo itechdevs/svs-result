@@ -75,12 +75,12 @@ export function DirectMarksEntryTable({
   const getRowStatus = (row: MarkEntryRow) => {
     if (row.validationError) return "error";
     if (row.hasUnsavedChanges) return "unsaved";
-    if (row.status === "VERIFIED" || row.status === "LOCKED") return "locked";
+    if (row.status === "VERIFIED") return "locked";
     return "normal";
   };
 
   const canEdit = (row: MarkEntryRow) => {
-    return row.status !== "VERIFIED" && row.status !== "LOCKED";
+    return row.status !== "VERIFIED";
   };
 
   return (

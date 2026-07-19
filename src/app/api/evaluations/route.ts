@@ -171,20 +171,6 @@ export const POST = withHandler(async (req: NextRequest, { user }) => {
     }
   }
 
-  // Prevent writes to already-locked results
-  const lockedCount = await prisma.studentEvaluationResult.count({
-    where: {
-      evaluationTemplateId: body.evaluationTemplateId,
-      syncedStudentId: { in: body.results.map((r) => r.syncedStudentId) },
-      status: "LOCKED",
-    },
-  });
-  if (lockedCount > 0) {
-    return badRequest(
-      `${lockedCount} result(s) are locked and cannot be modified`,
-    );
-  }
-
   const now = new Date();
 
   const upserts = body.results.map((r) => {

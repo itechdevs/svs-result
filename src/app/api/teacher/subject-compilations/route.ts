@@ -70,8 +70,9 @@ export const POST = withHandler(
     }
 
     // Fetch all students for this grade level
+    // class stores values like "Panda (L.K.G.)", gradeLevel is just "Panda"
     const students = await prisma.syncedStudent.findMany({
-      where: { class: body.gradeLevel, isActive: true },
+      where: { class: { startsWith: body.gradeLevel }, isActive: true },
     });
 
     if (students.length === 0) {

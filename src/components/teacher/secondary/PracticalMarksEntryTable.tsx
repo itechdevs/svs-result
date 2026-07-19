@@ -79,7 +79,7 @@ export function PracticalMarksEntryTable({
   };
 
   const canEdit = (row: PracticalMarkEntry) => {
-    return row.status !== "VERIFIED" && row.status !== "LOCKED";
+    return row.status !== "VERIFIED";
   };
 
   const sortedHeadings = [...practicalHeadings].sort((a, b) => a.displayOrder - b.displayOrder);

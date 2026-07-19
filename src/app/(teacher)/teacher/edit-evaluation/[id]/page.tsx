@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import CreateEvaluationTab from '@/components/teacher/CreateEvaluationTab';
 import { AnimatePresence } from 'motion/react';
 import { useEvaluationTemplate, useEvaluationTemplates } from '@/hooks/use-evaluations';
 import { useExams } from '@/hooks/use-exams';
+import { useAcademicYears } from '@/hooks/use-academic-config';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { toast } from 'sonner';
@@ -35,10 +36,29 @@ export default function EditEvaluationPage() {
 
   const { data: template, isLoading: isTemplateLoading } = useEvaluationTemplate(id);
   const { data: allTemplates = [], isLoading: isTemplatesLoading } = useEvaluationTemplates();
-  const { data: exams = [] } = useExams({
-    gradeLevel: selectedClass,
+  const { data: academicYears } = useAcademicYears();
+
+  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState('');
+
+  const { data: allExams = [] } = useExams({
+    ...(selectedAcademicYearId && { academicYearId: selectedAcademicYearId }),
     isActive: true,
   });
+
+  // Match exams by gradeLevel/section (same as create page)
+  const exams = useMemo(() => {
+    if (!selectedClass) return allExams;
+    return allExams.filter((exam) => {
+      const g = exam.gradeLevel;
+      if (g === selectedClass) return true;
+      if (selectedSection) {
+        if (g === `${selectedClass} - ${selectedSection}`) return true;
+        if (g === `${selectedClass} ${selectedSection}`) return true;
+        if (g === `${selectedClass}-${selectedSection}`) return true;
+      }
+      return false;
+    });
+  }, [allExams, selectedClass, selectedSection]);
 
   const [newEvalTitle, setNewEvalTitle] = useState('');
   const [newEvalSubject, setNewEvalSubject] = useState('');
@@ -84,6 +104,11 @@ export default function EditEvaluationPage() {
     setNewSubjectTitle(unitTitle);
     setNewEvalSubject(template.syncedSubject?.name ?? '');
     setSelectedExamId(template.examId || '');
+
+    // Auto-select the template's academic year so exams are filtered correctly
+    if (template.gradeConfig?.academicYear?.id) {
+      setSelectedAcademicYearId(template.gradeConfig.academicYear.id);
+    }
     setTargetMarks(resolvedGroup.reduce((s, t) => s + Number(t.fullMarks), 0));
 
     const taskGroupMap = new Map<string, TaskGroup>();
@@ -218,6 +243,9 @@ export default function EditEvaluationPage() {
           selectedExamId={selectedExamId}
           setSelectedExamId={setSelectedExamId}
           exams={exams}
+          academicYears={academicYears}
+          selectedAcademicYearId={selectedAcademicYearId}
+          setSelectedAcademicYearId={setSelectedAcademicYearId}
           targetMarks={targetMarks}
           setTargetMarks={setTargetMarks}
           newOutcomes={newOutcomes}
