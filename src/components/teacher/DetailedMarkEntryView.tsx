@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, CheckCircle, AlertTriangle, Calendar, Save } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -18,67 +18,23 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { BSCalendarSelector } from '@/components/shared/ui/bs-calendar-selector';
+import {
+  calcStudentGrade,
+  calcResultStatus,
+  calcFullMarks as calcFullMarksCentral,
+  OutcomeInput,
+} from '@/lib/grading';
 
-
-// ── Pure calculation helpers (exported for reuse) ─────────────────────────────
-
-export function calcObtainedMarks(
-  studentId: string,
-  outcomes: { name: string; templateId?: string }[],
-  getStudentMark: (studentId: string, evalId: string) => StudentOutcomeMark | undefined
-): number {
-  return outcomes.reduce((sum, lo) => {
-    if (!lo.templateId) return sum;
-    const mark = getStudentMark(studentId, lo.templateId);
-    const m = mark?.outcomeMarks[lo.name];
-    // Final mark = MAX(regularMark, reExamMark)
-    const finalMark =
-      m?.reExamMark !== null && m?.reExamMark !== undefined
-        ? Math.max(m.reExamMark, m?.regularMark ?? 0)
-        : m?.regularMark;
-    return sum + (finalMark ?? 0);
-  }, 0);
-}
-
+// Backward-compatible re-export for ReExamDetailedView
 export function calcFullMarks(outcomes: { fullMarks?: number }[]): number {
-  return outcomes.reduce((sum, lo) => sum + (lo.fullMarks ?? 0), 0);
-}
-
-export function calcPassFail(
-  studentId: string,
-  outcomes: { name: string; passMarks?: number; templateId?: string }[],
-  getStudentMark: (studentId: string, evalId: string) => StudentOutcomeMark | undefined
-): 'Pass' | 'Fail' | 'Pending' {
-  const allEntered = outcomes.every((lo) => {
-    if (!lo.templateId) return false;
-    const mark = getStudentMark(studentId, lo.templateId);
-    const m = mark?.outcomeMarks[lo.name];
-    return m?.regularMark !== null && m?.regularMark !== undefined;
-  });
-  const anyEntered = outcomes.some((lo) => {
-    if (!lo.templateId) return false;
-    const mark = getStudentMark(studentId, lo.templateId);
-    const m = mark?.outcomeMarks[lo.name];
-    return m?.regularMark !== null && m?.regularMark !== undefined;
-  });
-  if (!anyEntered) return 'Pending';
-
-  const anyFail = outcomes.some((lo) => {
-    if (!lo.templateId) return false;
-    const mark = getStudentMark(studentId, lo.templateId);
-    const m = mark?.outcomeMarks[lo.name];
-    // Final mark = MAX(regularMark, reExamMark)
-    const finalMark =
-      m?.reExamMark !== null && m?.reExamMark !== undefined
-        ? Math.max(m.reExamMark, m?.regularMark ?? 0)
-        : m?.regularMark;
-    if (finalMark === null || finalMark === undefined) return false;
-    return finalMark < (lo.passMarks ?? 0);
-  });
-
-  if (anyFail) return 'Fail';
-  if (!allEntered) return 'Pending';
-  return 'Pass';
+  return calcFullMarksCentral(
+    outcomes.map((o) => ({
+      regularMark: null,
+      reExamMark: null,
+      passMarks: 0,
+      fullMarks: o.fullMarks ?? 0,
+    })),
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -129,19 +85,23 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
     updateOutcomeMark(student.id, templateId, outcomeName, { remarks: value });
   };
 
-  // For display: use effective mark (re-exam > regular)
-  const obtained = outcomes.reduce((sum, lo) => {
-    if (!lo.templateId) return sum;
-    const mark = getStudentMark(student.id, lo.templateId);
-    const m = mark?.outcomeMarks[lo.name];
-    const finalMark =
-      m?.reExamMark !== null && m?.reExamMark !== undefined
-        ? Math.max(m.reExamMark, m?.regularMark ?? 0)
-        : m?.regularMark ?? 0;
-    return sum + finalMark;
-  }, 0);
-  const fullTotal = calcFullMarks(outcomes);
-  const status = calcPassFail(student.id, outcomes, getStudentMark);
+  // Centralized grade calculation
+  const gradeInputs: OutcomeInput[] = useMemo(() =>
+    outcomes.map((lo) => {
+      if (!lo.templateId) return { regularMark: null, reExamMark: null, passMarks: 0, fullMarks: 0 };
+      const mark = getStudentMark(student.id, lo.templateId);
+      const m = mark?.outcomeMarks[lo.name];
+      return {
+        regularMark: m?.regularMark ?? null,
+        reExamMark: m?.reExamMark ?? null,
+        passMarks: lo.passMarks ?? 0,
+        fullMarks: lo.fullMarks ?? 0,
+      };
+    }),
+    [outcomes, student.id, getStudentMark],
+  );
+  const grade = useMemo(() => calcStudentGrade(gradeInputs), [gradeInputs]);
+  const status = calcResultStatus(grade);
 
   const isPending = status === 'Pending';
   const isPass = status === 'Pass';
@@ -186,7 +146,7 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
           )}>
             {status}
           </span>
-          <span className="font-bold text-sm text-foreground">{Number(obtained.toFixed(1))} / {fullTotal}</span>
+          <span className="font-bold text-sm text-foreground">{Number(grade.obtainedMarks.toFixed(1))} / {grade.fullMarks}</span>
           {!readOnly && (
             <button
               onClick={async () => {
@@ -446,13 +406,13 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
         <div className="flex justify-between items-center sm:block sm:pr-8">
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider sm:mb-1">Total</p>
           <p className="text-lg sm:text-2xl font-bold text-foreground">
-            {obtained} <span className="text-sm sm:text-base text-muted-foreground">/ {fullTotal}</span>
+            {grade.obtainedMarks} <span className="text-sm sm:text-base text-muted-foreground">/ {grade.fullMarks}</span>
           </p>
         </div>
         <div className="flex justify-between items-center sm:block sm:px-8 border-t border-border pt-3 sm:border-t-0 sm:pt-0">
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider sm:mb-1">Percentage</p>
           <p className="text-lg sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
-            {fullTotal > 0 ? ((obtained / fullTotal) * 100).toFixed(2) : 0}%
+            {grade.percentage.toFixed(2)}%
           </p>
         </div>
         <div className="flex justify-between items-center sm:block sm:px-8 border-t border-border pt-3 sm:border-t-0 sm:pt-0">

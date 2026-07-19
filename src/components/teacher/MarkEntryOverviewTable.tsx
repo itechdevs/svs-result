@@ -27,6 +27,13 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useMarksContext } from "@/contexts/marks-context";
 import { toast } from "sonner";
 import MarkEntrySkeleton from "@/components/teacher/MarkEntrySkeleton";
+import {
+  calcStudentGrade,
+  calcResultStatus,
+  calcReExamStatus,
+  OutcomeInput,
+  type ReExamStatus,
+} from '@/lib/grading';
 
 export default function MarkEntryOverviewTable() {
   const { data: profile, isLoading: isProfileLoading } = useProfile();
@@ -203,6 +210,27 @@ export default function MarkEntryOverviewTable() {
     (page - 1) * PAGE_SIZE,
     page * PAGE_SIZE,
   );
+
+  // Compute grades for all students at top level (never inside loops/conditionals)
+  const studentsGradeMap = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof calcStudentGrade> & { reExamStatus: ReExamStatus }>();
+    for (const student of classStudents) {
+      const inputs: OutcomeInput[] = outcomeColumns.map((col) => {
+        const mark = getStudentMark(student.id, col.evalId);
+        const m = mark?.outcomeMarks[col.name];
+        return {
+          regularMark: m?.regularMark ?? null,
+          reExamMark: m?.reExamMark ?? null,
+          passMarks: col.passMarks,
+          fullMarks: col.fullMarks,
+        };
+      });
+      const grade = calcStudentGrade(inputs);
+      const reExamStatus = calcReExamStatus(grade);
+      map.set(student.id, { ...grade, reExamStatus });
+    }
+    return map;
+  }, [classStudents, outcomeColumns, getStudentMark]);
 
   const isLoading =
     (isProfileLoading || isTemplatesLoading || isStudentsLoading) &&
@@ -463,52 +491,14 @@ export default function MarkEntryOverviewTable() {
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-border">
                     {pagedStudents.map((student) => {
-                      // ── Per-student calculations ────────────────
-                      const totalObtained = outcomeColumns.reduce((sum, col) => {
-                        const mark = getStudentMark(student.id, col.evalId);
-                        const m = mark?.outcomeMarks[col.name];
-                        const val = m?.reExamMark !== null && m?.reExamMark !== undefined
-                          ? Math.max(m.reExamMark, m?.regularMark ?? 0)
-                          : m?.regularMark;
-                        return val !== null && val !== undefined ? sum + val : sum;
-                      }, 0);
+                      const grade = studentsGradeMap.get(student.id)!;
+                      const hasMarks = grade.anyEntered;
+                      const anyFail = grade.hasFailure;
+                      const status = hasMarks
+                        ? calcResultStatus(grade)
+                        : null;
 
-                      const totalFull = outcomeColumns.reduce(
-                        (sum, col) => sum + col.fullMarks,
-                        0,
-                      );
-
-                      const enteredCount = outcomeColumns.filter((col) => {
-                        const mark = getStudentMark(student.id, col.evalId);
-                        const m = mark?.outcomeMarks[col.name];
-                        const val = m?.reExamMark !== null && m?.reExamMark !== undefined
-                          ? Math.max(m.reExamMark, m?.regularMark ?? 0)
-                          : m?.regularMark;
-                        return val !== null && val !== undefined;
-                      }).length;
-
-                      const percentage =
-                        totalFull > 0 && enteredCount > 0
-                          ? Number(((totalObtained * 100) / totalFull).toFixed(2))
-                          : null;
-
-                      // A column fails if mark entered AND below passMarks
-                      const failedCols = outcomeColumns.filter((col) => {
-                        const mark = getStudentMark(student.id, col.evalId);
-                        const m = mark?.outcomeMarks[col.name];
-                        const val = m?.reExamMark !== null && m?.reExamMark !== undefined
-                          ? Math.max(m.reExamMark, m?.regularMark ?? 0)
-                          : m?.regularMark;
-                        return val !== null && val !== undefined && val < col.passMarks;
-                      });
-
-                      const hasMarks = enteredCount > 0;
-                      const anyFail = failedCols.length > 0;
-
-                      let status: "Pass" | "Fail" | "—" = "—";
-                      if (hasMarks) {
-                        status = anyFail ? "Fail" : "Pass";
-                      }
+                      const statusLabel = status === 'Pass' ? 'Pass' : status === 'Fail' ? 'Fail' : '—';
 
                       return (
                         <tr
@@ -582,24 +572,24 @@ export default function MarkEntryOverviewTable() {
                           {/* ── Total ── */}
                           <td className="px-4 py-3 text-center font-bold text-sm text-[#002045] dark:text-white whitespace-nowrap">
                             {hasMarks
-                              ? `${Number(totalObtained.toFixed(1))} / ${totalFull}`
+                              ? `${Number(grade.obtainedMarks.toFixed(1))} / ${grade.fullMarks}`
                               : "—"}
                           </td>
 
                           {/* ── Percentage ── */}
                           <td className="px-4 py-3 text-center whitespace-nowrap">
-                            {percentage !== null ? (
+                            {hasMarks ? (
                               <span
                                 className={cn(
                                   "inline-block px-2.5 py-0.5 rounded-full text-xs font-extrabold",
-                                  percentage >= 80
+                                  grade.percentage >= 80
                                     ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300"
-                                    : percentage >= 50
+                                    : grade.percentage >= 50
                                       ? "bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300"
                                       : "bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-300",
                                 )}
                               >
-                                {percentage}%
+                                {grade.percentage.toFixed(2)}%
                               </span>
                             ) : (
                               <span className="text-slate-400 text-xs">—</span>
@@ -610,91 +600,41 @@ export default function MarkEntryOverviewTable() {
                             <span
                               className={cn(
                                 "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase",
-                                status === "Pass"
+                                statusLabel === "Pass"
                                   ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300"
-                                  : status === "Fail"
+                                  : statusLabel === "Fail"
                                     ? "bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-300"
                                     : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400",
                               )}
                             >
-                              {status}
+                              {statusLabel}
                             </span>
                           </td>
 
                           {/* ── Re-Exam ── */}
-                          {(() => {
-                            // Use local anyFail (live marks) OR server isPassed=false (submitted)
-                            const evalIdSet = new Set(evalIds);
-                            const studentResults = resultsData.filter(
-                              r => evalIdSet.has(r.evaluationTemplateId) && r.syncedStudentId === student.id
-                            );
-
-                            // Originally failed based on regular mark < passMarks
-                            const localRegularFailedCols = outcomeColumns.filter((col) => {
-                              const mark = getStudentMark(student.id, col.evalId);
-                              const m = mark?.outcomeMarks[col.name];
-                              const val = m?.regularMark;
-                              return val !== null && val !== undefined && val < col.passMarks;
-                            });
-
-                            const failedEvalIds = new Set<string>([
-                              ...localRegularFailedCols.map(c => c.evalId),
-                              ...studentResults
-                                .filter(
-                                  r =>
-                                    r.isPassed === false ||
-                                    (r.marksObtained !== null &&
-                                      Number(r.marksObtained) < Number(r.evaluationTemplate?.passMarks))
-                                )
-                                .map(r => r.evaluationTemplateId),
-                            ]);
-
-                            const totalFailed = failedEvalIds.size;
-                            const reExamGiven = outcomeColumns.filter((col) => {
-                              if (!failedEvalIds.has(col.evalId)) return false;
-                              const mark = getStudentMark(student.id, col.evalId);
-                              const m = mark?.outcomeMarks[col.name];
-                              if (m?.reExamMark !== null && m?.reExamMark !== undefined) return true;
-                              const r = studentResults.find(res => res.evaluationTemplateId === col.evalId);
-                              return !!r?.reExamResult;
-                            }).length;
-
-                            if (totalFailed === 0) {
-                              return (
-                                <td className="px-4 py-3 text-center whitespace-nowrap">
-                                  <span className="text-slate-400 text-xs">—</span>
-                                </td>
-                              );
-                            }
-
-                            if (reExamGiven === 0) {
-                              return (
-                                <td className="px-4 py-3 text-center whitespace-nowrap">
-                                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300">
-                                    Needed
-                                  </span>
-                                </td>
-                              );
-                            }
-
-                            if (reExamGiven < totalFailed) {
-                              return (
-                                <td className="px-4 py-3 text-center whitespace-nowrap">
-                                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300">
-                                    {reExamGiven}/{totalFailed} Given
-                                  </span>
-                                </td>
-                              );
-                            }
-
-                            return (
-                              <td className="px-4 py-3 text-center whitespace-nowrap">
-                                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300">
-                                  Given
-                                </span>
-                              </td>
-                            );
-                          })()}
+                          {(grade.reExamStatus === 'none') ? (
+                            <td className="px-4 py-3 text-center whitespace-nowrap">
+                              <span className="text-slate-400 text-xs">—</span>
+                            </td>
+                          ) : grade.reExamStatus === 'needed' ? (
+                            <td className="px-4 py-3 text-center whitespace-nowrap">
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300">
+                                Needed
+                              </span>
+                            </td>
+                          ) : grade.reExamStatus === 'partial' ? (
+                            <td className="px-4 py-3 text-center whitespace-nowrap">
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300">
+                                {grade.reExamGivenCount}/{grade.originallyFailedCount} Given
+                              </span>
+                            </td>
+                          ) : (
+                            <td className="px-4 py-3 text-center whitespace-nowrap">
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300">
+                                Given
+                              </span>
+                            </td>
+                          )}
 
                           {/* ── Detail link ── */}
                           <td className="px-4 py-3 text-center">
@@ -832,69 +772,9 @@ export default function MarkEntryOverviewTable() {
             ) : (
               <div className="flex flex-col gap-3">
                 {pagedStudents.map((student) => {
-                  const totalObtained = outcomeColumns.reduce((sum, col) => {
-                    const mark = getStudentMark(student.id, col.evalId);
-                    const m = mark?.outcomeMarks[col.name];
-                    const val = m?.reExamMark !== null && m?.reExamMark !== undefined
-                      ? Math.max(m.reExamMark, m?.regularMark ?? 0)
-                      : m?.regularMark;
-                    return val !== null && val !== undefined ? sum + val : sum;
-                  }, 0);
-                  const totalFull = outcomeColumns.reduce((sum, col) => sum + col.fullMarks, 0);
-                  const enteredCount = outcomeColumns.filter((col) => {
-                    const mark = getStudentMark(student.id, col.evalId);
-                    const m = mark?.outcomeMarks[col.name];
-                    const val = m?.reExamMark !== null && m?.reExamMark !== undefined
-                      ? Math.max(m.reExamMark, m?.regularMark ?? 0)
-                      : m?.regularMark;
-                    return val !== null && val !== undefined;
-                  }).length;
-                  const percentage = totalFull > 0 && enteredCount > 0 ? Number(((totalObtained * 100) / totalFull).toFixed(2)) : null;
-                  const failedCols = outcomeColumns.filter((col) => {
-                    const mark = getStudentMark(student.id, col.evalId);
-                    const m = mark?.outcomeMarks[col.name];
-                    const val = m?.reExamMark !== null && m?.reExamMark !== undefined
-                      ? Math.max(m.reExamMark, m?.regularMark ?? 0)
-                      : m?.regularMark;
-                    return val !== null && val !== undefined && val < col.passMarks;
-                  });
-                  const hasMarks = enteredCount > 0;
-                  const anyFail = failedCols.length > 0;
-                  let status: "Pass" | "Fail" | "—" = "—";
-                  if (hasMarks) status = anyFail ? "Fail" : "Pass";
-
-                  const evalIdSet = new Set(evalIds);
-                  const studentResults = resultsData.filter(r => evalIdSet.has(r.evaluationTemplateId) && r.syncedStudentId === student.id);
-
-                  // Originally failed based on regular mark < passMarks
-                  const localRegularFailedCols = outcomeColumns.filter((col) => {
-                    const mark = getStudentMark(student.id, col.evalId);
-                    const m = mark?.outcomeMarks[col.name];
-                    const val = m?.regularMark;
-                    return val !== null && val !== undefined && val < col.passMarks;
-                  });
-
-                  const failedEvalIds = new Set<string>([
-                    ...localRegularFailedCols.map(c => c.evalId),
-                    ...studentResults
-                      .filter(
-                        r =>
-                          r.isPassed === false ||
-                          (r.marksObtained !== null &&
-                            Number(r.marksObtained) < Number(r.evaluationTemplate?.passMarks))
-                      )
-                      .map(r => r.evaluationTemplateId),
-                  ]);
-
-                  const totalFailed = failedEvalIds.size;
-                  const reExamGiven = outcomeColumns.filter((col) => {
-                    if (!failedEvalIds.has(col.evalId)) return false;
-                    const mark = getStudentMark(student.id, col.evalId);
-                    const m = mark?.outcomeMarks[col.name];
-                    if (m?.reExamMark !== null && m?.reExamMark !== undefined) return true;
-                    const r = studentResults.find(res => res.evaluationTemplateId === col.evalId);
-                    return !!r?.reExamResult;
-                  }).length;
+                  const grade = studentsGradeMap.get(student.id)!;
+                  const hasMarks = grade.anyEntered;
+                  const status = hasMarks ? calcResultStatus(grade) : null;
 
                   return (
                     <div key={student.id} className="bg-card rounded-xl border border-border shadow-sm p-4 flex flex-col gap-4">
@@ -959,11 +839,11 @@ export default function MarkEntryOverviewTable() {
                       <div className="flex justify-between items-end pt-3 border-t border-border/50">
                         <div className="flex flex-col gap-1">
                           <span className="text-[9px] font-extrabold text-muted-foreground uppercase">Obtained</span>
-                          <span className="font-bold text-xs text-foreground">{hasMarks ? totalObtained : "—"}</span>
+                          <span className="font-bold text-xs text-foreground">{hasMarks ? grade.obtainedMarks : "—"}</span>
                         </div>
                         <div className="flex flex-col gap-1">
                           <span className="text-[9px] font-extrabold text-muted-foreground uppercase">Percent</span>
-                          <span className="font-bold text-xs text-blue-500">{percentage ? `${percentage}%` : "—"}</span>
+                          <span className="font-bold text-xs text-blue-500">{hasMarks ? `${grade.percentage.toFixed(2)}%` : "—"}</span>
                         </div>
                         <div className="flex flex-col gap-1 items-center">
                           <span className="text-[9px] font-extrabold text-muted-foreground uppercase">Result</span>
@@ -971,13 +851,19 @@ export default function MarkEntryOverviewTable() {
                             "px-2 py-0.5 rounded-full text-[10px] font-bold",
                             status === 'Pass' ? 'bg-emerald-500/10 text-emerald-500' : status === 'Fail' ? 'bg-red-500/10 text-red-500' : 'bg-slate-800 text-slate-400'
                           )}>
-                            {status === "—" ? "—" : status}
+                            {status ?? "—"}
                           </span>
                         </div>
                         <div className="flex flex-col gap-1 items-end">
                           <span className="text-[9px] font-extrabold text-muted-foreground uppercase">Re-Exam</span>
                           <span className="font-bold text-xs text-amber-500">
-                            {totalFailed > 0 ? (reExamGiven >= totalFailed ? 'Given' : `${reExamGiven}/${totalFailed}`) : "—"}
+                            {grade.reExamStatus === 'none'
+                              ? "—"
+                              : grade.reExamStatus === 'needed'
+                                ? 'Needed'
+                                : grade.reExamStatus === 'partial'
+                                  ? `${grade.reExamGivenCount}/${grade.originallyFailedCount} Given`
+                                  : 'Given'}
                           </span>
                         </div>
                       </div>
