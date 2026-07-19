@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback } from 'react';
+import { formatToBSDateString } from '@/lib/bs-calendar';
 import {
     FONT,
     accentColor,
@@ -124,7 +125,7 @@ export const EMPTY_DATA: PrePrimaryGradeSheetData = {
     customRemark: '',
     classTeacher: '',
     principal: '',
-    dateOfIssue: '',
+    dateOfIssue: formatToBSDateString(new Date()),
     dateOfIssueAD: '',
 };
 
@@ -320,7 +321,7 @@ export function buildPrePrimaryData(params: {
         remarks: '',
         classTeacher: '',
         principal: '',
-        dateOfIssue: '',
+        dateOfIssue: formatToBSDateString(new Date()),
         dateOfIssueAD: '',
         rawObservations: observationResults.length > 0 ? observationResults : undefined,
         customRemark,

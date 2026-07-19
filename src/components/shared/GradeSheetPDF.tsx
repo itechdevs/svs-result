@@ -10,6 +10,7 @@ import {
   StyleSheet as PdfStyleSheet,
 } from '@react-pdf/renderer';
 import { MergedScore } from '@/lib/transcript-utils';
+import { formatToBSDateString } from '@/lib/bs-calendar';
 
 const pdfStyles = PdfStyleSheet.create({
   page: { padding: 28, fontFamily: 'Helvetica', fontSize: 8, color: '#002045' },
@@ -111,7 +112,7 @@ export function GradeSheetPDF({
             <View style={pdfStyles.sigBox}><Text>CLASS TEACHER</Text></View>
             <View style={pdfStyles.sigBox}><Text>PRINCIPAL</Text></View>
           </View>
-          <Text style={pdfStyles.dateText}>DATE OF ISSUE: 2082-12-28</Text>
+          <Text style={pdfStyles.dateText}>DATE OF ISSUE: {formatToBSDateString(new Date())}</Text>
         </View>
       </Page>
     </Document>

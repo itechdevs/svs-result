@@ -652,7 +652,11 @@ export default function ExamResultCompilation({
   };
 
   const handleViewAllGradeSheets = () => {
-    const studentObjs = compiledResults.map((r) =>
+    const resultsToView = selectedIds.size > 0
+      ? compiledResults.filter(r => selectedIds.has(r.studentId))
+      : compiledResults;
+
+    const studentObjs = resultsToView.map((r) =>
       toStudentObj(r, gradeLevel, students, examName),
     );
     setBulkGradeSheets(studentObjs);
@@ -767,8 +771,13 @@ export default function ExamResultCompilation({
       obs = await loadObservations();
       remarks = await loadCustomRemarks();
     }
+
+    const resultsToView = selectedIds.size > 0
+      ? sortedResults.filter(r => selectedIds.has(r.studentId))
+      : sortedResults;
+
     setPrePrimaryBulk(
-      sortedResults.map((r) => toPrePrimaryData(r, obs, remarks)),
+      resultsToView.map((r) => toPrePrimaryData(r, obs, remarks)),
     );
   };
 
@@ -1103,7 +1112,7 @@ export default function ExamResultCompilation({
                   ) : (
                     <FileText className="w-4 h-4" />
                   )}
-                  View All Grade Sheets
+                  {selectedIds.size > 0 ? `View Selected (${selectedIds.size})` : "View All Grade Sheets"}
                 </Button>
                 <Button
                   onClick={handleSaveCompilation}
@@ -1192,9 +1201,9 @@ export default function ExamResultCompilation({
                       className={cn(
                         "hover:bg-muted/20",
                         selectedIds.has(result.studentId) &&
-                          "bg-blue-50/40 dark:bg-blue-950/20",
+                        "bg-blue-50/40 dark:bg-blue-950/20",
                         result.hasReExam &&
-                          "bg-amber-50/60 dark:bg-amber-950/20",
+                        "bg-amber-50/60 dark:bg-amber-950/20",
                       )}
                     >
                       <TableCell className="border border-border px-3 py-2 text-center">
@@ -1226,8 +1235,8 @@ export default function ExamResultCompilation({
                                 className={cn(
                                   "font-mono text-xs",
                                   !sub.isPassed &&
-                                    sub.subjectName &&
-                                    "text-destructive",
+                                  sub.subjectName &&
+                                  "text-destructive",
                                 )}
                               >
                                 {sub.percentage.toFixed(1)}%
@@ -1267,13 +1276,13 @@ export default function ExamResultCompilation({
                             includeObservation
                               ? handleViewPrePrimaryGradeSheet(result)
                               : setShowTranscriptModal(
-                                  toStudentObj(
-                                    result,
-                                    gradeLevel,
-                                    students,
-                                    examName,
-                                  ),
-                                )
+                                toStudentObj(
+                                  result,
+                                  gradeLevel,
+                                  students,
+                                  examName,
+                                ),
+                              )
                           }
                           className="px-2.5 py-1 bg-primary hover:bg-primary/90 text-primary-foreground rounded text-[11px] font-bold cursor-pointer transition-colors"
                         >
