@@ -231,8 +231,8 @@ export default function ExamsPage() {
     setDescription(exam.description || "");
     setGradeLevel(exam.gradeLevel);
     setAcademicYearId(exam.academicYearId);
-    setStartDate(exam.startDate || "");
-    setEndDate(exam.endDate || "");
+    setStartDate(exam.startDate ? new Date(exam.startDate).toISOString().split("T")[0] : "");
+    setEndDate(exam.endDate ? new Date(exam.endDate).toISOString().split("T")[0] : "");
     setEditOpen(true);
   };
 
@@ -244,6 +244,7 @@ export default function ExamsPage() {
         data: {
           name,
           description: description || undefined,
+          gradeLevel: gradeLevel || undefined,
           startDate: startDate || undefined,
           endDate: endDate || undefined,
         },
@@ -443,10 +444,11 @@ export default function ExamsPage() {
                             className="font-semibold"
                           >
                             <div
-                                className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${allVisibleSelected
+                              className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${
+                                allVisibleSelected
                                   ? "bg-primary text-primary-foreground"
                                   : "opacity-50"
-                                }`}
+                              }`}
                             >
                               {allVisibleSelected && (
                                 <Check className="h-3 w-3" />
@@ -489,16 +491,19 @@ export default function ExamsPage() {
                                         }}
                                       >
                                         <div
-                                          className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${isChecked
-                                            ? "bg-primary text-primary-foreground"
-                                            : "opacity-50"
-                                            }`}
+                                          className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors ${
+                                            isChecked
+                                              ? "bg-primary text-primary-foreground"
+                                              : "opacity-50"
+                                          }`}
                                         >
                                           {isChecked && (
                                             <Check className="h-3 w-3" />
                                           )}
                                         </div>
-                                        <span>{item.gradeLevel} {item.section}</span>
+                                        <span>
+                                          {item.gradeLevel} {item.section}
+                                        </span>
                                       </DropdownMenuItem>
                                     );
                                   })}
@@ -611,11 +616,7 @@ export default function ExamsPage() {
                 <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
                   Grade Level
                 </label>
-                <Select
-                  value={gradeLevel}
-                  onValueChange={setGradeLevel}
-                  disabled
-                >
+                <Select value={gradeLevel} onValueChange={setGradeLevel}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select grade level" />
                   </SelectTrigger>
@@ -710,7 +711,13 @@ export default function ExamsPage() {
                 <SelectItem value="all">All Grade Levels</SelectItem>
                 {/* {JSON.stringify(gradeLevels)} */}
                 {gradeLevels?.map((item) => (
-                  <SelectItem key={item.displayName || `${item.gradeLevel}-${item.section || ''}`} value={item.gradeLevel}>
+                  <SelectItem
+                    key={
+                      item.displayName ||
+                      `${item.gradeLevel}-${item.section || ""}`
+                    }
+                    value={item.gradeLevel}
+                  >
                     {item.displayName || item.gradeLevel}
                   </SelectItem>
                 ))}

@@ -50,6 +50,7 @@ export interface CreateExamInput {
 export interface UpdateExamInput {
   name?: string;
   description?: string;
+  gradeLevel?: string;
   startDate?: string | Date;
   endDate?: string | Date;
   isActive?: boolean;
