@@ -706,7 +706,7 @@ export function FooterSection({ data }: { data: PrePrimaryGradeSheetData }) {
           gap: '4px',
         }}
       >
-        <span>Date of Issue:</span>
+        <span>DATE OF ISSUE:</span>
         {data.dateOfIssue || data.dateOfIssueAD ? (
           <>
             {data.dateOfIssue && <span>{data.dateOfIssue}</span>}
