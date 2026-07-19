@@ -46,6 +46,8 @@ export interface EvaluationPlan {
   subEvaluations?: SubEvaluation[];
   syncedSubjectId?: string;
   gradeLevel?: string;
+  /** Section this evaluation belongs to (e.g. "B") — from SyncedSubject.section */
+  section?: string;
   /** All real EvaluationTemplate IDs in this group — used for bulk delete */
   templateIds?: string[];
 }

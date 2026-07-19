@@ -23,7 +23,7 @@ import {
   useStudentEvaluationResults,
 } from "@/hooks/use-evaluations";
 import { useStudents } from "@/hooks/use-students";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useMarksContext } from "@/contexts/marks-context";
 import { toast } from "sonner";
 import MarkEntrySkeleton from "@/components/teacher/MarkEntrySkeleton";
@@ -45,6 +45,11 @@ export default function MarkEntryOverviewTable() {
 
   const searchParams = useSearchParams();
   const router = useRouter();
+  const pathname = usePathname();
+
+  // Derive base path from the URL — reliable from first render, before profile loads.
+  // Avoids isAdmin flickering to false during profile fetch generating wrong teacher URLs.
+  const markEntryBase = pathname.startsWith('/admin') ? '/admin/mark-entry' : '/teacher/mark-entry';
 
   const selectedClass = searchParams.get("class") ?? "";
   const selectedSection = searchParams.get("section") ?? "";
@@ -82,23 +87,36 @@ export default function MarkEntryOverviewTable() {
     if (!selectedClass || !selectedSubject) return undefined;
     if (isAdmin) return undefined; // admins use direct template matching
     return profile?.syncedTeacher?.subjects.find(
-      (s) => s.name === selectedSubject && s.gradeLevel === selectedClass,
+      (s) =>
+        s.name === selectedSubject &&
+        s.gradeLevel === selectedClass &&
+        (selectedSection ? s.section === selectedSection : true),
     );
-  }, [selectedClass, selectedSubject, profile, isAdmin]);
+  }, [selectedClass, selectedSubject, selectedSection, profile, isAdmin]);
 
   const allSubjectTemplates = useMemo(() => {
     if (!selectedClass || !selectedSubject) return [];
-    // Admin: match templates by subject name + grade level directly
-    if (isAdmin) {
-      return templatesData.filter(
-        (t) =>
-          t.syncedSubject?.name === selectedSubject &&
-          (t.syncedSubject?.gradeLevel === selectedClass || t.gradeConfig?.gradeLevel === selectedClass),
-      );
+
+    // For teachers: match by the teacher's assigned subject ID (exact, reliable)
+    if (!isAdmin && subjectObj) {
+      return templatesData.filter((t) => t.syncedSubjectId === subjectObj.id);
     }
-    if (!subjectObj) return [];
-    return templatesData.filter((t) => t.syncedSubjectId === subjectObj.id);
-  }, [subjectObj, templatesData, isAdmin, selectedClass, selectedSubject]);
+
+    // For admin (or fallback when subjectObj not resolved yet):
+    // match templates by subject name + grade level + optional section
+    return templatesData.filter((t) => {
+      if (t.syncedSubject?.name !== selectedSubject) return false;
+      const gradeMatches =
+        t.syncedSubject?.gradeLevel === selectedClass ||
+        t.gradeConfig?.gradeLevel === selectedClass;
+      if (!gradeMatches) return false;
+      // If a section is in the URL, also filter by section
+      if (selectedSection) {
+        return t.syncedSubject?.section === selectedSection;
+      }
+      return true;
+    });
+  }, [subjectObj, templatesData, isAdmin, selectedClass, selectedSubject, selectedSection]);
 
   const evaluations = useMemo(() => {
     if (!selectedEvalPlan) return [];
@@ -135,7 +153,7 @@ export default function MarkEntryOverviewTable() {
     const evalIdSet = new Set(evalIds);
     const relevantResults = resultsData.filter(r => evalIdSet.has(r.evaluationTemplateId));
     if (relevantResults.length === 0) return 'NONE';
-    if (relevantResults.some(r => r.status === 'SUBMITTED' || r.status === 'VERIFIED' || r.status === 'LOCKED')) return 'SUBMITTED';
+    if (relevantResults.some(r => r.status === 'SUBMITTED' || r.status === 'VERIFIED')) return 'SUBMITTED';
     if (relevantResults.some(r => r.status === 'DRAFT')) return 'DRAFT';
     return 'NONE';
   }, [evalIds, resultsData]);
@@ -297,9 +315,7 @@ export default function MarkEntryOverviewTable() {
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <Link
-                  href={isAdmin
-                    ? `/admin/mark-entry/all?class=${selectedClass}&subject=${selectedSubject}&evalId=${evaluations[0].id}`
-                    : `/teacher/mark-entry/all?class=${selectedClass}&subject=${selectedSubject}&evalId=${evaluations[0].id}`}
+                  href={`${markEntryBase}/all?class=${selectedClass}&subject=${selectedSubject}${selectedSection ? `&section=${selectedSection}` : ``}&evalId=${evaluations[0].id}`}
                   className="px-4 py-2 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
                 >
                   <Eye className="w-3.5 h-3.5" />
@@ -683,9 +699,7 @@ export default function MarkEntryOverviewTable() {
                           {/* ── Detail link ── */}
                           <td className="px-4 py-3 text-center">
                             <Link
-                              href={isAdmin
-                                ? `/admin/mark-entry/${student.id}?evalId=${evaluations[0].id}`
-                                : `/teacher/mark-entry/${student.id}?evalId=${evaluations[0].id}`}
+                              href={`${markEntryBase}/${student.id}?evalId=${evaluations[0].id}`}
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded border border-slate-200 dark:border-border transition-colors"
                             >
                               <Eye className="w-3 h-3" />
@@ -788,9 +802,7 @@ export default function MarkEntryOverviewTable() {
               </div>
               <div className="flex gap-2">
                 <Link
-                  href={isAdmin
-                    ? `/admin/mark-entry/all?class=${selectedClass}&subject=${selectedSubject}&evalId=${evaluations[0].id}`
-                    : `/teacher/mark-entry/all?class=${selectedClass}&subject=${selectedSubject}&evalId=${evaluations[0].id}`}
+                  href={`${markEntryBase}/all?class=${selectedClass}&subject=${selectedSubject}${selectedSection ? `&section=${selectedSection}` : ``}&evalId=${evaluations[0].id}`}
                   className="flex-1 py-2 text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
                 >
                   <Eye className="w-3.5 h-3.5" /> View details
@@ -898,7 +910,7 @@ export default function MarkEntryOverviewTable() {
                           </div>
                         </div>
                         <Link
-                          href={isAdmin ? `/admin/mark-entry/${student.id}?evalId=${evaluations[0].id}` : `/teacher/mark-entry/${student.id}?evalId=${evaluations[0].id}`}
+                          href={`${markEntryBase}/${student.id}?evalId=${evaluations[0].id}`}
                           className="px-3 py-1.5 border border-border rounded-lg text-xs font-bold hover:bg-muted transition-colors flex items-center gap-1.5"
                         >
                           <Eye className="w-3.5 h-3.5" /> View

@@ -33,6 +33,7 @@ export const PATCH = withHandler(
         ...(body.scheduledDate !== undefined && { scheduledDate: body.scheduledDate }),
         ...(body.displayOrder !== undefined && { displayOrder: body.displayOrder }),
         ...(body.isActive !== undefined && { isActive: body.isActive }),
+        ...(body.examId !== undefined && { examId: body.examId }),
       },
       include: {
         syncedSubject: { select: { id: true, name: true, gradeLevel: true } },

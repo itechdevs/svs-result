@@ -255,7 +255,7 @@ export default function TeacherEvaluationsViewTab({ teacher, evaluations, onView
                     {/* Action */}
                     <td className="px-5 py-4 text-center">
                       <Link
-                        href={`/admin/mark-entry?class=${encodeURIComponent(evaluation.gradeLevel ?? teacher.classes[0])}&subject=${encodeURIComponent(evaluation.subject)}&eval=${encodeURIComponent(evaluation.title)}`}
+                        href={`/admin/mark-entry?class=${encodeURIComponent(evaluation.gradeLevel ?? teacher.classes[0])}&subject=${encodeURIComponent(evaluation.subject)}${evaluation.section ? `&section=${encodeURIComponent(evaluation.section)}` : ''}&eval=${encodeURIComponent(evaluation.title)}`}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded transition-colors border border-blue-200 dark:border-blue-800/50"
                       >
                         <Eye className="w-3.5 h-3.5" />
