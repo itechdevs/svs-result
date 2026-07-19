@@ -89,6 +89,7 @@ export default function TeacherAllocationsDetailPage() {
         title: evalTitle || subjectName,
         subject: subjectName,
         gradeLevel,
+        section: first.syncedSubject?.section ?? undefined,
         status: first.isActive ? 'Active' : 'Inactive',
         testTypes: `${group.length} Task${group.length !== 1 ? 's' : ''}`,
         outcomes: `${group.length} Outcome${group.length !== 1 ? 's' : ''}`,

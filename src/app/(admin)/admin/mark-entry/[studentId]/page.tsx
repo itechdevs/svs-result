@@ -14,7 +14,18 @@ export default function AdminStudentMarkEntryPage() {
   const searchParams = useSearchParams();
   const evalId = searchParams.get('evalId') ?? '';
 
-  const { data: studentsData, isLoading: isStudentsLoading } = useStudents({ limit: 500 });
+  // Build a combined class filter (e.g. "Penguin - B") the same way the overview page does
+  const classParam = searchParams.get('class') ?? '';
+  const sectionParam = searchParams.get('section') ?? '';
+  const studentClassFilter = sectionParam
+    ? `${classParam} - ${sectionParam}`
+    : classParam;
+
+  const { data: studentsData, isLoading: isStudentsLoading } = useStudents(
+    studentId === 'all' && studentClassFilter
+      ? { class: studentClassFilter, limit: 9999 }
+      : { limit: 500 },
+  );
   const { data: templatesData = [], isLoading: isTemplatesLoading } = useEvaluationTemplates();
 
   const { getStudentMark, updateOutcomeMark, setEvaluations, handleSaveAll } = useMarksContext();
@@ -47,8 +58,9 @@ export default function AdminStudentMarkEntryPage() {
     if (studentId !== 'all') {
       list = list.filter((s) => s.id === studentId);
     } else {
-      const className = searchParams.get('class');
-      if (className) list = list.filter((s) => s.class === className);
+      if (studentClassFilter) {
+        list = list.filter((s) => s.class === studentClassFilter);
+      }
     }
     return list.map((s) => ({
       id: s.id,
@@ -67,7 +79,7 @@ export default function AdminStudentMarkEntryPage() {
       scores: [],
       dist: {},
     }));
-  }, [studentsData, studentId, searchParams]);
+  }, [studentsData, studentId, studentClassFilter]);
 
   const evaluation: EvaluationPlan | undefined = useMemo(() => {
     if (!baseTemplate || groupTemplates.length === 0) return undefined;
