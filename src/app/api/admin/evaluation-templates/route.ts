@@ -37,7 +37,7 @@ export const GET = withHandler(
           },
         },
         syncedSubject: {
-          select: { id: true, name: true, code: true, gradeLevel: true },
+          select: { id: true, name: true, code: true, gradeLevel: true, section: true },
         },
         exam: {
           select: { id: true, name: true },

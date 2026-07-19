@@ -25,6 +25,7 @@ export interface EvaluationTemplate {
     name: string;
     code: string;
     gradeLevel: string;
+    section?: string | null;
   };
   examId?: string;
   exam?: { id: string; name: string };
