@@ -160,9 +160,6 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
       return false;
     });
   }, [allExams, selectedClass, selectedSection]);
-  const { data: templatesData = [] } = useEvaluationTemplates(
-    selectedAcademicYear ? { academicYearId: selectedAcademicYear } : {},
-  );
   const { data: resultsData = [] } = useStudentEvaluationResults({ limit: 5000 });
   const { data: studentsData } = useStudents(
     selectedClass ? { class: classQuery, limit: 9999 } : { limit: 1 },
@@ -181,31 +178,44 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
     const teacherSubjects = profile?.syncedTeacher?.subjects ?? [];
     return teacherSubjects
       .filter((s) => s.gradeLevel === selectedClass)
-      .map((s) => ({ id: s.id, name: s.name, gradeLevel: s.gradeLevel }));
+      .map((s) => ({ id: s.id, name: s.name, gradeLevel: s.gradeLevel, section: s.section }));
   }, [profile, selectedClass]);
 
-  // Filtered templates for selected subject + exam
-  // When an exam is selected:
-  //   - include templates explicitly linked to that exam (t.examId === selectedExam)
-  //   - also include templates with no examId (created before exam linking was introduced,
-  //     or created when no exam was available in the dropdown)
+  // Resolve the exact subject record (with ID) matching class + name + section.
+  // This mirrors the logic in MarkEntryOverviewTable and prevents merging
+  // templates from different SyncedSubject records (e.g. different sections).
+  const subjectObj = useMemo(() => {
+    if (!selectedSubject) return undefined;
+    return subjects.find(
+      (s) =>
+        s.name === selectedSubject &&
+        (selectedSection ? s.section === selectedSection : true),
+    );
+  }, [subjects, selectedSubject, selectedSection]);
+
+  const { data: templatesData = [] } = useEvaluationTemplates(
+    selectedAcademicYear || subjectObj
+      ? {
+          academicYearId: selectedAcademicYear || undefined,
+          ...(subjectObj?.id && { syncedSubjectId: subjectObj.id }),
+        }
+      : {},
+  );
+
+  // Filtered templates for the exact subject record (by database ID, not by name).
+  // This matches the marks entry page logic and excludes templates from
+  // other sections or duplicate subject records that share the same name.
   const filteredTemplates = useMemo(() => {
-    if (!selectedSubject) return [];
+    if (!subjectObj) return [];
     return templatesData.filter((t) => {
-      if (t.syncedSubject?.name !== selectedSubject) return false;
+      if (t.syncedSubjectId !== subjectObj.id) return false;
       if (!t.isActive) return false;
-      if (
-        t.gradeConfig?.academicYear?.id &&
-        t.gradeConfig.academicYear.id !== selectedAcademicYear
-      )
-        return false;
       if (selectedExam) {
-        // Show templates for this exam OR unlinked templates (examId null/undefined)
         return t.examId === selectedExam || !t.examId;
       }
       return true;
     });
-  }, [templatesData, selectedSubject, selectedAcademicYear, selectedExam]);
+  }, [templatesData, subjectObj, selectedExam]);
 
   // Build a map: templateId → highest status in that template
   const templateStatusMap = useMemo(() => {
@@ -226,8 +236,11 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
     const map = new Map<string, EvalPlanGroup>();
     for (const t of filteredTemplates) {
       const { planTitle, unitTitle } = getPlanTitle(t.name, selectedSubject);
-      if (!map.has(planTitle)) {
-        map.set(planTitle, {
+      // Use a composite key to prevent merging templates from different
+      // SyncedSubject records that share the same plan title.
+      const compositeKey = `${t.syncedSubjectId}::${planTitle}`;
+      if (!map.has(compositeKey)) {
+        map.set(compositeKey, {
           planTitle,
           unitTitle,
           templates: [],
@@ -235,7 +248,7 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
           totalPassMarks: 0,
         });
       }
-      const group = map.get(planTitle)!;
+      const group = map.get(compositeKey)!;
       group.templates.push(t);
       group.totalFullMarks += Number(t.fullMarks);
       group.totalPassMarks += Number(t.passMarks);
@@ -247,6 +260,26 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
       return groupStatuses.some(s => s === 'SUBMITTED');
     });
   }, [filteredTemplates, selectedSubject, templateStatusMap]);
+
+  // Log evaluation plan details for debugging
+  useEffect(() => {
+    if (evalPlanGroups.length > 0) {
+      console.debug('[ResultCompilation] Evaluation Plan Groups:', evalPlanGroups.map((g) => ({
+        planTitle: g.planTitle,
+        unitTitle: g.unitTitle,
+        templateCount: g.templates.length,
+        totalFullMarks: g.totalFullMarks,
+        totalPassMarks: g.totalPassMarks,
+        templates: g.templates.map((t) => ({
+          id: t.id,
+          name: t.name,
+          syncedSubjectId: t.syncedSubjectId,
+          fullMarks: Number(t.fullMarks),
+          passMarks: Number(t.passMarks),
+        })),
+      })));
+    }
+  }, [evalPlanGroups]);
 
   // All template IDs from selected plans
   const selectedTemplateIds = useMemo(() => {
@@ -373,12 +406,10 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
   };
 
   const handleSaveDraft = async () => {
-    if (!selectedSubject || !selectedClass || !selectedAcademicYear || !selectedExam || selectedTemplateIds.length === 0) {
+    if (!subjectObj || !selectedClass || !selectedAcademicYear || !selectedExam || selectedTemplateIds.length === 0) {
       toast.error('Please select exam, academic year, and at least one evaluation plan');
       return;
     }
-    const subjectObj = subjects.find((s) => s.name === selectedSubject);
-    if (!subjectObj) return;
     await createCompilation.mutateAsync({
       syncedSubjectId: subjectObj.id,
       academicYearId: selectedAcademicYear,
@@ -390,12 +421,10 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
   };
 
   const handleSubmit = async () => {
-    if (!selectedSubject || !selectedClass || !selectedAcademicYear || !selectedExam || selectedTemplateIds.length === 0) {
+    if (!subjectObj || !selectedClass || !selectedAcademicYear || !selectedExam || selectedTemplateIds.length === 0) {
       toast.error('Please select exam, academic year, and at least one evaluation plan');
       return;
     }
-    const subjectObj = subjects.find((s) => s.name === selectedSubject);
-    if (!subjectObj) return;
     const result = await createCompilation.mutateAsync({
       syncedSubjectId: subjectObj.id,
       academicYearId: selectedAcademicYear,
@@ -411,7 +440,6 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
 
   // Find existing compilation for current selection (including exam)
   const existingCompilation = useMemo(() => {
-    const subjectObj = subjects.find((s) => s.name === selectedSubject);
     if (!subjectObj || !selectedAcademicYear || !selectedExam) return null;
     return existingCompilations.find(
       (c) =>
@@ -420,7 +448,7 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
         c.gradeLevel === classQuery &&
         (c as any).examId === selectedExam,
     );
-  }, [existingCompilations, selectedSubject, classQuery, selectedAcademicYear, selectedExam, subjects]);
+  }, [existingCompilations, subjectObj, classQuery, selectedAcademicYear, selectedExam]);
 
   const activeGroups = evalPlanGroups.filter((g) => selectedPlanTitles.includes(g.planTitle));
 
