@@ -176,10 +176,11 @@ export default function ExamDetailClient({ examId }: Props) {
                 {exam.name}
               </h1>
               <span
-                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${exam.isActive
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                  exam.isActive
                     ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
                     : "bg-muted text-muted-foreground"
-                  }`}
+                }`}
               >
                 <CheckCircle2 className="w-3 h-3" />
                 {exam.isActive ? "Active" : "Inactive"}
@@ -198,9 +199,7 @@ export default function ExamDetailClient({ examId }: Props) {
                 <span className="flex items-center gap-1.5 text-xs">
                   <Calendar className="w-3 h-3" />
                   {formatToBSFullString(exam.startDate)}
-                  {exam.endDate && (
-                    <> — {formatToBSFullString(exam.endDate)}</>
-                  )}
+                  {exam.endDate && <> — {formatToBSFullString(exam.endDate)}</>}
                 </span>
               )}
             </div>
@@ -277,7 +276,7 @@ export default function ExamDetailClient({ examId }: Props) {
               <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
                 Academic Year
               </label>
-              <Select value={academicYearId} onValueChange={() => { }} disabled>
+              <Select value={academicYearId} onValueChange={() => {}} disabled>
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -294,7 +293,7 @@ export default function ExamDetailClient({ examId }: Props) {
               <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
                 Grade Level
               </label>
-              <Select value={gradeLevel} onValueChange={() => { }} disabled>
+              <Select value={gradeLevel} onValueChange={() => {}}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -362,7 +361,6 @@ export default function ExamDetailClient({ examId }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
     </motion.div>
   );
 }

@@ -1,12 +1,14 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { badRequest, notFound, ok } from "@/lib/response";
+import { badRequest, conflict, notFound, ok } from "@/lib/response";
 import { withHandler } from "@/lib/handlers";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 const updateExamSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
+  gradeLevel: z.string().min(1).optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
   isActive: z.boolean().optional(),
@@ -33,15 +35,27 @@ export const PATCH = withHandler(
   async (req: NextRequest, { params }) => {
     const body = updateExamSchema.parse(await req.json());
 
-    const exam = await prisma.exam.update({
-      where: { id: params.id },
-      data: body,
-      include: {
-        academicYear: true,
-      },
-    });
+    try {
+      const exam = await prisma.exam.update({
+        where: { id: params.id },
+        data: body,
+        include: {
+          academicYear: true,
+        },
+      });
 
-    return ok(exam, "Exam updated");
+      return ok(exam, "Exam updated");
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2002"
+      ) {
+        return conflict(
+          "An exam with this name already exists for this grade level and academic year",
+        );
+      }
+      throw err;
+    }
   },
   ["ADMIN"],
 );
