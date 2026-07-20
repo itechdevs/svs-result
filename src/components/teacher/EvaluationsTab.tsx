@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import {
   Plus,
   MoreVertical,
@@ -9,9 +9,18 @@ import {
   Trash2,
   Sparkles,
   Lock,
+  Download,
+  X,
+  CheckSquare,
+  Loader2,
 } from "lucide-react";
+import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import { cn } from "@/lib/utils";
 import { EvaluationPlan } from "@/types/academic";
+import { exportEvaluationsToExcel } from "@/lib/export-evaluations";
+import { apiClient } from "@/lib/api-client";
+import { toast } from "sonner";
+import { useProfile } from "@/hooks/use-profile";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +42,49 @@ import {
 } from "@/components/ui/alert-dialog";
 import Pagination from "@mui/material/Pagination";
 import Stack from "@mui/material/Stack";
+
+// ─── Inline Checkbox ────────────────────────────────────────────────────────
+function Checkbox({
+  checked,
+  onCheckedChange,
+  "aria-label": ariaLabel,
+}: {
+  checked: boolean | "indeterminate";
+  onCheckedChange: (checked: boolean) => void;
+  "aria-label"?: string;
+}) {
+  return (
+    <CheckboxPrimitive.Root
+      checked={checked}
+      onCheckedChange={onCheckedChange}
+      aria-label={ariaLabel}
+      className={cn(
+        "w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        checked === true || checked === "indeterminate"
+          ? "bg-primary border-primary"
+          : "border-border bg-background hover:border-primary/60"
+      )}
+    >
+      <CheckboxPrimitive.Indicator className="text-primary-foreground">
+        {checked === "indeterminate" ? (
+          <span className="block w-2.5 h-0.5 bg-current rounded" />
+        ) : (
+          <svg
+            className="w-3.5 h-3.5"
+            viewBox="0 0 10 10"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="1.5,5 4,7.5 8.5,2" />
+          </svg>
+        )}
+      </CheckboxPrimitive.Indicator>
+    </CheckboxPrimitive.Root>
+  );
+}
 
 interface EvaluationsTabProps {
   evaluations: EvaluationPlan[];
@@ -121,6 +173,68 @@ export default function EvaluationsTab({
   const handleFilterChange = (f: "All" | "Published" | "Draft" | "Active") => {
     setFilter(f);
     setPage(1);
+  };
+
+  const { data: profile } = useProfile();
+  const teacherName = profile?.syncedTeacher?.name ?? profile?.name ?? "Teacher";
+
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isExporting, setIsExporting] = useState(false);
+
+  const filteredIds = useMemo(() => filtered.map((e) => e.id), [filtered]);
+  const selectedInFiltered = filteredIds.filter((id) => selectedIds.has(id));
+
+  const selectAllFiltered = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      filteredIds.forEach((id) => next.add(id));
+      return next;
+    });
+  };
+
+  const deselectAllFiltered = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      filteredIds.forEach((id) => next.delete(id));
+      return next;
+    });
+  };
+
+  const toggleOne = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleExport = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      const selectedEvaluations = filtered.filter((e) => selectedIds.has(e.id));
+      const allTemplateIds = selectedEvaluations.flatMap((ev) => ev.templateIds ?? []);
+      let studentResults: import("@/hooks/use-evaluations").StudentEvaluationResult[] = [];
+      if (allTemplateIds.length > 0) {
+        try {
+          studentResults = await apiClient.get(
+            `/evaluations?evaluationTemplateIds=${allTemplateIds.join(",")}&limit=5000`
+          );
+        } catch {
+          toast.warning("Could not load student marks — exporting plan data only.");
+        }
+      }
+      exportEvaluationsToExcel(selectedEvaluations, teacherName, studentResults);
+      toast.success(
+        `Exported ${selectedEvaluations.length} plan(s) with ${studentResults.length} student mark record(s).`
+      );
+    } catch (err) {
+      toast.error("Export failed. Please try again.");
+      console.error(err);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -224,28 +338,87 @@ export default function EvaluationsTab({
         );
       })()}
 
-      {/* Filter Buttons */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {(["All", "Published", "Draft", "Active"] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={cn(
-              "px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors",
-              filter === f
-                ? f === "Published"
-                  ? "bg-blue-600 text-white border-blue-600"
-                  : f === "Draft"
-                    ? "bg-amber-500 text-white border-amber-500"
-                    : f === "Active"
-                      ? "bg-emerald-600 text-white border-emerald-600"
-                      : "bg-foreground text-background border-foreground"
-                : "bg-card text-muted-foreground border-border hover:bg-muted",
-            )}
-          >
-            {f}
-          </button>
-        ))}
+      {/* Filter Buttons & Select All Toolbar */}
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-2 flex-wrap">
+            {(["All", "Published", "Draft", "Active"] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors",
+                  filter === f
+                    ? f === "Published"
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : f === "Draft"
+                        ? "bg-amber-500 text-white border-amber-500"
+                        : f === "Active"
+                          ? "bg-emerald-600 text-white border-emerald-600"
+                          : "bg-foreground text-background border-foreground"
+                    : "bg-card text-muted-foreground border-border hover:bg-muted",
+                )}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+
+          {/* Select All shortcut when nothing is selected */}
+          {filtered.length > 0 && selectedInFiltered.length === 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={selectAllFiltered}
+              className="text-muted-foreground hover:text-foreground h-8 text-xs font-semibold"
+            >
+              <CheckSquare className="w-3.5 h-3.5 mr-1" />
+              Select All
+            </Button>
+          )}
+        </div>
+
+        {/* Animated Export Toolbar */}
+        <AnimatePresence>
+          {selectedIds.size > 0 && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="bg-primary/5 border border-primary/20 rounded-xl px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+                <span className="text-sm font-semibold text-primary">
+                  {selectedIds.size} plan{selectedIds.size !== 1 ? "s" : ""} selected
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={deselectAllFiltered}
+                    className="h-8 text-xs font-semibold"
+                  >
+                    <X className="w-3.5 h-3.5 mr-1" />
+                    Deselect All
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleExport}
+                    disabled={isExporting}
+                    className="h-8 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
+                  >
+                    {isExporting ? (
+                      <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                    ) : (
+                      <Download className="w-3.5 h-3.5 mr-1" />
+                    )}
+                    {isExporting ? "Fetching marks…" : "Export to Excel"}
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Evaluations Plan Cards Directory */}
@@ -276,34 +449,46 @@ export default function EvaluationsTab({
           return (
             <div
               key={evalPlan.id}
-              className="bg-card border border-border rounded-xl overflow-hidden hover:shadow-md transition-all flex flex-col"
+              className={cn(
+                "bg-card border rounded-xl overflow-hidden hover:shadow-md transition-all flex flex-col",
+                selectedIds.has(evalPlan.id) ? "border-primary ring-1 ring-primary" : "border-border"
+              )}
             >
               <div className="p-5 flex-1 space-y-4">
-                <div className="flex justify-between items-start">
-                  <div className="flex flex-col gap-1.5">
-                    <span
-                      className={cn(
-                        "px-2.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider w-fit",
-                        evalPlan.status === "Published"
-                          ? "bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300"
-                          : evalPlan.status === "Draft"
-                            ? "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300"
-                            : evalPlan.status === "Active"
-                              ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300"
-                              : "bg-muted text-muted-foreground",
-                      )}
-                    >
-                      {evalPlan.status}
-                    </span>
-                    <span className="text-muted-foreground text-[10px] font-mono block">
-                      Created:{" "}
-                      {evalPlan.createdAt
-                        ? new Date(evalPlan.createdAt).toLocaleDateString(
-                            "en-US",
-                            { month: "short", day: "2-digit", year: "numeric" },
-                          )
-                        : evalPlan.date}
-                    </span>
+                <div className="flex justify-between items-start gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="pt-0.5">
+                      <Checkbox
+                        checked={selectedIds.has(evalPlan.id)}
+                        onCheckedChange={() => toggleOne(evalPlan.id)}
+                        aria-label={`Select ${evalPlan.title}`}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <span
+                        className={cn(
+                          "px-2.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider w-fit",
+                          evalPlan.status === "Published"
+                            ? "bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300"
+                            : evalPlan.status === "Draft"
+                              ? "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300"
+                              : evalPlan.status === "Active"
+                                ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300"
+                                : "bg-muted text-muted-foreground",
+                        )}
+                      >
+                        {evalPlan.status}
+                      </span>
+                      <span className="text-muted-foreground text-[10px] font-mono block">
+                        Created:{" "}
+                        {evalPlan.createdAt
+                          ? new Date(evalPlan.createdAt).toLocaleDateString(
+                              "en-US",
+                              { month: "short", day: "2-digit", year: "numeric" },
+                            )
+                          : evalPlan.date}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Subject badge + kebab */}
