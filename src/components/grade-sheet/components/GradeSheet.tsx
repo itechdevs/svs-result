@@ -79,7 +79,7 @@ function SchoolHeader({ result }: { result: StudentResult }) {
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "64px 1fr 64px",
+        gridTemplateColumns: "80px 1fr 80px",
         alignItems: "center",
         paddingBottom: "8px",
         marginBottom: "8px",
@@ -88,8 +88,8 @@ function SchoolHeader({ result }: { result: StudentResult }) {
       {/* Logo — left column */}
       <div
         style={{
-          width: "64px",
-          height: "64px",
+          width: "80px",
+          height: "80px",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -98,8 +98,8 @@ function SchoolHeader({ result }: { result: StudentResult }) {
         <img
           src={result.logo}
           alt={`${result.schoolName} logo`}
-          width={62}
-          height={62}
+          width={80}
+          height={80}
           style={{ objectFit: "contain" }}
           onError={(e) => {
             const el = e.currentTarget as HTMLImageElement;

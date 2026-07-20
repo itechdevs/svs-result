@@ -55,6 +55,12 @@ const subjectCell: React.CSSProperties = {
   textTransform: "uppercase",
 };
 
+const remarksCell: React.CSSProperties = {
+  ...cell,
+  textAlign: "center",
+  fontWeight: 800,
+};
+
 const headerCell: React.CSSProperties = {
   border: "0.5px solid #4a7aa8",
   padding: "6px 10px",
@@ -62,7 +68,7 @@ const headerCell: React.CSSProperties = {
   verticalAlign: "middle",
   textAlign: "center",
   fontSize: "9.5px",
-  fontWeight: 700,
+  fontWeight: 800,
   textTransform: "uppercase",
   letterSpacing: "0.5px",
   color: "#1f5e9d",
@@ -134,7 +140,7 @@ export default function GradeTable({ subjects }: GradeTableProps) {
               <td style={subjectCell}>{subject.name}</td>
               <td style={centerCell}>{formatNum(gp, 2)}</td>
               <td style={centerCell}>{grade}</td>
-              <td style={centerCell}>{remarks}</td>
+              <td style={remarksCell}>{remarks}</td>
             </tr>
           );
         })}

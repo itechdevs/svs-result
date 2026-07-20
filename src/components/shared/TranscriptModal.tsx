@@ -67,7 +67,7 @@ function toStudentResult(student: Student): StudentResult {
     schoolAddress: 'Balkhu, Kathmandu, Nepal',
     schoolPhone: '9802036680',
     schoolEmail: 'sanskarvschool@gmail.com',
-    logo: '/SVS LOGO NEW.png',
+    logo: 'https://storage.itechosnepal.com/console/api/v1/buckets/svs/objects/download?preview=true&prefix=school-general%2F3ceaa026-6b4d-4cb9-8660-e420746e46cc.jpg&version_id=null',
     studentName: student.name,
     rollNo: student.rollNo,
     grade: student.class,
@@ -151,11 +151,13 @@ export default function TranscriptModal({
           style={{
             flex: 1,
             overflowY: 'auto',
-            padding: '32px',
+            padding: '24px',
             background: '#e8edf2',
           }}
         >
-          <GradeSheet result={result} showPrintButton={false} />
+          <div style={{ transform: 'scale(1.1)', transformOrigin: 'top center' }}>
+            <GradeSheet result={result} showPrintButton={false} />
+          </div>
         </div>
       </div>
     </div>

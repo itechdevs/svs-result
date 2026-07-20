@@ -43,7 +43,7 @@ export function SchoolHeader({ data }: { data: PrePrimaryGradeSheetData }) {
       {/* Logo */}
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '4px' }}>
         <img
-          src="/SVS LOGO NEW.png"
+          src="https://storage.itechosnepal.com/console/api/v1/buckets/svs/objects/download?preview=true&prefix=school-general%2F3ceaa026-6b4d-4cb9-8660-e420746e46cc.jpg&version_id=null"
           alt="Sanskar Vidhyapith School Logo"
           width={70}
           height={70}
