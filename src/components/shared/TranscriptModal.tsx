@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { SCHOOL_CONFIG } from '@/constants';
 import { Student } from '@/types/academic';
 import GradeSheet from '@/components/grade-sheet/components/GradeSheet';
 import { StudentResult, Subject, DEFAULT_GRADE_INTERVALS } from '@/components/grade-sheet/types';
@@ -63,11 +64,11 @@ function toStudentResult(student: Student): StudentResult {
   const issueDate = formatToBSDateString(now);
 
   return {
-    schoolName: 'SANSKAR VIDHYAPITH SCHOOL',
-    schoolAddress: 'Balkhu, Kathmandu, Nepal',
-    schoolPhone: '9802036680',
-    schoolEmail: 'sanskarvschool@gmail.com',
-    logo: 'https://storage.itechosnepal.com/console/api/v1/buckets/svs/objects/download?preview=true&prefix=school-general%2F3ceaa026-6b4d-4cb9-8660-e420746e46cc.jpg&version_id=null',
+    schoolName: SCHOOL_CONFIG.name,
+    schoolAddress: SCHOOL_CONFIG.address,
+    schoolPhone: SCHOOL_CONFIG.phone,
+    schoolEmail: SCHOOL_CONFIG.emailAlt,
+    logo: SCHOOL_CONFIG.logo,
     studentName: student.name,
     rollNo: student.rollNo,
     grade: student.class,
@@ -128,7 +129,7 @@ export default function TranscriptModal({
               fontFamily: 'Arial, sans-serif',
             }}
           >
-            Sanskar Vidhyapith School — Grade Sheet
+            {SCHOOL_CONFIG.nameShort} — Grade Sheet
           </span>
           <button
             onClick={() => setShowTranscriptModal(null)}

@@ -11,6 +11,7 @@
 // ─────────────────────────────────────────────
 
 import React from "react";
+import { SCHOOL_CONFIG } from "@/constants";
 import { StudentResult, DEMO_STUDENT } from "../types";
 import BackgroundPattern from "./BackgroundPattern";
 import Watermark from "./Watermark";
@@ -67,7 +68,7 @@ function LogoSVG() {
         fontWeight="900"
         fill="#1f5e9d"
       >
-        SVS
+        {SCHOOL_CONFIG.abbrev}
       </text>
     </svg>
   );
