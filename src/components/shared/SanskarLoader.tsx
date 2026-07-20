@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { SCHOOL_CONFIG } from "@/constants";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -241,7 +242,7 @@ const FullpageLoader = ({
             color: "#2B6CB0",
           }}
         >
-          Sanskar Vidhyapith School
+          {SCHOOL_CONFIG.nameShort}
         </p>
 
         {/* Progress bar */}

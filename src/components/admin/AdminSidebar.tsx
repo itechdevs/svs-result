@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { SCHOOL_CONFIG } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import {
   LayoutGrid,
@@ -520,7 +521,7 @@ export function AdminSidebar() {
                 Admin Portal
               </p>
               <p className="text-[11px] font-semibold text-sidebar-foreground/60 whitespace-nowrap mt-0.5">
-                SVS Results
+                {SCHOOL_CONFIG.abbrev} Results
               </p>
             </div>
           )}

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { SCHOOL_CONFIG } from '@/constants';
 import GradeSheet from '@/components/grade-sheet/components/GradeSheet';
 import type { StudentResult, Subject } from '@/components/grade-sheet/types';
 import { DEFAULT_GRADE_INTERVALS } from '@/components/grade-sheet/types';
@@ -8,11 +9,11 @@ import { X, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const SCHOOL_INFO = {
-  schoolName: 'SANSKAR VIDHYAPITH SCHOOL',
-  schoolAddress: 'Balkhu, Kathmandu, Nepal',
-  schoolPhone: '9802036680',
-  schoolEmail: 'sanskarvschool@gmail.com',
-  logo: '/SVS LOGO NEW.png',
+  schoolName: SCHOOL_CONFIG.name,
+  schoolAddress: SCHOOL_CONFIG.address,
+  schoolPhone: SCHOOL_CONFIG.phone,
+  schoolEmail: SCHOOL_CONFIG.emailAlt,
+  logo: SCHOOL_CONFIG.logo,
   nepaliYear: '2082',
   englishYear: '2026',
 };
