@@ -45,9 +45,9 @@ export function SchoolHeader({ data }: { data: PrePrimaryGradeSheetData }) {
         <img
           src="https://storage.itechosnepal.com/console/api/v1/buckets/svs/objects/download?preview=true&prefix=school-general%2F3ceaa026-6b4d-4cb9-8660-e420746e46cc.jpg&version_id=null"
           alt="Sanskar Vidhyapith School Logo"
-          width={70}
-          height={70}
-          style={{ objectFit: 'contain' }}
+          width={80}
+          height={80}
+          style={{ objectFit: 'contain', mixBlendMode: 'multiply', opacity: 0.85 }}
         />
       </div>
 
@@ -68,7 +68,7 @@ export function SchoolHeader({ data }: { data: PrePrimaryGradeSheetData }) {
       {/* Address */}
       <div
         style={{
-          fontSize: '10px',
+          fontSize: '11px',
           color: accentColor,
           fontWeight: 500,
           marginTop: '2px',
@@ -80,7 +80,7 @@ export function SchoolHeader({ data }: { data: PrePrimaryGradeSheetData }) {
       {/* Email / Website */}
       <div
         style={{
-          fontSize: '9px',
+          fontSize: '10px',
           color: accentColor,
           fontWeight: 400,
           marginTop: '1px',
@@ -139,7 +139,7 @@ export function TitleBlock({ evaluationName }: { evaluationName: string }) {
 
 export function StudentInfoRow({ data }: { data: PrePrimaryGradeSheetData }) {
   const labelStyle: React.CSSProperties = {
-    fontSize: '10px',
+    fontSize: '11px',
     fontWeight: 700,
     color: textColor,
     fontFamily: FONT,
@@ -151,7 +151,7 @@ export function StudentInfoRow({ data }: { data: PrePrimaryGradeSheetData }) {
     borderBottom: `1px solid ${textColor}`,
     height: '16px',
     verticalAlign: 'bottom',
-    fontSize: '10px',
+    fontSize: '11px',
     fontFamily: FONT,
     paddingLeft: '4px',
     paddingRight: '4px',
@@ -165,7 +165,7 @@ export function StudentInfoRow({ data }: { data: PrePrimaryGradeSheetData }) {
     <div
       style={{
         width: '100%',
-        fontSize: '10px',
+        fontSize: '11px',
         fontWeight: 700,
         fontFamily: FONT,
         color: textColor,
@@ -232,7 +232,7 @@ export function DeclarationLine({ evaluationName }: { evaluationName: string }) 
   return (
     <div
       style={{
-        fontSize: '8.5px',
+        fontSize: '10px',
         fontWeight: 700,
         color: textColor,
         fontFamily: FONT,
@@ -257,7 +257,7 @@ export function SubjectGradeTable({ subjects }: { subjects: PrePrimarySubjectRes
     border: `1px solid ${borderColor}`,
     padding: '3px 4px',
     textAlign: 'center',
-    fontSize: '8px',
+    fontSize: '9px',
     fontWeight: 700,
     color: textColor,
     fontFamily: FONT,
@@ -268,7 +268,7 @@ export function SubjectGradeTable({ subjects }: { subjects: PrePrimarySubjectRes
   const tdStyle: React.CSSProperties = {
     border: `1px solid ${borderColor}`,
     padding: '2px 4px',
-    fontSize: '8.5px',
+    fontSize: '9.5px',
     color: textColor,
     fontFamily: FONT,
     height: '22px',
@@ -341,7 +341,7 @@ export function GradeScaleTable({ rows }: { rows: GradeScaleRow[] }) {
     border: `1px solid ${borderColor}`,
     padding: '3px 4px',
     textAlign: 'center',
-    fontSize: '7.5px',
+    fontSize: '9px',
     fontWeight: 700,
     color: textColor,
     fontFamily: FONT,
@@ -352,7 +352,7 @@ export function GradeScaleTable({ rows }: { rows: GradeScaleRow[] }) {
     border: `1px solid ${borderColor}`,
     padding: '2px 4px',
     textAlign: 'center',
-    fontSize: '8px',
+    fontSize: '9px',
     color: textColor,
     fontFamily: FONT,
     height: '20px',
@@ -383,7 +383,7 @@ export function GradeScaleTable({ rows }: { rows: GradeScaleRow[] }) {
               border: `1px solid ${borderColor}`,
               padding: '4px',
               textAlign: 'center',
-              fontSize: '9px',
+              fontSize: '10px',
               fontWeight: 700,
               fontFamily: FONT,
               color: textColor,
@@ -431,7 +431,7 @@ export function SummarySection({
   const displayRank = rank !== null && rank !== undefined ? String(rank) : '';
 
   const labelStyle: React.CSSProperties = {
-    fontSize: '9px',
+    fontSize: '10px',
     fontWeight: 700,
     color: textColor,
     fontFamily: FONT,
@@ -444,7 +444,7 @@ export function SummarySection({
     minWidth: '60px',
     height: '14px',
     verticalAlign: 'bottom',
-    fontSize: '9px',
+    fontSize: '10px',
     fontFamily: FONT,
     paddingLeft: '4px',
     fontWeight: 700,
@@ -462,7 +462,7 @@ export function SummarySection({
         marginBottom: '4px',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', fontSize: '9px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', fontSize: '10px' }}>
         <span style={labelStyle} >Grade Point Average (GPA) =</span>
         <span style={valueUnderline}>{displayGpa}</span>
       </div>
@@ -491,7 +491,7 @@ export function ObservationSection({ data }: { data: PrePrimaryGradeSheetData })
       <div style={{ marginBottom: '8px', fontFamily: FONT }}>
         <div
           style={{
-            fontSize: '9px',
+            fontSize: '10px',
             fontWeight: 900,
             color: textColor,
             marginBottom: '2px',
@@ -509,7 +509,7 @@ export function ObservationSection({ data }: { data: PrePrimaryGradeSheetData })
                   style={{
                     border: `1px solid ${borderColor}`,
                     padding: '3px 8px',
-                    fontSize: '9px',
+                    fontSize: '10px',
                     fontWeight: 700,
                     color: textColor,
                     width: '35%',
@@ -524,7 +524,7 @@ export function ObservationSection({ data }: { data: PrePrimaryGradeSheetData })
                   style={{
                     border: `1px solid ${borderColor}`,
                     padding: '3px 8px',
-                    fontSize: '9px',
+                    fontSize: '10px',
                     color: textColor,
                     height: '22px',
                     verticalAlign: 'middle',
@@ -558,7 +558,7 @@ export function ObservationSection({ data }: { data: PrePrimaryGradeSheetData })
       {/* Section header */}
       <div
         style={{
-          fontSize: '9px',
+          fontSize: '10px',
           fontWeight: 900,
           color: textColor,
           marginBottom: '2px',
@@ -584,7 +584,7 @@ export function ObservationSection({ data }: { data: PrePrimaryGradeSheetData })
                 style={{
                   border: `1px solid ${borderColor}`,
                   padding: '3px 8px',
-                  fontSize: '9px',
+                  fontSize: '10px',
                   fontWeight: 700,
                   color: textColor,
                   width: '35%',
@@ -599,7 +599,7 @@ export function ObservationSection({ data }: { data: PrePrimaryGradeSheetData })
                 style={{
                   border: `1px solid ${borderColor}`,
                   padding: '3px 8px',
-                  fontSize: '9px',
+                  fontSize: '10px',
                   color: textColor,
                   height: '22px',
                   verticalAlign: 'middle',
@@ -624,7 +624,7 @@ export function CustomRemarkSection({ data }: { data: PrePrimaryGradeSheetData }
     <div style={{ marginBottom: '8px', fontFamily: FONT }}>
       <div
         style={{
-          fontSize: '9px',
+          fontSize: '10px',
           fontWeight: 900,
           color: textColor,
           marginBottom: '2px',
@@ -638,7 +638,7 @@ export function CustomRemarkSection({ data }: { data: PrePrimaryGradeSheetData }
         style={{
           border: `1px solid ${borderColor}`,
           padding: '8px 10px',
-          fontSize: '9px',
+          fontSize: '10px',
           color: textColor,
           lineHeight: 1.5,
           minHeight: '30px',
@@ -666,7 +666,7 @@ export function SignatureBlock({ label }: { label: string }) {
         style={{
           borderTop: `1px solid ${borderColor}`,
           paddingTop: '3px',
-          fontSize: '9px',
+          fontSize: '10px',
           fontWeight: 700,
           color: textColor,
         }}
@@ -699,7 +699,7 @@ export function FooterSection({ data }: { data: PrePrimaryGradeSheetData }) {
       {/* Date of Issue */}
       <div
         style={{
-          fontSize: '9px',
+          fontSize: '10px',
           fontWeight: 700,
           color: textColor,
           display: 'flex',

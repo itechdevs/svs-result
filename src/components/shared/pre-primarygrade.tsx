@@ -497,7 +497,7 @@ export default function PrePrimaryGradeSheet({
                     }}
                 >
                     <img
-                        src="/SVS LOGO NEW.png"
+                        src="https://storage.itechosnepal.com/console/api/v1/buckets/svs/objects/download?preview=true&prefix=school-general%2F3ceaa026-6b4d-4cb9-8660-e420746e46cc.jpg&version_id=null"
                         alt=""
                         aria-hidden="true"
                         style={{

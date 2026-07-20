@@ -100,7 +100,7 @@ function SchoolHeader({ result }: { result: StudentResult }) {
           alt={`${result.schoolName} logo`}
           width={80}
           height={80}
-          style={{ objectFit: "contain" }}
+          style={{ objectFit: "contain", mixBlendMode: "multiply" }}
           onError={(e) => {
             const el = e.currentTarget as HTMLImageElement;
             el.style.display = "none";
