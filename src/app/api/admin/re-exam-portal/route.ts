@@ -56,9 +56,12 @@ export const POST = withHandler(
         : null;
       const passNum = Number(template.passMarks);
 
-      const hasFailed =
-        originalResult.isPassed === false ||
-        (obtainedNum !== null && obtainedNum < passNum);
+      const hasFailed = originalResult.status === "DRAFT"
+        ? originalResult.isAbsent ||
+          (obtainedNum !== null && obtainedNum < passNum) ||
+          obtainedNum === null
+        : originalResult.isPassed === false ||
+          (obtainedNum !== null && obtainedNum < passNum);
 
       if (!hasFailed) {
         return badRequest(
