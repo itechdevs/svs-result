@@ -2,6 +2,8 @@
 //  Grade Sheet — Shared Types
 // ─────────────────────────────────────────────
 
+import { SCHOOL_CONFIG } from '@/constants';
+
 export interface Subject {
   name: string
   creditHourTheory?: number
@@ -59,11 +61,11 @@ export const DEFAULT_GRADE_INTERVALS: GradeInterval[] = [
 
 /** Demo data — replace with real API/props in production */
 export const DEMO_STUDENT: StudentResult = {
-  schoolName:    'SANSKAR VIDHYAPITH SCHOOL',
-  schoolAddress: 'Balkhu, Kathmandu, Nepal',
-  schoolPhone:   '9802036680',
-  schoolEmail:   'sanskarvschool@gmail.com',
-  logo:          '/SVS LOGO NEW.png',
+  schoolName:    SCHOOL_CONFIG.name,
+  schoolAddress: SCHOOL_CONFIG.address,
+  schoolPhone:   SCHOOL_CONFIG.phone,
+  schoolEmail:   SCHOOL_CONFIG.emailAlt,
+  logo:          SCHOOL_CONFIG.logo,
   studentName:   'RAM BAHADUR SHRESTHA',
   rollNo:        '07',
   grade:         'GRADE VIII',

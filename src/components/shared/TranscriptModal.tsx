@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { SCHOOL_CONFIG } from "@/constants";
 import { Student } from "@/types/academic";
 import GradeSheet from "@/components/grade-sheet/components/GradeSheet";
 import {
@@ -72,11 +73,11 @@ function toStudentResult(student: Student): StudentResult {
   const issueDate = formatToBSDateString(now);
 
   return {
-    schoolName: "SANSKAR VIDHYAPITH SCHOOL",
-    schoolAddress: "Balkhu, Kathmandu, Nepal",
-    schoolPhone: "9802036680",
-    schoolEmail: "sanskarvschool@gmail.com",
-    logo: "https://dashboard.svs.edu.np/logo.png",
+    schoolName: SCHOOL_CONFIG.name,
+    schoolAddress: SCHOOL_CONFIG.address,
+    schoolPhone: SCHOOL_CONFIG.phone,
+    schoolEmail: SCHOOL_CONFIG.emailAlt,
+    logo: SCHOOL_CONFIG.logo,
     studentName: student.name,
     rollNo: student.rollNo,
     grade: student.class,
@@ -137,7 +138,7 @@ export default function TranscriptModal({
               fontFamily: "Arial, sans-serif",
             }}
           >
-            Sanskar Vidhyapith School — Grade Sheet
+            {SCHOOL_CONFIG.nameShort} — Grade Sheet
           </span>
           <button
             onClick={() => setShowTranscriptModal(null)}
@@ -160,11 +161,15 @@ export default function TranscriptModal({
           style={{
             flex: 1,
             overflowY: "auto",
-            padding: "32px",
+            padding: "24px",
             background: "#e8edf2",
           }}
         >
-          <GradeSheet result={result} showPrintButton={false} />
+          <div
+            style={{ transform: "scale(1.1)", transformOrigin: "top center" }}
+          >
+            <GradeSheet result={result} showPrintButton={false} />
+          </div>
         </div>
       </div>
     </div>

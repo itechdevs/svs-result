@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { SCHOOL_CONFIG } from '@/constants';
 import { Student } from '@/types/academic';
 import {
   Document,
@@ -60,9 +61,9 @@ export function GradeSheetPDF({
       <Page size="A4" style={pdfStyles.page}>
         <View style={pdfStyles.outerBorder}>
           <View style={pdfStyles.headerRow}>
-            <Text style={pdfStyles.schoolName}>Sanskar Vidhyapith School</Text>
-            <Text style={pdfStyles.subHeader}>Balkhu, Kathmandu</Text>
-            <Text style={pdfStyles.subHeader}>Phone: 9802036680 | Email: sanskarvschool@gmail.com</Text>
+            <Text style={pdfStyles.schoolName}>{SCHOOL_CONFIG.nameShort}</Text>
+            <Text style={pdfStyles.subHeader}>{SCHOOL_CONFIG.address}</Text>
+            <Text style={pdfStyles.subHeader}>Phone: {SCHOOL_CONFIG.phone} | Email: {SCHOOL_CONFIG.emailAlt}</Text>
           </View>
           <View style={pdfStyles.examTitle}>
             <Text style={pdfStyles.examLabel}>Final Examination</Text>

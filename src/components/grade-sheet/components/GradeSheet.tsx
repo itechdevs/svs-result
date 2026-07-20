@@ -11,6 +11,7 @@
 // ─────────────────────────────────────────────
 
 import React from "react";
+import { SCHOOL_CONFIG } from "@/constants";
 import { StudentResult, DEMO_STUDENT } from "../types";
 import BackgroundPattern from "./BackgroundPattern";
 import Watermark from "./Watermark";
@@ -67,7 +68,7 @@ function LogoSVG() {
         fontWeight="900"
         fill="#1f5e9d"
       >
-        SVS
+        {SCHOOL_CONFIG.abbrev}
       </text>
     </svg>
   );
@@ -79,7 +80,7 @@ function SchoolHeader({ result }: { result: StudentResult }) {
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "64px 1fr 64px",
+        gridTemplateColumns: "80px 1fr 80px",
         alignItems: "center",
         paddingBottom: "8px",
         marginBottom: "8px",
@@ -88,8 +89,8 @@ function SchoolHeader({ result }: { result: StudentResult }) {
       {/* Logo — left column */}
       <div
         style={{
-          width: "64px",
-          height: "64px",
+          width: "80px",
+          height: "80px",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -98,9 +99,9 @@ function SchoolHeader({ result }: { result: StudentResult }) {
         <img
           src={result.logo}
           alt={`${result.schoolName} logo`}
-          width={62}
-          height={62}
-          style={{ objectFit: "contain" }}
+          width={80}
+          height={80}
+          style={{ objectFit: "contain", mixBlendMode: "multiply" }}
           onError={(e) => {
             const el = e.currentTarget as HTMLImageElement;
             el.style.display = "none";

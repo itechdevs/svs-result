@@ -6,6 +6,7 @@ import { useTable } from '@/hooks/use-table';
 import { DataTable } from '@/components/shared/common/data-table';
 import { EvaluationPlan, Student } from '@/types/academic';
 import { cn } from '@/lib/utils';
+import { formatNum, formatPct } from '@/lib/format-num';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -106,14 +107,14 @@ export function TableStudentDetails({ evaluation, students, onUpdateMarks, onVie
         accessorKey: 'obtainedMarks',
         header: () => <div className="text-center text-foreground font-semibold">Total /{evaluation.fullMarks}</div>,
         cell: ({ row }) => (
-          <div className="text-center font-bold text-sm text-foreground">{row.original.obtainedMarks.toFixed(1)}</div>
+          <div className="text-center font-bold text-sm text-foreground">{formatNum(row.original.obtainedMarks, 2)}</div>
         ),
       },
       {
         accessorKey: 'percentage',
         header: () => <div className="text-center text-foreground font-semibold">Score %</div>,
         cell: ({ row }) => (
-          <div className="text-center font-semibold text-xs text-foreground">{row.original.percentage.toFixed(1)}%</div>
+          <div className="text-center font-semibold text-xs text-foreground">{formatPct(row.original.percentage, 2)}</div>
         ),
       },
       {
@@ -126,7 +127,7 @@ export function TableStudentDetails({ evaluation, students, onUpdateMarks, onVie
               ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300"
               : "bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-300"
           )}>
-            {row.original.percentage.toFixed(1)}%
+            {formatPct(row.original.percentage, 2)}
           </div>
         ),
       },

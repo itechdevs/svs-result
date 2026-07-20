@@ -63,3 +63,18 @@ export const RATE_LIMIT = {
   PUBLIC_API_REQUESTS: 60, // requests
   PUBLIC_API_WINDOW: 60, // seconds
 } as const;
+
+// ── School Configuration ──────────────────────────────────────
+// Change these values when deploying for a different school.
+export const SCHOOL_CONFIG = {
+  name: "SANSKAR VIDHYAPITH SCHOOL",
+  nameShort: "SANSKAR VIDHYAPITH SCHOOL",
+  abbrev: "SVS",
+  address: "Balkhu, Kathmandu, Nepal",
+  addressFull: "Balkhu, Kathmandu, Nepal",
+  phone: "9802036680",
+  email: "sanskarvschool@gmail.com",
+  emailAlt: "sanskarvschool@gmail.com",
+  website: "www.svskirtipur.edu.np",
+  logo: "https://dashboard.svs.edu.np/logo.png",
+} as const;

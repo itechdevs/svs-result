@@ -7,7 +7,7 @@ import { Loader2, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/shared/ui/button";
 import { Input } from "@/components/shared/ui/input";
-import { ROUTES } from "@/lib/constants";
+import { ROUTES, SCHOOL_CONFIG } from "@/lib/constants";
 
 // ─── Validation Schema ────────────────────────────────────────────────────────
 
@@ -150,8 +150,8 @@ function LoginForm() {
       <div className="px-8 pt-8 pb-6 text-center">
         <div className="flex justify-center mb-5">
           <img
-            src="https://storage.itechosnepal.com/svs/school-general/3ceaa026-6b4d-4cb9-8660-e420746e46cc.jpg"
-            alt="SVS School Logo"
+            src={SCHOOL_CONFIG.logo}
+            alt={`${SCHOOL_CONFIG.abbrev} School Logo`}
             className="h-16 w-auto object-contain"
           />
         </div>
