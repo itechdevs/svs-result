@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatNum } from "@/lib/format-num";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -287,7 +288,7 @@ export function PracticalMarksEntryTable({
                           <span className={cn(
                             totalExceedsMax && "text-red-600 dark:text-red-400"
                           )}>
-                            {row.totalMarks.toFixed(2)}
+                            {formatNum(row.totalMarks, 2)}
                           </span>
                         )}
                       </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { formatNum } from '@/lib/format-num';
 import { motion } from 'motion/react';
 import { CheckCircle } from 'lucide-react';
 import { EvaluationPlan, Student } from '@/types/academic';
@@ -233,7 +234,7 @@ export default function MarkEntryTab({
                 Score Percentage
               </p>
               <p className="text-2xl sm:text-3xl font-bold text-emerald-600 dark:text-emerald-400">
-                {studentPercentage.toFixed(2)} <span className="text-lg">/ 100</span>
+                {formatNum(studentPercentage, 2)} <span className="text-lg">/ 100</span>
               </p>
             </div>
             <div className="sm:border-l sm:border-border sm:pl-8 w-full sm:w-auto">

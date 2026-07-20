@@ -4,6 +4,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { FileSearch, Loader2, Save, Check, AlertCircle, FileDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatNum, formatPct } from '@/lib/format-num';
 import { useEvaluationTemplates, useStudentEvaluationResults } from '@/hooks/use-evaluations';
 import { useStudents } from '@/hooks/use-students';
 import { useAdminTeacherCompilations } from '@/hooks/use-teacher-compilations';
@@ -459,7 +460,7 @@ export default function ResultCompilationTab() {
             className="bg-card text-card-foreground rounded-xl border border-border shadow-sm p-5">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
               <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
-                Compiled Results ({compiledResults.length} students · {totalSubjectsInTemplates.length} subjects)
+                Compiled Results({compiledResults.length} students · {totalSubjectsInTemplates.length} subjects)
               </h3>
               <div className="flex flex-wrap items-center gap-2">
                 {selectedIds.size > 0 && (
@@ -505,11 +506,11 @@ export default function ResultCompilationTab() {
                         const sub = result.subjects[s.name];
                         return (
                           <TableCell key={s.id} className="border border-border px-3 py-2 text-center text-foreground">
-                            {sub ? <span className={cn('font-mono text-xs', !sub.isPassed && sub.subjectName && 'text-destructive')}>{sub.percentage.toFixed(1)}%</span> : '-'}
+                            {sub ? <span className={cn('font-mono text-xs', !sub.isPassed && sub.subjectName && 'text-destructive')}>{formatPct(sub.percentage, 2)}</span> : '-'}
                           </TableCell>
                         );
                       })}
-                      <TableCell className="border border-border px-3 py-2 text-center font-semibold text-foreground">{result.overallPercentage}%</TableCell>
+                      <TableCell className="border border-border px-3 py-2 text-center font-semibold text-foreground">{formatPct(result.overallPercentage, 2)}</TableCell>
                       <TableCell className="border border-border px-3 py-2 text-center font-semibold text-foreground">{result.overallGrade}</TableCell>
                       <TableCell className={cn('border border-border px-3 py-2 text-center font-bold',
                         result.result === 'Pass' ? 'text-emerald-600 dark:text-emerald-400' : result.result === 'Fail' ? 'text-destructive' : 'text-muted-foreground')}>

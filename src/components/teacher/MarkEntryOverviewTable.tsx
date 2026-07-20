@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
+import { formatNum, formatPct } from "@/lib/format-num";
 import { useProfile } from "@/hooks/use-profile";
 import {
   useEvaluationTemplates,
@@ -572,7 +573,7 @@ export default function MarkEntryOverviewTable() {
                           {/* ── Total ── */}
                           <td className="px-4 py-3 text-center font-bold text-sm text-[#002045] dark:text-white whitespace-nowrap">
                             {hasMarks
-                              ? `${Number(grade.obtainedMarks.toFixed(1))} / ${grade.fullMarks}`
+                              ? `${formatNum(grade.obtainedMarks, 2)} / ${grade.fullMarks}`
                               : "—"}
                           </td>
 
@@ -589,7 +590,7 @@ export default function MarkEntryOverviewTable() {
                                       : "bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-300",
                                 )}
                               >
-                                {grade.percentage.toFixed(2)}%
+                                {formatPct(grade.percentage, 2)}
                               </span>
                             ) : (
                               <span className="text-slate-400 text-xs">—</span>
@@ -839,11 +840,11 @@ export default function MarkEntryOverviewTable() {
                       <div className="flex justify-between items-end pt-3 border-t border-border/50">
                         <div className="flex flex-col gap-1">
                           <span className="text-[9px] font-extrabold text-muted-foreground uppercase">Obtained</span>
-                          <span className="font-bold text-xs text-foreground">{hasMarks ? grade.obtainedMarks : "—"}</span>
+                          <span className="font-bold text-xs text-foreground">{hasMarks ? formatNum(grade.obtainedMarks, 2) : "—"}</span>
                         </div>
                         <div className="flex flex-col gap-1">
                           <span className="text-[9px] font-extrabold text-muted-foreground uppercase">Percent</span>
-                          <span className="font-bold text-xs text-blue-500">{hasMarks ? `${grade.percentage.toFixed(2)}%` : "—"}</span>
+                          <span className="font-bold text-xs text-blue-500">{hasMarks ? formatPct(grade.percentage, 2) : "—"}</span>
                         </div>
                         <div className="flex flex-col gap-1 items-center">
                           <span className="text-[9px] font-extrabold text-muted-foreground uppercase">Result</span>

@@ -1,6 +1,7 @@
 // ─────────────────────────────────────────────
 //  GPASummary — Blue highlighted GPA + Rank strip
 // ─────────────────────────────────────────────
+import { formatNum } from '@/lib/format-num';
 
 interface GPASummaryProps {
   gpa: number
@@ -32,7 +33,7 @@ export default function GPASummary({ gpa, rank }: GPASummaryProps) {
             }}
           >
             Grade Point Average (GPA) ={' '}
-            <strong style={{ fontSize: '12px' }}>{gpa.toFixed(2)}</strong>
+            <strong style={{ fontSize: '12px' }}>{formatNum(gpa, 2)}</strong>
           </td>
           <td
             style={{

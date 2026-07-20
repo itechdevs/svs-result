@@ -15,6 +15,7 @@ import {
   ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatNum, formatPct } from "@/lib/format-num";
 import {
   useStudentEvaluationResults,
   useEvaluationTemplates,
@@ -431,6 +432,8 @@ export default function ExamResultCompilation({
       const subjects: Record<string, SubjectResult> = {};
       let totalObtainedAll = 0;
       let totalFullAll = 0;
+      let totalPercentage = 0;
+      let subjectCount = 0;
       let hasAnyMarks = false;
       let anyFailed = false;
 
@@ -469,12 +472,14 @@ export default function ExamResultCompilation({
         // percentage = obtained / full * 100 (raw, not weighted)
         const percentage =
           totalFull > 0
-            ? Number(((totalObtained / totalFull) * 100).toFixed(1))
+            ? (totalObtained / totalFull) * 100
             : 0;
         const grade = subjectHasMarks ? lookupGrade(percentage) : "N/A";
         const isPassed = subjectHasMarks && failedEvals === 0;
 
         if (subjectHasMarks) {
+          totalPercentage += percentage;
+          subjectCount++;
           totalObtainedAll += totalObtained;
           totalFullAll += totalFull;
         }
@@ -490,10 +495,10 @@ export default function ExamResultCompilation({
         };
       }
 
-      // Overall: percentage = sum(obtained) / sum(full) * 100
+      // Overall: percentage = average of subject percentages
       const overallPercentage =
-        totalFullAll > 0
-          ? Number(((totalObtainedAll / totalFullAll) * 100).toFixed(1))
+        subjectCount > 0
+          ? totalPercentage / subjectCount
           : 0;
 
       return {
@@ -1204,9 +1209,9 @@ export default function ExamResultCompilation({
                       className={cn(
                         "hover:bg-muted/20",
                         selectedIds.has(result.studentId) &&
-                          "bg-blue-50/40 dark:bg-blue-950/20",
+                        "bg-blue-50/40 dark:bg-blue-950/20",
                         result.hasReExam &&
-                          "bg-amber-50/60 dark:bg-amber-950/20",
+                        "bg-amber-50/60 dark:bg-amber-950/20",
                       )}
                     >
                       <TableCell className="border border-border px-3 py-2 text-center">
@@ -1238,11 +1243,11 @@ export default function ExamResultCompilation({
                                 className={cn(
                                   "font-mono text-xs",
                                   !sub.isPassed &&
-                                    sub.subjectName &&
-                                    "text-destructive",
+                                  sub.subjectName &&
+                                  "text-destructive",
                                 )}
                               >
-                                {sub.percentage.toFixed(1)}%
+                                {formatPct(sub.percentage, 2)}
                               </span>
                             ) : (
                               "-"
@@ -1251,7 +1256,7 @@ export default function ExamResultCompilation({
                         );
                       })}
                       <TableCell className="border border-border px-3 py-2 text-center font-semibold text-foreground">
-                        {result.overallPercentage.toFixed(1)}%
+                        {formatPct(result.overallPercentage, 2)}
                       </TableCell>
                       <TableCell className="border border-border px-3 py-2 text-center font-semibold text-foreground">
                         {result.overallGrade}
@@ -1279,13 +1284,13 @@ export default function ExamResultCompilation({
                             includeObservation
                               ? handleViewPrePrimaryGradeSheet(result)
                               : setShowTranscriptModal(
-                                  toStudentObj(
-                                    result,
-                                    gradeLevel,
-                                    students,
-                                    examName,
-                                  ),
-                                )
+                                toStudentObj(
+                                  result,
+                                  gradeLevel,
+                                  students,
+                                  examName,
+                                ),
+                              )
                           }
                           className="px-2.5 py-1 bg-primary hover:bg-primary/90 text-primary-foreground rounded text-[11px] font-bold cursor-pointer transition-colors"
                         >

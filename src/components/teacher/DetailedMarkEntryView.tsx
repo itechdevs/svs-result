@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, CheckCircle, AlertTriangle, Calendar, Save } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
+import { formatNum, formatPct } from '@/lib/format-num';
 import { formatToBSFullString } from '@/lib/bs-calendar';
 import { Student, EvaluationPlan, StudentOutcomeMark, OutcomeMark } from '@/types/academic';
 import { Button } from '@/components/ui/button';
@@ -146,7 +147,7 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
           )}>
             {status}
           </span>
-          <span className="font-bold text-sm text-foreground">{Number(grade.obtainedMarks.toFixed(1))} / {grade.fullMarks}</span>
+          <span className="font-bold text-sm text-foreground">{formatNum(grade.obtainedMarks, 2)} / {grade.fullMarks}</span>
           {!readOnly && (
             <button
               onClick={async () => {
@@ -406,13 +407,13 @@ export default function DetailedMarkEntryView({ student, evaluation, getStudentM
         <div className="flex justify-between items-center sm:block sm:pr-8">
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider sm:mb-1">Total</p>
           <p className="text-lg sm:text-2xl font-bold text-foreground">
-            {grade.obtainedMarks} <span className="text-sm sm:text-base text-muted-foreground">/ {grade.fullMarks}</span>
+            {formatNum(grade.obtainedMarks, 2)} <span className="text-sm sm:text-base text-muted-foreground">/ {grade.fullMarks}</span>
           </p>
         </div>
         <div className="flex justify-between items-center sm:block sm:px-8 border-t border-border pt-3 sm:border-t-0 sm:pt-0">
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider sm:mb-1">Percentage</p>
           <p className="text-lg sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
-            {grade.percentage.toFixed(2)}%
+            {formatPct(grade.percentage, 2)}
           </p>
         </div>
         <div className="flex justify-between items-center sm:block sm:px-8 border-t border-border pt-3 sm:border-t-0 sm:pt-0">
