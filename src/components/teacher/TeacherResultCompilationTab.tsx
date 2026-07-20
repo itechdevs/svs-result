@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { formatNum, formatPct } from '@/lib/format-num';
 import {
   useEvaluationTemplates,
   useStudentEvaluationResults,
@@ -858,7 +859,7 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
                         <React.Fragment key={g.planTitle}>
                           <td className="border border-border px-3 py-2 text-center font-mono font-bold text-foreground">
                             {pm?.obtained !== null && pm?.obtained !== undefined
-                              ? pm.obtained
+                              ? formatNum(pm.obtained, 2)
                               : '—'}
                           </td>
                           <td className="border border-border px-3 py-2 text-center font-mono text-muted-foreground">
@@ -881,10 +882,10 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
                       );
                     })}
                     <td className="border border-border px-3 py-2 text-center font-semibold text-foreground whitespace-nowrap">
-                      {result.totalObtained}/{result.totalFull}
+                      {formatNum(result.totalObtained, 2)}/{result.totalFull}
                     </td>
                     <td className="border border-border px-3 py-2 text-center text-foreground">
-                      {result.percentage.toFixed(1)}%
+                      {formatPct(result.percentage, 2)}
                     </td>
                     <td className="border border-border px-3 py-2 text-center font-semibold text-foreground">
                       {result.grade}

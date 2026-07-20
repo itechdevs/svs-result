@@ -6,6 +6,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Sparkles, Calendar, BookOpen, Layers, Award, Printer, CheckCircle, AlertTriangle, Eye, Loader2, ArrowRight, FileDown } from "lucide-react";
 import { toast } from "sonner";
+import { formatNum } from "@/lib/format-num";
 import { apiClient } from "@/lib/api-client";
 import { useAcademicYears } from "@/hooks/use-academic-config";
 import { useExams } from "@/hooks/use-exams";
@@ -570,7 +571,7 @@ function SecondaryResultCompilationPage() {
                           <>
                             <TableCell className="text-xs font-semibold" colSpan={5}>
                               <span className="text-muted-foreground">Overall — </span>
-                              <span className="text-primary font-bold">GPA: {Number(result.gpa).toFixed(2)}</span>
+                              <span className="text-primary font-bold">GPA: {formatNum(Number(result.gpa), 2)}</span>
                               <span className="text-muted-foreground mx-1">|</span>
                               <span className={result.ngSubjects > 0 ? 'text-red-500 font-semibold' : 'text-emerald-500 font-semibold'}>
                                 {result.ngSubjects > 0 ? `${result.ngSubjects} NG` : 'No NG'}
@@ -697,7 +698,7 @@ function SecondaryResultCompilationPage() {
                           <>
                             <TableCell className="text-xs font-semibold" colSpan={5}>
                               <span className="text-muted-foreground">Overall — </span>
-                              <span className="text-primary font-bold">GPA: {Number(result.gpa).toFixed(2)}</span>
+                              <span className="text-primary font-bold">GPA: {formatNum(Number(result.gpa), 2)}</span>
                               <span className="text-muted-foreground mx-1">|</span>
                               <span className={result.ngSubjects > 0 ? 'text-red-500 font-semibold' : 'text-emerald-500 font-semibold'}>
                                 {result.ngSubjects > 0 ? `${result.ngSubjects} NG` : 'No NG'}

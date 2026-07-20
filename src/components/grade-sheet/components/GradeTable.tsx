@@ -4,6 +4,8 @@
 //  All grade values are calculated dynamically from the grading intervals.
 // ─────────────────────────────────────────────
 
+import React from 'react';
+import { formatNum } from '@/lib/format-num';
 import { Subject, DEFAULT_GRADE_INTERVALS } from "../types";
 
 interface GradeTableProps {
@@ -130,7 +132,7 @@ export default function GradeTable({ subjects }: GradeTableProps) {
           return (
             <tr key={subject.name} style={{ background: evenBg }}>
               <td style={subjectCell}>{subject.name}</td>
-              <td style={centerCell}>{gp.toFixed(1)}</td>
+              <td style={centerCell}>{formatNum(gp, 2)}</td>
               <td style={centerCell}>{grade}</td>
               <td style={centerCell}>{remarks}</td>
             </tr>

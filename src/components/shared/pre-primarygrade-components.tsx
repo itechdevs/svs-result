@@ -6,6 +6,7 @@
  */
 
 import React from 'react';
+import { formatNum } from '@/lib/format-num';
 import type {
   PrePrimaryGradeSheetData,
   PrePrimarySubjectResult,
@@ -318,7 +319,7 @@ export function SubjectGradeTable({ subjects }: { subjects: PrePrimarySubjectRes
               </td>
               <td style={{ ...tdStyle, textAlign: 'center' }}>{subject.grade}</td>
               <td style={{ ...tdStyle, textAlign: 'center' }}>
-                {subject.gradePoint != null ? subject.gradePoint.toFixed(1) : ''}
+                {subject.gradePoint != null ? formatNum(subject.gradePoint, 2) : ''}
               </td>
               <td style={{ ...tdStyle, textAlign: 'left', paddingLeft: '4px' }}>
                 {subject.remarks || ''}
@@ -426,7 +427,7 @@ export function SummarySection({
   rank: number | null;
   attendance?: string;
 }) {
-  const displayGpa = gpa !== null && gpa !== undefined ? gpa.toFixed(2) : '';
+  const displayGpa = gpa !== null && gpa !== undefined ? formatNum(gpa, 2) : '';
   const displayRank = rank !== null && rank !== undefined ? String(rank) : '';
 
   const labelStyle: React.CSSProperties = {

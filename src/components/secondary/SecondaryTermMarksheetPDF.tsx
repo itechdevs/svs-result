@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { formatNum } from '@/lib/format-num';
 import {
   Document,
   Page,
@@ -463,12 +464,12 @@ export function SecondaryTermMarksheetPDF({ data }: { data: SecondaryTermMarkshe
                   <Text style={[styles.td, styles.colSubject, { fontFamily: 'Helvetica-Bold' }]}>
                     {subject.subject.toUpperCase()}
                   </Text>
-                  <Text style={[styles.td, styles.colCH]}>{subject.creditHours.toFixed(1)}</Text>
+                  <Text style={[styles.td, styles.colCH]}>{formatNum(subject.creditHours, 2)}</Text>
                   <Text style={[styles.td, styles.colGrade, { fontFamily: 'Helvetica-Bold' }]}>
                     {subject.grade}
                   </Text>
                   <Text style={[styles.td, styles.colGP, { fontFamily: 'Helvetica-Bold' }]}>
-                    {subject.gradePoint > 0 ? subject.gradePoint.toFixed(2) : '\u2013'}
+                    {subject.gradePoint > 0 ? formatNum(subject.gradePoint, 2) : '\u2013'}
                   </Text>
                   <Text style={[styles.td, styles.colRemarks, {
                     borderRight: 0,
@@ -482,7 +483,7 @@ export function SecondaryTermMarksheetPDF({ data }: { data: SecondaryTermMarkshe
 
             {/* GPA Strip */}
             <View style={styles.gpaStrip}>
-              <Text style={styles.gpaLabel}>Grade Point Average (GPA) = {data.gpa.toFixed(2)}</Text>
+              <Text style={styles.gpaLabel}>Grade Point Average (GPA) = {formatNum(data.gpa, 2)}</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <Text style={styles.gpaRightValue}>Rank = 1</Text>
               </View>

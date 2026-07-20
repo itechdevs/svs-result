@@ -2,6 +2,7 @@
 
 import React, { useCallback } from 'react';
 import { formatToBSDateString } from '@/lib/bs-calendar';
+import { formatNum } from '@/lib/format-num';
 import {
     FONT,
     accentColor,
@@ -218,7 +219,7 @@ export function buildPrePrimaryData(params: {
                     sn: idx + 1,
                     interval: `${Number(gs.minPercent)} \u2013 ${Number(gs.maxPercent)}`,
                     grade: gs.grade,
-                    gradePoint: gs.gradePoint != null ? gs.gradePoint.toFixed(1) : '\u2013',
+                    gradePoint: gs.gradePoint != null ? formatNum(gs.gradePoint, 2) : '\u2013',
                     description: gs.description || '',
                 }))
                 .sort((a, b) => a.sn - b.sn)

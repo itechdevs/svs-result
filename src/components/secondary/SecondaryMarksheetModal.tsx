@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { formatNum } from '@/lib/format-num';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import {
@@ -158,7 +159,7 @@ export function SecondaryMarksheetModal({ marksheetId, open, onClose }: Secondar
                 <div className="pt-3 border-t border-border mt-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Grade Point Average:</span>
-                    <span className="font-bold text-2xl text-primary">{marksheetData.gpa.toFixed(2)}</span>
+                    <span className="font-bold text-2xl text-primary">{formatNum(marksheetData.gpa, 2)}</span>
                   </div>
                   <div className="flex items-center justify-between mt-2">
                     <span className="text-sm text-muted-foreground">Status:</span>

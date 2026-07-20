@@ -6,6 +6,7 @@ import { ArrowLeft, CheckCircle, Calendar, Save } from "lucide-react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { formatToBSFullString } from "@/lib/bs-calendar";
+import { formatNum } from "@/lib/format-num";
 import { useStudentEvaluationResults } from "@/hooks/use-evaluations";
 import { useReExamAssessment } from "@/hooks/use-re-exams";
 import { calcFullMarks } from "@/components/teacher/DetailedMarkEntryView";
@@ -357,7 +358,7 @@ export default function ReExamDetailedView({ student, evaluation, backHref = "ad
       <div className="bg-card text-card-foreground rounded-xl border border-border p-3 sm:p-5 flex items-center gap-3 sm:gap-8 shadow-sm overflow-x-auto">
         <div className="shrink-0">
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Total Obtained</p>
-          <p className="text-lg sm:text-2xl font-bold text-foreground whitespace-nowrap">{obtained} <span className="text-sm sm:text-base text-muted-foreground">/ {fullTotal}</span></p>
+          <p className="text-lg sm:text-2xl font-bold text-foreground whitespace-nowrap">{formatNum(obtained, 2)} <span className="text-sm sm:text-base text-muted-foreground">/ {fullTotal}</span></p>
         </div>
         <div className="border-l border-border pl-3 sm:pl-8 shrink-0">
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Final Result</p>
