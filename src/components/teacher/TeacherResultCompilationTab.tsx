@@ -55,7 +55,7 @@ interface CompiledStudentResult {
   studentId: string;
   rollNo: string;
   studentName: string;
-  planMarks: Record<string, { obtained: number | null; full: number; passed: boolean | null }>;
+  planMarks: Record<string, { obtained: number | null; full: number; passed: boolean | null; percentage: number | null }>;
   totalObtained: number;
   totalFull: number;
   percentage: number;
@@ -331,6 +331,8 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
       let hasAnyMarks = false;
       let hasFailed = false;
       let hasReExam = false;
+      let sumOfPercentages = 0;
+      let validPlanCount = 0;
 
       for (const group of selectedGroups) {
         let groupObtained = 0;
@@ -349,10 +351,15 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
           }
         }
 
+        const planPct = groupHasMarks && group.totalFullMarks > 0
+          ? (groupObtained / group.totalFullMarks) * 100
+          : null;
+
         planMarks[group.planTitle] = {
           obtained: groupHasMarks ? groupObtained : null,
           full: group.totalFullMarks,
           passed: groupHasMarks ? !groupFailed : null,
+          percentage: planPct,
         };
 
         totalFull += groupFull;
@@ -360,10 +367,14 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
           hasAnyMarks = true;
           totalObtained += groupObtained;
           if (groupFailed) hasFailed = true;
+          
+          const planPercentage = group.totalFullMarks > 0 ? (groupObtained / group.totalFullMarks) * 100 : 0;
+          sumOfPercentages += planPercentage;
+          validPlanCount++;
         }
       }
 
-      const percentage = totalFull > 0 ? (totalObtained / totalFull) * 100 : 0;
+      const percentage = validPlanCount > 0 ? sumOfPercentages / validPlanCount : 0;
 
       let grade = 'N/A';
       if (hasAnyMarks) {
@@ -791,22 +802,14 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
                       colSpan={3}
                     >
                       {g.planTitle}
-                      <span className="ml-1 text-[9px] font-normal text-muted-foreground">
-                        /{g.totalFullMarks}
-                      </span>
                     </th>
                   ))}
+                  {/* No Total column header */}
                   <th
                     className="border border-border px-3 py-2 text-center font-bold text-foreground text-[11px]"
                     rowSpan={2}
                   >
-                    Total
-                  </th>
-                  <th
-                    className="border border-border px-3 py-2 text-center font-bold text-foreground text-[11px]"
-                    rowSpan={2}
-                  >
-                    %
+                    Avg %
                   </th>
                   <th
                     className="border border-border px-3 py-2 text-center font-bold text-foreground text-[11px]"
@@ -838,7 +841,7 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
                         Full
                       </th>
                       <th className="border border-border px-3 py-1.5 text-center text-[9px] font-bold text-muted-foreground uppercase">
-                        Status
+                        %
                       </th>
                     </React.Fragment>
                   ))}
@@ -865,26 +868,15 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
                           <td className="border border-border px-3 py-2 text-center font-mono text-muted-foreground">
                             {pm?.full}
                           </td>
-                          <td className="border border-border px-3 py-2 text-center">
-                            {pm?.passed === null ? (
-                              <span className="text-muted-foreground text-[10px]">—</span>
-                            ) : pm?.passed ? (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300">
-                                Pass
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300">
-                                Fail
-                              </span>
-                            )}
+                          <td className="border border-border px-3 py-2 text-center font-mono text-foreground">
+                            {pm?.percentage !== null && pm?.percentage !== undefined
+                              ? formatPct(pm.percentage, 2)
+                              : '—'}
                           </td>
                         </React.Fragment>
                       );
                     })}
-                    <td className="border border-border px-3 py-2 text-center font-semibold text-foreground whitespace-nowrap">
-                      {formatNum(result.totalObtained, 2)}/{result.totalFull}
-                    </td>
-                    <td className="border border-border px-3 py-2 text-center text-foreground">
+                    <td className="border border-border px-3 py-2 text-center text-foreground font-semibold">
                       {formatPct(result.percentage, 2)}
                     </td>
                     <td className="border border-border px-3 py-2 text-center font-semibold text-foreground">
