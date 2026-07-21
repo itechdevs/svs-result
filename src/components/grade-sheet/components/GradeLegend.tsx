@@ -120,7 +120,7 @@ export default function GradeLegend({
         >
           3.&nbsp;
           <span>
-            Achieved Percentage of each subjects =
+            Achieved Percentage =
             <span
               style={{
                 display: "inline-flex",

@@ -429,7 +429,10 @@ export default function ExamResultCompilation({
   const lookupGrade = useCallback(
     (percent: number): string => {
       if (gradeScales.length > 0) {
-        const scale = gradeScales.find(
+        const sorted = [...gradeScales].sort(
+          (a, b) => Number(b.minPercent) - Number(a.minPercent),
+        );
+        const scale = sorted.find(
           (s) =>
             percent >= Number(s.minPercent) && percent <= Number(s.maxPercent),
         );
