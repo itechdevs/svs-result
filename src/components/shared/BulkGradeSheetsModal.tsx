@@ -70,6 +70,7 @@ function toStudentResult(student: Student): StudentResult {
     schoolAddress: SCHOOL_CONFIG.address,
     schoolPhone: SCHOOL_CONFIG.phone,
     schoolEmail: SCHOOL_CONFIG.emailAlt,
+    schoolWebsite: SCHOOL_CONFIG.website,
     logo: SCHOOL_CONFIG.logo,
     studentName: student.name,
     rollNo: student.rollNo,

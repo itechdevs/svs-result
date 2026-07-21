@@ -152,8 +152,8 @@ function SchoolHeader({ result }: { result: StudentResult }) {
             marginTop: "1px",
           }}
         >
-          Phone: {result.schoolPhone}&nbsp;&nbsp;|&nbsp;&nbsp;Email:{" "}
-          {result.schoolEmail}
+          Email: {result.schoolEmail}
+          {result.schoolWebsite ? `  |  Website: ${result.schoolWebsite}` : ""}
         </div>
       </div>
 
