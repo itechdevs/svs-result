@@ -156,6 +156,10 @@ export default function CreateEvaluationTab({
                 toast.error('Please enter a Unit Title');
                 return;
               }
+              if (!selectedExamId) {
+                toast.error('Please select an Exam/Term');
+                return;
+              }
               if (newOutcomes.length === 0) {
                 toast.error('Please add at least one task type');
                 return;
@@ -254,36 +258,41 @@ export default function CreateEvaluationTab({
               </div>
             )}
 
-            {/* Exam/Term — only visible after an academic year is chosen (or if no year selector) */}
-            {exams.length > 0 && (
-              <div>
-                <label className="text-[10px] font-extrabold text-muted-foreground uppercase block mb-1">
-                  Exam/Term
-                </label>
-                <select
-                  value={selectedExamId}
-                  onChange={e => setSelectedExamId?.(e.target.value)}
-                  className="w-full text-xs border border-input bg-background px-3 py-2 rounded-md"
-                >
-                  <option value="">-- Select Exam/Term --</option>
-                  {exams.map((exam) => (
-                    <option key={exam.id} value={exam.id}>
-                      {exam.name}
-                    </option>
-                  ))}
-                </select>
+            {/* Exam/Term — always shown, compulsory */}
+            <div>
+              <label className="text-[10px] font-extrabold text-muted-foreground uppercase block mb-1">
+                Exam/Term <span className="text-destructive">*</span>
+              </label>
+              <select
+                value={selectedExamId}
+                onChange={e => setSelectedExamId?.(e.target.value)}
+                className={`w-full text-xs border border-input bg-background px-3 py-2 rounded-md ${
+                  !selectedExamId ? 'border-destructive/50' : ''
+                }`}
+              >
+                <option value="">-- Select Exam/Term --</option>
+                {exams.map((exam) => (
+                  <option key={exam.id} value={exam.id}>
+                    {exam.name}
+                  </option>
+                ))}
+              </select>
+              {!selectedAcademicYearId && (
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Select a fiscal year first, then choose an exam/term.
+                </p>
+              )}
+              {selectedAcademicYearId && exams.length === 0 && (
+                <p className="text-[10px] text-destructive mt-1">
+                  No exams available for this fiscal year. Ask an admin to create one first.
+                </p>
+              )}
+              {exams.length > 0 && (
                 <p className="text-[10px] text-muted-foreground mt-1">
                   Select which exam/term this evaluation belongs to (e.g., First Term, Second Term)
                 </p>
-              </div>
-            )}
-
-            {/* Show a hint when a year is selected but no exams exist for it */}
-            {academicYears && academicYears.length > 0 && selectedAcademicYearId && exams.length === 0 && (
-              <p className="text-[10px] text-muted-foreground">
-                No exam plans found for the selected fiscal year.
-              </p>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>
