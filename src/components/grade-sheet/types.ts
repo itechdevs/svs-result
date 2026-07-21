@@ -23,6 +23,7 @@ export interface StudentResult {
   schoolAddress: string
   schoolPhone: string
   schoolEmail: string
+  schoolWebsite?: string
   /** Path or URL to school logo image */
   logo: string
   studentName: string
@@ -65,6 +66,7 @@ export const DEMO_STUDENT: StudentResult = {
   schoolAddress: SCHOOL_CONFIG.address,
   schoolPhone:   SCHOOL_CONFIG.phone,
   schoolEmail:   SCHOOL_CONFIG.emailAlt,
+  schoolWebsite: SCHOOL_CONFIG.website,
   logo:          SCHOOL_CONFIG.logo,
   studentName:   'RAM BAHADUR SHRESTHA',
   rollNo:        '07',

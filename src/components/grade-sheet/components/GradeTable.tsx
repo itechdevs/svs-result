@@ -51,7 +51,7 @@ const subjectCell: React.CSSProperties = {
   textAlign: "left",
   paddingLeft: "8px",
   fontWeight: 700,
-  fontSize: "9.5px",
+  fontSize: "11.5px",
   textTransform: "uppercase",
 };
 
@@ -67,7 +67,7 @@ const headerCell: React.CSSProperties = {
   height: "34px",
   verticalAlign: "middle",
   textAlign: "center",
-  fontSize: "9.5px",
+  fontSize: "11.5px",
   fontWeight: 800,
   textTransform: "uppercase",
   letterSpacing: "0.5px",
@@ -77,13 +77,14 @@ const headerCell: React.CSSProperties = {
 };
 
 export default function GradeTable({ subjects }: GradeTableProps) {
+  const sorted = [...subjects].sort((a, b) => a.name.localeCompare(b.name));
   return (
     <table
       style={{
         width: "100%",
         tableLayout: "fixed",
         borderCollapse: "collapse",
-        fontSize: "10px",
+        fontSize: "12px",
         marginBottom: "0",
         fontFamily: "Arial, sans-serif",
       }}
@@ -116,7 +117,7 @@ export default function GradeTable({ subjects }: GradeTableProps) {
       </thead>
 
       <tbody>
-        {subjects.map((subject, idx) => {
+        {sorted.map((subject, idx) => {
           const evenBg = idx % 2 === 0 ? "#ffffff" : "#f8fbff";
 
           let grade = subject.finalGrade;

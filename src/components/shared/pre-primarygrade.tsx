@@ -57,7 +57,7 @@ function BackgroundPattern({ schoolName }: { schoolName: string }) {
             style={{
               whiteSpace: "nowrap",
               opacity: 0.045,
-              fontSize: "10px",
+              fontSize: "12px",
               fontFamily: FONT,
               color: accentColor,
               letterSpacing: "2px",
@@ -559,7 +559,7 @@ export default function PrePrimaryGradeSheet({
               background: accentColor,
               color: headingText,
               border: "none",
-              fontSize: "13px",
+              fontSize: "14px",
               fontWeight: 700,
               cursor: "pointer",
               fontFamily: FONT,

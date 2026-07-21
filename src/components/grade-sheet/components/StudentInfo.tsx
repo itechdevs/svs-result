@@ -26,7 +26,7 @@ export default function StudentInfo({
   const labelStyle: React.CSSProperties = {
     whiteSpace: 'nowrap',
     fontWeight: 600,
-    fontSize: '10px',
+    fontSize: '13px',
   };
 
   const underlineBase: React.CSSProperties = {
@@ -34,7 +34,7 @@ export default function StudentInfo({
     padding: '0 4px',
     fontWeight: 700,
     whiteSpace: 'nowrap',
-    fontSize: '10px',
+    fontSize: '13px',
     textAlign: 'center',
   };
 
@@ -42,7 +42,7 @@ export default function StudentInfo({
     <div
       style={{
         width: '100%',
-        fontSize: '10px',
+        fontSize: '14px',
         fontWeight: 700,
         fontFamily: '"Arial", sans-serif',
         color: '#1f5e9d',

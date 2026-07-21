@@ -73,8 +73,8 @@ export const SCHOOL_CONFIG = {
   address: "Balkhu, Kathmandu, Nepal",
   addressFull: "Balkhu, Kathmandu, Nepal",
   phone: "9802036680",
-  email: "sanskarvschool@gmail.com",
-  emailAlt: "sanskarvschool@gmail.com",
-  website: "www.svskirtipur.edu.np",
+  email: "sanskarvidhyapith@gmail.com",
+  emailAlt: "sanskarvidhyapith@gmail.com",
+  website: "www.svs.edu.np",
   logo: "https://dashboard.svs.edu.np/logo.png",
 } as const;

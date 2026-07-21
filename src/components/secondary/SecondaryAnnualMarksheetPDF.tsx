@@ -584,7 +584,7 @@ export function SecondaryAnnualMarksheetPDF({
                 </Text>
               </View>
 
-              {data.subjectResults.map((subject, index) => (
+              {[...data.subjectResults].sort((a, b) => a.subject.localeCompare(b.subject)).map((subject, index) => (
                 <View
                   key={index}
                   style={index % 2 === 0 ? styles.tableRow : styles.tableRowAlt}

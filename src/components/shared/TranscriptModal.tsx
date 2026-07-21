@@ -77,6 +77,7 @@ function toStudentResult(student: Student): StudentResult {
     schoolAddress: SCHOOL_CONFIG.address,
     schoolPhone: SCHOOL_CONFIG.phone,
     schoolEmail: SCHOOL_CONFIG.emailAlt,
+    schoolWebsite: SCHOOL_CONFIG.website,
     logo: SCHOOL_CONFIG.logo,
     studentName: student.name,
     rollNo: student.rollNo,
@@ -130,7 +131,7 @@ export default function TranscriptModal({
         >
           <span
             style={{
-              fontSize: "11px",
+              fontSize: "13px",
               fontWeight: 700,
               color: "#64748b",
               textTransform: "uppercase",
@@ -147,7 +148,7 @@ export default function TranscriptModal({
               background: "transparent",
               color: "#64748b",
               border: "1px solid #e2e8f0",
-              fontSize: "11px",
+              fontSize: "13px",
               fontWeight: 700,
               cursor: "pointer",
               fontFamily: "Arial, sans-serif",
