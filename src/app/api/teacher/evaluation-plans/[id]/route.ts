@@ -24,56 +24,60 @@ export const PATCH = withHandler(
       return forbidden("You are not assigned to this subject");
     }
 
-    // ── When fullMarks or passMarks change, clean up existing marks ──────────
+    // ── When editing, reset submitted results so teacher can re-enter marks ─
     const newFullMarks = body.fullMarks !== undefined ? body.fullMarks : Number(existing.fullMarks);
     const newPassMarks = body.passMarks !== undefined ? body.passMarks : Number(existing.passMarks);
     const oldFullMarks = Number(existing.fullMarks);
-    const fullMarksChanged = body.fullMarks !== undefined && newFullMarks !== oldFullMarks;
+    const fullMarksDecreased = body.fullMarks !== undefined && newFullMarks < oldFullMarks;
     const passMarksChanged = body.passMarks !== undefined && newPassMarks !== Number(existing.passMarks);
 
-    // Needs cleanup when: fullMarks decreased OR passMarks changed
-    const needsCleanup = (fullMarksChanged && newFullMarks < oldFullMarks) || passMarksChanged;
     let resetCount = 0;
 
-    if (needsCleanup) {
-      const existingResults = await prisma.studentEvaluationResult.findMany({
-        where: {
-          evaluationTemplateId: params.id,
-          deletedAt: null,
-        },
-      });
+    // Find existing results and reset non-DRAFT ones to DRAFT on any edit
+    const existingResults = await prisma.studentEvaluationResult.findMany({
+      where: {
+        evaluationTemplateId: params.id,
+        deletedAt: null,
+      },
+    });
 
-      if (existingResults.length > 0) {
-        const updates = existingResults.map((result) => {
-          // Cap marksObtained at new fullMarks if they exceed it
-          const cappedMarks =
-            result.isAbsent || result.marksObtained === null
-              ? result.marksObtained
-              : fullMarksChanged && Number(result.marksObtained) > newFullMarks
-                ? new Decimal(newFullMarks)
-                : result.marksObtained;
+    const hasNonDraftResults = existingResults.some(r => r.status !== "DRAFT");
 
-          // Recalculate isPassed with new passMarks
-          const isPassed = result.isAbsent
+    if (hasNonDraftResults) {
+      const updates = existingResults.map((result) => {
+        // Cap marksObtained if fullMarks decreased and marks exceed the new max
+        const wasCapped =
+          !result.isAbsent &&
+          result.marksObtained !== null &&
+          fullMarksDecreased &&
+          Number(result.marksObtained) > newFullMarks;
+
+        const cappedMarks = wasCapped ? new Decimal(newFullMarks) : result.marksObtained;
+
+        // Recalculate isPassed if passMarks changed or marks were capped
+        const shouldRecalcPassed = passMarksChanged || wasCapped;
+
+        const isPassed = shouldRecalcPassed
+          ? result.isAbsent
             ? false
             : cappedMarks !== null
               ? new Decimal(Number(cappedMarks)) >= new Decimal(newPassMarks)
-              : false;
+              : false
+          : result.isPassed;
 
-          return prisma.studentEvaluationResult.update({
-            where: { id: result.id },
-            data: {
-              marksObtained: cappedMarks,
-              isPassed,
-              status: "DRAFT",
-              submittedAt: null,
-            },
-          });
+        return prisma.studentEvaluationResult.update({
+          where: { id: result.id },
+          data: {
+            marksObtained: cappedMarks,
+            isPassed,
+            status: "DRAFT",
+            submittedAt: null,
+          },
         });
+      });
 
-        await prisma.$transaction(updates);
-        resetCount = existingResults.length;
-      }
+      await prisma.$transaction(updates);
+      resetCount = existingResults.length;
     }
 
     // ── Update the template ─────────────────────────────────────────────────
@@ -96,7 +100,7 @@ export const PATCH = withHandler(
     });
 
     const message = resetCount > 0
-      ? `Evaluation updated. ${resetCount} student mark(s) were reset to DRAFT due to full/pass marks changes. Please review and re-submit.`
+      ? `Evaluation updated. ${resetCount} student mark(s) were returned to DRAFT. Please review marks and re-submit.`
       : "Evaluation updated";
 
     return ok(updated, message);
