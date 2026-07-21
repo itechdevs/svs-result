@@ -451,7 +451,10 @@ function getGradeFromScale(
     gradePoint?: number | null;
   }>,
 ): { grade: string; gradePoint: number | null } {
-  for (const s of scales) {
+  const sorted = [...scales].sort(
+    (a, b) => Number(b.minPercent) - Number(a.minPercent),
+  );
+  for (const s of sorted) {
     if (
       percentage >= Number(s.minPercent) &&
       percentage <= Number(s.maxPercent)
