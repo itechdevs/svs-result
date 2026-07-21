@@ -77,6 +77,7 @@ const headerCell: React.CSSProperties = {
 };
 
 export default function GradeTable({ subjects }: GradeTableProps) {
+  const sorted = [...subjects].sort((a, b) => a.name.localeCompare(b.name));
   return (
     <table
       style={{
@@ -116,7 +117,7 @@ export default function GradeTable({ subjects }: GradeTableProps) {
       </thead>
 
       <tbody>
-        {subjects.map((subject, idx) => {
+        {sorted.map((subject, idx) => {
           const evenBg = idx % 2 === 0 ? "#ffffff" : "#f8fbff";
 
           let grade = subject.finalGrade;

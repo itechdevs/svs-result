@@ -304,6 +304,9 @@ export function SubjectGradeTable({
 }: {
   subjects: PrePrimarySubjectResult[];
 }) {
+  const sorted = [...subjects].sort((a, b) =>
+    a.subjectName.localeCompare(b.subjectName),
+  );
   const thStyle: React.CSSProperties = {
     border: `1px solid ${borderColor}`,
     padding: "3px 4px",
@@ -383,7 +386,7 @@ export function SubjectGradeTable({
             </td>
           </tr>
         ) : (
-          subjects.map((subject, idx) => (
+          sorted.map((subject, idx) => (
             <tr key={subject.subjectName}>
               <td style={{ ...tdStyle, textAlign: "center", fontWeight: 600 }}>
                 {idx + 1}.
