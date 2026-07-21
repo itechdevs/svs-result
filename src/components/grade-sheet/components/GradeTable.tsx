@@ -51,7 +51,7 @@ const subjectCell: React.CSSProperties = {
   textAlign: "left",
   paddingLeft: "8px",
   fontWeight: 700,
-  fontSize: "9.5px",
+  fontSize: "11.5px",
   textTransform: "uppercase",
 };
 
@@ -67,7 +67,7 @@ const headerCell: React.CSSProperties = {
   height: "34px",
   verticalAlign: "middle",
   textAlign: "center",
-  fontSize: "9.5px",
+  fontSize: "11.5px",
   fontWeight: 800,
   textTransform: "uppercase",
   letterSpacing: "0.5px",
@@ -83,7 +83,7 @@ export default function GradeTable({ subjects }: GradeTableProps) {
         width: "100%",
         tableLayout: "fixed",
         borderCollapse: "collapse",
-        fontSize: "10px",
+        fontSize: "12px",
         marginBottom: "0",
         fontFamily: "Arial, sans-serif",
       }}

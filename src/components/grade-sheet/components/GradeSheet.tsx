@@ -124,7 +124,7 @@ function SchoolHeader({ result }: { result: StudentResult }) {
       <div style={{ textAlign: "center", fontFamily: "Arial, sans-serif" }}>
         <div
           style={{
-            fontSize: "20px",
+            fontSize: "24px",
             fontWeight: 900,
             color: "#1f5e9d",
             letterSpacing: "1px",
@@ -136,7 +136,7 @@ function SchoolHeader({ result }: { result: StudentResult }) {
         </div>
         <div
           style={{
-            fontSize: "10.5px",
+            fontSize: "13px",
             color: "#1f5e9d",
             fontWeight: 600,
             marginTop: "1px",
@@ -146,7 +146,7 @@ function SchoolHeader({ result }: { result: StudentResult }) {
         </div>
         <div
           style={{
-            fontSize: "9.5px",
+            fontSize: "12px",
             color: "#1f5e9d",
             fontWeight: 500,
             marginTop: "1px",
@@ -177,7 +177,7 @@ function ExamTitle({ examName }: { examName?: string }) {
     >
       <div
         style={{
-          fontSize: "10px",
+          fontSize: "13px",
           fontWeight: 800,
           color: "#1f5e9d",
           letterSpacing: "3px",
@@ -188,7 +188,7 @@ function ExamTitle({ examName }: { examName?: string }) {
       </div>
       <div
         style={{
-          fontSize: "19px",
+          fontSize: "24px",
           fontWeight: 900,
           color: "#1f5e9d",
           letterSpacing: "2px",
@@ -337,7 +337,7 @@ export default function GradeSheet({
               background: "#1f5e9d",
               color: "white",
               border: "none",
-              fontSize: "13px",
+              fontSize: "14px",
               fontWeight: 700,
               cursor: "pointer",
               fontFamily: "Arial, sans-serif",

@@ -26,14 +26,14 @@ export default function GPASummary({ gpa, rank }: GPASummaryProps) {
               borderLeft: '0.5px solid #1f5e9d',
               borderBottom: '0.5px solid #1f5e9d',
               padding: '6px 14px',
-              fontSize: '11px',
+              fontSize: '12px',
               fontWeight: 700,
               color: '#1f5e9d',
               textAlign: 'center',
             }}
           >
             Grade Point Average (GPA) ={' '}
-            <strong style={{ fontSize: '12px' }}>{formatNum(gpa, 2)}</strong>
+            <strong style={{ fontSize: '13px' }}>{formatNum(gpa, 2)}</strong>
           </td>
           <td
             style={{
@@ -41,13 +41,13 @@ export default function GPASummary({ gpa, rank }: GPASummaryProps) {
               borderRight: '0.5px solid #1f5e9d',
               borderBottom: '0.5px solid #1f5e9d',
               padding: '6px 14px',
-              fontSize: '11px',
+              fontSize: '12px',
               fontWeight: 700,
               color: '#1f5e9d',
               textAlign: 'center',
             }}
           >
-            Rank: <strong style={{ fontSize: '12px' }}>{rank}</strong>
+            Rank: <strong style={{ fontSize: '13px' }}>{rank}</strong>
           </td>
         </tr>
       </tbody>

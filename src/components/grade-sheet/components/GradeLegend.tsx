@@ -58,7 +58,7 @@ const tableHeaderCell: React.CSSProperties = {
   padding: "4px 6px",
   textAlign: "center",
   fontWeight: 800,
-  fontSize: "10px",
+  fontSize: "11px",
   color: "#1f5e9d",
   fontFamily: "Arial, sans-serif",
   whiteSpace: "pre-wrap",
@@ -70,7 +70,7 @@ const tableBodyCell: React.CSSProperties = {
   textAlign: "center",
   height: "18px",
   color: "#1f5e9d",
-  fontSize: "10px",
+  fontSize: "11px",
   fontFamily: "Arial, sans-serif",
 };
 
@@ -102,13 +102,13 @@ export default function GradeLegend({
       {/* ── LEFT: Notes ── */}
       <div
         style={{
-          fontSize: "10px",
+          fontSize: "11px",
           color: "#1f5e9d",
           fontWeight: 700,
           lineHeight: 1.4,
         }}
       >
-        <div style={{ marginBottom: "2px", fontSize: "11px" }}>Note:</div>
+        <div style={{ marginBottom: "2px", fontSize: "12px" }}>Note:</div>
 
         <div style={{ marginBottom: "1px" }}>1. ABS: Absent</div>
 
@@ -167,7 +167,7 @@ export default function GradeLegend({
       {/* ── RIGHT: Grade intervals ── */}
       <div
         style={{
-          fontSize: "10px",
+          fontSize: "11px",
           color: "#1f5e9d",
         }}
       >
@@ -175,7 +175,7 @@ export default function GradeLegend({
           style={{
             color: "#1f5e9d",
             fontWeight: 800,
-            fontSize: "11px",
+            fontSize: "12px",
             textAlign: "center",
             marginBottom: "4px",
           }}
