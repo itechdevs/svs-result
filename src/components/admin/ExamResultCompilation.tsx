@@ -472,31 +472,60 @@ export default function ExamResultCompilation({
         ).filter((t) => submittedIds.has(t.id));
         if (subjectTemplates.length === 0) continue;
 
+        // Group templates by evaluation plan (mirrors teacher view getPlanTitle logic)
+        const planGroupsForSubject = new Map<string, typeof subjectTemplates>();
+        for (const t of subjectTemplates) {
+          const newFmt = (t.name as string).match(/^\[([^\]]+)\]\[/);
+          let planKey: string;
+          if (newFmt) {
+            const [evalTitle] = newFmt[1].split('|');
+            planKey = evalTitle.trim();
+          } else {
+            planKey = t.id; // legacy: each template is its own group
+          }
+          if (!planGroupsForSubject.has(planKey)) planGroupsForSubject.set(planKey, []);
+          planGroupsForSubject.get(planKey)!.push(t);
+        }
+
         let totalObtained = 0;
         let totalFull = 0;
         let failedEvals = 0;
         let subjectHasMarks = false;
+        let sumPlanPcts = 0;
+        let validPlanCount = 0;
 
-        for (const t of subjectTemplates) {
-          const lookup = marksLookup[student.id]?.[t.id];
-          const obtained = lookup?.marks ?? null;
-          const fullMarks = Number(t.fullMarks);
-          const passMarks = Number(t.passMarks);
+        for (const [, planTemplates] of planGroupsForSubject) {
+          let planObtained = 0;
+          let planFull = 0;
+          let planHasMarks = false;
 
-          if (obtained !== null) {
+          for (const t of planTemplates) {
+            const lookup = marksLookup[student.id]?.[t.id];
+            const obtained = lookup?.marks ?? null;
+            const fullMarks = Number(t.fullMarks);
+            const passMarks = Number(t.passMarks);
+
+            planFull += fullMarks;
             totalFull += fullMarks;
-            subjectHasMarks = true;
-            hasAnyMarks = true;
-            totalObtained += obtained;
-            if (obtained < passMarks) failedEvals++;
+
+            if (obtained !== null) {
+              planHasMarks = true;
+              subjectHasMarks = true;
+              hasAnyMarks = true;
+              planObtained += obtained;
+              totalObtained += obtained;
+              if (obtained < passMarks) failedEvals++;
+            }
+          }
+
+          if (planHasMarks && planFull > 0) {
+            sumPlanPcts += (planObtained / planFull) * 100;
+            validPlanCount++;
           }
         }
 
-        // percentage = obtained / full * 100 (raw, not weighted)
-        const percentage =
-          totalFull > 0
-            ? (totalObtained / totalFull) * 100
-            : 0;
+        // Average of individual plan percentages (matches teacher view + backend)
+        const percentage = validPlanCount > 0 ? sumPlanPcts / validPlanCount : 0;
         const grade = subjectHasMarks ? lookupGrade(percentage) : "N/A";
         const isPassed = subjectHasMarks && failedEvals === 0;
 
