@@ -339,6 +339,28 @@ export default function ExamResultCompilation({
     return Array.from(subjectMap.entries()).map(([name, id]) => ({ name, id }));
   }, [templates]);
 
+  // Map subject name → set of template IDs the teacher actually submitted.
+  // When a teacher re-submits with fewer evaluation plans, this ensures the
+  // admin compilation only includes the plans the teacher selected.
+  const submittedTemplateIdsBySubject = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const comp of teacherCompilations) {
+      if (
+        comp.status === "SUBMITTED" &&
+        comp.subject?.name &&
+        comp.evaluationTemplateIds?.length > 0
+      ) {
+        if (!map.has(comp.subject.name)) {
+          map.set(comp.subject.name, new Set());
+        }
+        for (const tid of comp.evaluationTemplateIds) {
+          map.get(comp.subject.name)!.add(tid);
+        }
+      }
+    }
+    return map;
+  }, [teacherCompilations]);
+
   const dataReady =
     students.length > 0 &&
     (templates.length > 0 || submittedSubjects.length > 0);
@@ -439,14 +461,15 @@ export default function ExamResultCompilation({
 
       // Only compile subjects that teachers actually submitted to THIS exam
       for (const subject of submittedSubjects) {
-        // Get only the templates for this subject that are linked to this exam
+        // Get only the templates for this subject that the teacher actually included
+        // in their submission. This prevents deselected/dropped evaluation plans
+        // from showing up when the teacher re-submits with fewer plans.
+        const submittedIds = submittedTemplateIdsBySubject.get(subject.name);
+        if (!submittedIds) continue;
+
         const subjectTemplates = (
           templatesBySubject.get(subject.name) ?? []
-        ).filter(
-          (t) =>
-            (t as any).examId === examId ||
-            linkedTemplates.some((lt) => lt.id === t.id),
-        );
+        ).filter((t) => submittedIds.has(t.id));
         if (subjectTemplates.length === 0) continue;
 
         let totalObtained = 0;
@@ -515,12 +538,11 @@ export default function ExamResultCompilation({
   }, [
     students,
     submittedSubjects,
+    submittedTemplateIdsBySubject,
     templatesBySubject,
     marksLookup,
     studentsWithReExam,
     lookupGrade,
-    examId,
-    linkedTemplates,
   ]);
 
   const toggleSort = (column: "rank" | "rollNo" | "studentName") => {
