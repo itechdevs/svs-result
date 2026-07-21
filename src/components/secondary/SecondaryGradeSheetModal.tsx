@@ -13,6 +13,7 @@ const SCHOOL_INFO = {
   schoolAddress: SCHOOL_CONFIG.address,
   schoolPhone: SCHOOL_CONFIG.phone,
   schoolEmail: SCHOOL_CONFIG.emailAlt,
+  schoolWebsite: SCHOOL_CONFIG.website,
   logo: SCHOOL_CONFIG.logo,
   nepaliYear: '2082',
   englishYear: '2026',

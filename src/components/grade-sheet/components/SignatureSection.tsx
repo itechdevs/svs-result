@@ -22,7 +22,7 @@ function SigBlock({ label }: { label: string }) {
         style={{
           borderTop: '1px solid #1f5e9d',
           paddingTop: '3px',
-          fontSize: '9.5px',
+          fontSize: '11px',
           fontWeight: 700,
           color: '#1f5e9d',
           letterSpacing: '0.5px',
@@ -57,7 +57,7 @@ export default function SignatureSection({ issueDate, issueDateAD }: SignatureSe
       <div
         style={{
           marginTop: '8px',
-          fontSize: '10px',
+          fontSize: '12px',
           fontWeight: 700,
           fontFamily: 'Arial, sans-serif',
           display: 'flex',
