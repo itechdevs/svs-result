@@ -27,15 +27,18 @@ export default function StudentInfo({
     whiteSpace: "nowrap",
     fontWeight: 600,
     fontSize: "13px",
+    marginRight: "4px",
   };
 
   const underlineBase: React.CSSProperties = {
     borderBottom: "1px solid #1f5e9d",
-    padding: "0 4px",
+    padding: "0px 4px 10px 4px",
     fontWeight: 700,
     whiteSpace: "nowrap",
     fontSize: "13px",
     textAlign: "center",
+    display: "inline-block",
+    lineHeight: 1.5,
   };
 
   return (
@@ -58,7 +61,7 @@ export default function StudentInfo({
         style={{
           display: "flex",
           alignItems: "flex-end",
-          gap: "4px",
+          gap: "8px",
           width: "100%",
         }}
       >
@@ -67,7 +70,7 @@ export default function StudentInfo({
           style={{
             ...underlineBase,
             flex: 2,
-            minWidth: "110px",
+            minWidth: "100px",
             textAlign: "center",
           }}
         >
@@ -92,13 +95,13 @@ export default function StudentInfo({
         style={{
           display: "flex",
           alignItems: "flex-end",
-          gap: "4px",
+          gap: "8px",
           width: "100%",
         }}
       >
         <span style={labelStyle}>(</span>
         <span
-          style={{ ...underlineBase, minWidth: "70px", textAlign: "center" }}
+          style={{ ...underlineBase, minWidth: "40px", textAlign: "center" }}
         >
           {dateOfBirthAD || "\u00A0"}
         </span>
@@ -119,7 +122,7 @@ export default function StudentInfo({
           style={{
             ...underlineBase,
             flex: 0.5,
-            minWidth: "50px",
+            minWidth: "40px",
             textAlign: "center",
           }}
         >
@@ -133,7 +136,7 @@ export default function StudentInfo({
         style={{
           display: "flex",
           alignItems: "flex-end",
-          gap: "4px",
+          gap: "8px",
           width: "100%",
           marginTop: "6px",
         }}
