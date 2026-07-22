@@ -65,23 +65,78 @@ export const PATCH = withHandler(
       }
     }
 
-    const updated = await prisma.evaluationTemplate.update({
-      where: { id: params.id },
-      data: {
-        ...(body.name !== undefined && { name: body.name }),
-        ...(body.fullMarks !== undefined && { fullMarks: body.fullMarks }),
-        ...(body.passMarks !== undefined && { passMarks: body.passMarks }),
-        ...(body.weightage !== undefined && { weightage: body.weightage }),
-        ...(body.scheduledDate !== undefined && { scheduledDate: body.scheduledDate }),
-        ...(body.displayOrder !== undefined && { displayOrder: body.displayOrder }),
-        ...(body.isActive !== undefined && { isActive: body.isActive }),
-        ...(body.examId !== undefined && { examId: body.examId }),
-      },
-      include: {
-        syncedSubject: true,
-        gradeConfig: true,
-        exam: { select: { id: true, name: true } },
-      },
+    // Wrap template update + re-exam cleanup in a transaction for atomicity
+    const updated = await prisma.$transaction(async (tx) => {
+      // 1) Update the evaluation template first
+      const updatedTemplate = await tx.evaluationTemplate.update({
+        where: { id: params.id },
+        data: {
+          ...(body.name !== undefined && { name: body.name }),
+          ...(body.fullMarks !== undefined && { fullMarks: body.fullMarks }),
+          ...(body.passMarks !== undefined && { passMarks: body.passMarks }),
+          ...(body.weightage !== undefined && { weightage: body.weightage }),
+          ...(body.scheduledDate !== undefined && { scheduledDate: body.scheduledDate }),
+          ...(body.displayOrder !== undefined && { displayOrder: body.displayOrder }),
+          ...(body.isActive !== undefined && { isActive: body.isActive }),
+          ...(body.examId !== undefined && { examId: body.examId }),
+        },
+        include: {
+          syncedSubject: true,
+          gradeConfig: true,
+          exam: { select: { id: true, name: true } },
+        },
+      });
+
+      // 2) If fullMarks or passMarks changed, sync re-exam schedule & clean up stale results
+      if (body.fullMarks !== undefined || body.passMarks !== undefined) {
+        const reExamSchedule = await tx.reExamSchedule.findUnique({
+          where: { evaluationTemplateId: params.id },
+          include: {
+            enrollments: {
+              include: { reExamResult: true },
+            },
+          },
+        });
+
+        if (reExamSchedule) {
+          const newFullMarks = body.fullMarks !== undefined
+            ? body.fullMarks
+            : Number(existing.fullMarks);
+          const newPassMarks = body.passMarks !== undefined
+            ? body.passMarks
+            : Number(existing.passMarks);
+
+          // 2a) Update the re-exam schedule's marks to match the template
+          await tx.reExamSchedule.update({
+            where: { id: reExamSchedule.id },
+            data: {
+              fullMarks: newFullMarks,
+              passMarks: newPassMarks,
+            },
+          });
+
+          // 2b) Delete re-exam results whose marks exceed the new full marks
+          //     (the exam conditions have changed — old marks are no longer valid)
+          const invalidEnrollmentIds: string[] = [];
+          for (const enrollment of reExamSchedule.enrollments) {
+            if (
+              enrollment.reExamResult &&
+              Number(enrollment.reExamResult.marksObtained) > newFullMarks
+            ) {
+              invalidEnrollmentIds.push(enrollment.id);
+            }
+          }
+
+          if (invalidEnrollmentIds.length > 0) {
+            // Cascade: deleting the enrollment deletes its result too
+            await tx.reExamEnrollment.deleteMany({
+              where: { id: { in: invalidEnrollmentIds } },
+            });
+          }
+        }
+      }
+
+      return updatedTemplate;
     });
 
     return ok(updated, "Evaluation template updated");
