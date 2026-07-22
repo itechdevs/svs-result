@@ -392,6 +392,7 @@ export default function GradeSheet({
             <div
               style={{
                 border: "1px solid #4a7aa8",
+
                 margin: "3px",
                 flex: 1,
                 display: "flex",

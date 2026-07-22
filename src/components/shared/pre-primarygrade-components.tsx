@@ -34,19 +34,22 @@ export function SchoolHeader({ data }: { data: PrePrimaryGradeSheetData }) {
   return (
     <div
       style={{
-        textAlign: "center",
+        display: "grid",
+        gridTemplateColumns: "80px 1fr 80px",
+        alignItems: "center",
         paddingBottom: "8px",
-        borderBottom: "none",
         marginBottom: "4px",
         fontFamily: FONT,
       }}
     >
-      {/* Logo */}
+      {/* Logo — left column */}
       <div
         style={{
+          width: "80px",
+          height: "80px",
           display: "flex",
+          alignItems: "center",
           justifyContent: "center",
-          marginBottom: "4px",
         }}
       >
         <img
@@ -62,44 +65,45 @@ export function SchoolHeader({ data }: { data: PrePrimaryGradeSheetData }) {
         />
       </div>
 
-      {/* School Name — largest font */}
-      <div
-        style={{
-          fontSize: "24px",
-          fontWeight: 900,
-          color: accentColor,
-          letterSpacing: "1px",
-          textTransform: "uppercase",
-          lineHeight: 1.2,
-        }}
-      >
-        {data.schoolName}
+      {/* Centre text — middle column */}
+      <div style={{ textAlign: "center", fontFamily: FONT }}>
+        <div
+          style={{
+            fontSize: "24px",
+            fontWeight: 900,
+            color: accentColor,
+            letterSpacing: "1px",
+            textTransform: "uppercase",
+            lineHeight: 1.2,
+          }}
+        >
+          {data.schoolName}
+        </div>
+        <div
+          style={{
+            fontSize: "13px",
+            color: accentColor,
+            fontWeight: 500,
+            marginTop: "1px",
+          }}
+        >
+          {data.schoolAddress}
+        </div>
+        <div
+          style={{
+            fontSize: "12px",
+            color: accentColor,
+            fontWeight: 400,
+            marginTop: "1px",
+          }}
+        >
+          Email: {data.schoolEmail}
+          {data.schoolWebsite ? `  |  Website: ${data.schoolWebsite}` : ""}
+        </div>
       </div>
 
-      {/* Address */}
-      <div
-        style={{
-          fontSize: "13px",
-          color: accentColor,
-          fontWeight: 500,
-          marginTop: "2px",
-        }}
-      >
-        {data.schoolAddress}
-      </div>
-
-      {/* Email / Website */}
-      <div
-        style={{
-          fontSize: "12px",
-          color: accentColor,
-          fontWeight: 400,
-          marginTop: "1px",
-        }}
-      >
-        Email: {data.schoolEmail}
-        {data.schoolWebsite ? `  |  Website: ${data.schoolWebsite}` : ""}
-      </div>
+      {/* Right column — empty for symmetry */}
+      <div />
     </div>
   );
 }
@@ -155,21 +159,20 @@ export function StudentInfoRow({ data }: { data: PrePrimaryGradeSheetData }) {
     color: textColor,
     fontFamily: FONT,
     whiteSpace: "nowrap",
+    marginRight: "4px",
   };
 
   const underlineBase: React.CSSProperties = {
     display: "inline-block",
     borderBottom: `1px solid ${textColor}`,
-    height: "16px",
-    verticalAlign: "bottom",
+    padding: "0px 2px 4px 2px",
     fontSize: "13px",
     fontFamily: FONT,
-    paddingLeft: "4px",
-    paddingRight: "4px",
     color: textColor,
     fontWeight: 600,
     flex: 1,
     minWidth: "60px",
+    lineHeight: 1.5,
   };
 
   return (
@@ -180,11 +183,11 @@ export function StudentInfoRow({ data }: { data: PrePrimaryGradeSheetData }) {
         fontWeight: 700,
         fontFamily: FONT,
         color: textColor,
-        padding: "8px 0",
-        lineHeight: "1.6",
+        padding: "4px 0",
+        lineHeight: "1.5",
         display: "flex",
         flexDirection: "column",
-        gap: "4px",
+        gap: "2px",
       }}
     >
       {/* Line 1: THE FOLLOWING ARE THE GRADE BY: _name_ DATE OF BIRTH: _dob_ B.S. */}
@@ -192,7 +195,7 @@ export function StudentInfoRow({ data }: { data: PrePrimaryGradeSheetData }) {
         style={{
           display: "flex",
           alignItems: "flex-end",
-          gap: "4px",
+          gap: "8px",
           width: "100%",
         }}
       >
@@ -226,7 +229,7 @@ export function StudentInfoRow({ data }: { data: PrePrimaryGradeSheetData }) {
         style={{
           display: "flex",
           alignItems: "flex-end",
-          gap: "4px",
+          gap: "8px",
           width: "100%",
         }}
       >
@@ -599,16 +602,16 @@ export function ObservationSection({
       <div style={{ marginBottom: "8px", fontFamily: FONT }}>
         <div
           style={{
-          fontSize: "12px",
-          fontWeight: 900,
-          color: textColor,
-          marginBottom: "2px",
-          textTransform: "uppercase",
-          letterSpacing: "0.5px",
-        }}
-      >
-        OBSERVATION
-      </div>
+            fontSize: "12px",
+            fontWeight: 900,
+            color: textColor,
+            marginBottom: "2px",
+            textTransform: "uppercase",
+            letterSpacing: "0.5px",
+          }}
+        >
+          OBSERVATION
+        </div>
         <table
           style={{
             width: "100%",
