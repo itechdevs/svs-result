@@ -63,7 +63,7 @@ export const POST = withHandler(
     }
 
     // Validate marks do not exceed component full marks
-    const invalidMarks = body.marks.filter(m => !m.isAbsent && m.marksObtained !== undefined && m.marksObtained > Number(component.fullMarks));
+    const invalidMarks = body.marks.filter(m => !m.isAbsent && m.marksObtained !== undefined && m.marksObtained !== null && m.marksObtained > Number(component.fullMarks));
     if (invalidMarks.length > 0) {
       return badRequest(`Marks obtained cannot exceed component full marks (${component.fullMarks})`);
     }
