@@ -518,7 +518,8 @@ export const secondaryHeadingMarkSchema = z.object({
 export const upsertSecondaryPracticalMarksSchema = z.object({
   componentId: z.string().cuid(),
   examId: z.string().cuid(),
-  marks: z.array(secondaryHeadingMarkSchema).min(1),
+  marks: z.array(secondaryHeadingMarkSchema),
+  absentStudents: z.array(z.string().cuid()).optional(),
 });
 
 export const compileSecondaryTermSchema = z.object({

@@ -130,6 +130,7 @@ export const POST = withHandler(
       });
       const componentHeadingIds = componentHeadings.map(h => h.id);
 
+      const absentSet = new Set(body.absentStudents || []);
       const studentIds = Array.from(new Set(body.marks.map(m => m.syncedStudentId)));
 
       for (const studentId of studentIds) {
@@ -142,6 +143,7 @@ export const POST = withHandler(
         });
 
         const totalPracticalMarks = studentHeadingMarks.reduce((sum, h) => sum + Number(h.marksObtained), 0);
+        const isAbsent = absentSet.has(studentId);
 
         await tx.secondaryComponentMark.upsert({
           where: {
@@ -153,7 +155,7 @@ export const POST = withHandler(
           },
           update: {
             marksObtained: totalPracticalMarks,
-            isAbsent: false,
+            isAbsent,
             status: "DRAFT",
           },
           create: {
@@ -162,7 +164,7 @@ export const POST = withHandler(
             examId: body.examId,
             enteredById: userId,
             marksObtained: totalPracticalMarks,
-            isAbsent: false,
+            isAbsent,
             status: "DRAFT"
           }
         });
