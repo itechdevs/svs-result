@@ -488,7 +488,7 @@ export const setSecondaryTermWeightsSchema = z.object({
 
 export const secondaryComponentMarkSchema = z.object({
   syncedStudentId: z.string().cuid(),
-  marksObtained: z.number().min(0).optional(),
+  marksObtained: z.number().min(0).optional().nullable(),
   isAbsent: z.boolean().default(false),
   remarks: z.string().max(500).optional(),
 });
@@ -501,7 +501,7 @@ export const upsertSecondaryMarksSchema = z.object({
     .min(1)
     .refine(
       (marks) =>
-        marks.every((m) => m.isAbsent || m.marksObtained !== undefined),
+        marks.every((m) => m.isAbsent || (m.marksObtained !== undefined && m.marksObtained !== null)),
       {
         message: "marksObtained is required unless student is absent",
         path: ["marksObtained"],
@@ -518,7 +518,8 @@ export const secondaryHeadingMarkSchema = z.object({
 export const upsertSecondaryPracticalMarksSchema = z.object({
   componentId: z.string().cuid(),
   examId: z.string().cuid(),
-  marks: z.array(secondaryHeadingMarkSchema).min(1),
+  marks: z.array(secondaryHeadingMarkSchema),
+  absentStudents: z.array(z.string().cuid()).optional(),
 });
 
 export const compileSecondaryTermSchema = z.object({

@@ -57,7 +57,7 @@ export function DirectMarksEntryTable({
 
     const numValue = parseFloat(value);
     if (!isNaN(numValue)) {
-      onMarkChange(studentId, numValue, false);
+      onMarkChange(studentId, Math.min(numValue, fullMarks), false);
     }
   };
 
@@ -220,6 +220,8 @@ export function DirectMarksEntryTable({
                           min="0"
                           max={fullMarks}
                           value={row.isAbsent ? "" : row.marksObtained ?? ""}
+                          onKeyDown={(e) => { if (e.key === "-" || e.key === "e" || e.key === "E") e.preventDefault(); }}
+                          onWheel={(e) => (e.target as HTMLInputElement).blur()}
                           onChange={(e) =>
                             handleMarkInput(row.studentId, e.target.value, row.isAbsent)
                           }
@@ -229,6 +231,7 @@ export function DirectMarksEntryTable({
                           placeholder={row.isAbsent ? "Absent" : "0.00"}
                           className={cn(
                             "text-center font-semibold",
+                            "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
                             validationError && "border-red-500 focus-visible:ring-red-500",
                             row.hasUnsavedChanges && !validationError && "border-amber-500",
                             row.isAbsent && "bg-muted"

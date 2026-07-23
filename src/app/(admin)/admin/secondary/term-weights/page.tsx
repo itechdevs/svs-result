@@ -24,7 +24,7 @@ import SanskarLoader from "@/components/shared/SanskarLoader";
 interface WeightItem {
   examId: string;
   termName: string;
-  weightPercent: number;
+  weightPercent: number | string;
   displayOrder: number;
 }
 
@@ -125,9 +125,14 @@ export default function SecondaryTermWeightsPage() {
     setWeights(weights.filter((_, i) => i !== index));
   };
 
-  const handleWeightChange = (index: number, val: number) => {
+  const handleWeightChange = (index: number, val: string) => {
     const updated = [...weights];
-    updated[index].weightPercent = Math.max(0, Math.min(100, val));
+    if (val === "" || val === "-") {
+      updated[index].weightPercent = "";
+    } else {
+      const numValue = Number(val);
+      updated[index].weightPercent = isNaN(numValue) ? "" : String(Math.max(0, Math.min(100, numValue)));
+    }
     setWeights(updated);
   };
 
@@ -137,10 +142,15 @@ export default function SecondaryTermWeightsPage() {
     setWeights(updated);
   };
 
+  const toNum = (val: any): number => {
+    const n = Number(val);
+    return isNaN(n) ? 0 : Math.max(0, n);
+  };
+
   const handleSave = () => {
     if (!selectedYear || !selectedGrade) return;
 
-    const totalWeight = weights.reduce((sum, w) => sum + w.weightPercent, 0);
+    const totalWeight = weights.reduce((sum, w) => sum + toNum(w.weightPercent), 0);
     if (weights.length === 0) {
       toast.error("Please add weightings for at least one term exam");
       return;
@@ -156,6 +166,7 @@ export default function SecondaryTermWeightsPage() {
       gradeLevel: selectedGrade,
       weights: weights.map((w) => ({
         ...w,
+        weightPercent: toNum(w.weightPercent),
         academicYearId: selectedYear,
         gradeLevel: selectedGrade,
       })),
@@ -191,7 +202,7 @@ export default function SecondaryTermWeightsPage() {
     setWeights(updated);
   };
 
-  const totalAddedPct = weights.reduce((sum, w) => sum + w.weightPercent, 0);
+  const totalAddedPct = weights.reduce((sum, w) => sum + (Number(w.weightPercent) || 0), 0);
   const remainingPct = 100 - totalAddedPct;
 
   const isLoading = isLoadingYears || (selectedGrade && isLoadingExams) || isLoadingWeights;
@@ -315,7 +326,9 @@ export default function SecondaryTermWeightsPage() {
                             type="number"
                             value={item.weightPercent}
                             className="h-9 pr-6 text-center font-bold"
-                            onChange={(e) => handleWeightChange(idx, Number(e.target.value) || 0)}
+                            onKeyDown={(e) => { if (e.key === "-" || e.key === "e" || e.key === "E") e.preventDefault(); }}
+                            onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                            onChange={(e) => handleWeightChange(idx, e.target.value)}
                           />
                           <span className="absolute right-2 text-xs text-muted-foreground">%</span>
                         </div>
@@ -383,15 +396,17 @@ export default function SecondaryTermWeightsPage() {
                     return (
                       <div
                         key={exam.id}
-                        className={`flex items-center justify-between p-2.5 rounded-lg border text-xs transition-all ${isAdded ? "bg-muted/50 border-border opacity-70" : "bg-card border-border/85 hover:border-primary/50"}`}
+                        className={`flex items-center justify-between p-2.5 rounded-lg border text-xs transition-all cursor-pointer ${isAdded ? "bg-muted/50 border-border opacity-70 cursor-default" : "bg-card border-border/85 hover:border-primary/50"}`}
+                        onClick={() => !isAdded && handleAddExamWeight(exam.id)}
                       >
-                        <div className="font-medium text-foreground">{exam.name}</div>
+                        <div className="font-medium text-foreground pointer-events-none">{exam.name}</div>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-7 px-2 font-bold"
-                          onClick={() => handleAddExamWeight(exam.id)}
+                          className="h-7 px-2 font-bold pointer-events-none"
                           disabled={isAdded}
+                          aria-hidden
+                          tabIndex={-1}
                         >
                           {isAdded ? "Added" : <Plus className="w-4 h-4 text-primary" />}
                         </Button>

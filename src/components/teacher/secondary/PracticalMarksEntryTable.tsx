@@ -60,7 +60,7 @@ export function PracticalMarksEntryTable({
 }: PracticalMarksEntryTableProps) {
   const [focusedCell, setFocusedCell] = useState<string | null>(null);
 
-  const handleMarkInput = (studentId: string, headingId: string, value: string) => {
+  const handleMarkInput = (studentId: string, headingId: string, value: string, maxMarks: number) => {
     if (value === "" || value === null) {
       onMarkChange(studentId, headingId, null);
       return;
@@ -68,7 +68,7 @@ export function PracticalMarksEntryTable({
 
     const numValue = parseFloat(value);
     if (!isNaN(numValue)) {
-      onMarkChange(studentId, headingId, numValue);
+      onMarkChange(studentId, headingId, Math.min(numValue, maxMarks));
     }
   };
 
@@ -250,26 +250,34 @@ export function PracticalMarksEntryTable({
                       return (
                         <TableCell key={heading.id}>
                           <div className="relative">
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              max={heading.fullMarks}
-                              value={row.isAbsent ? "" : marks ?? ""}
-                              onChange={(e) => handleMarkInput(row.studentId, heading.id, e.target.value)}
-                              onFocus={() => setFocusedCell(cellId(heading.id))}
-                              onBlur={() => setFocusedCell(null)}
-                              disabled={!editable || row.isAbsent}
-                              placeholder={row.isAbsent ? "AB" : "0"}
-                              className={cn(
-                                "text-center font-semibold h-9 text-sm",
-                                validationError && "border-red-500 focus-visible:ring-red-500",
-                                row.hasUnsavedChanges && !validationError && "border-amber-500",
-                                row.isAbsent && "bg-muted",
-                                isFocused && "ring-2 ring-primary"
-                              )}
-                            />
-                            {validationError && (
+                            {row.isAbsent ? (
+                              <div className="h-9 flex items-center justify-center text-xs font-semibold text-muted-foreground bg-muted rounded-lg border border-border/60 select-none">
+                                Absent
+                              </div>
+                            ) : (
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                max={heading.fullMarks}
+                                value={marks ?? ""}
+                                onKeyDown={(e) => { if (e.key === "-" || e.key === "e" || e.key === "E") e.preventDefault(); }}
+                                onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                                onChange={(e) => handleMarkInput(row.studentId, heading.id, e.target.value, Number(heading.fullMarks))}
+                                onFocus={() => setFocusedCell(cellId(heading.id))}
+                                onBlur={() => setFocusedCell(null)}
+                                disabled={!editable}
+                                placeholder="0"
+                                className={cn(
+                                  "text-center font-semibold h-9 text-sm",
+                                  "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+                                  validationError && "border-red-500 focus-visible:ring-red-500",
+                                  row.hasUnsavedChanges && !validationError && "border-amber-500",
+                                  isFocused && "ring-2 ring-primary"
+                                )}
+                              />
+                            )}
+                            {validationError && !row.isAbsent && (
                               <div className="absolute -bottom-4 left-0 right-0 text-[9px] text-red-600 dark:text-red-400 text-center whitespace-nowrap">
                                 {validationError}
                               </div>

@@ -172,11 +172,12 @@ export function usePracticalMarkEntry({
 
   // Save mutation
   const saveMutation = useMutation({
-    mutationFn: async (marks: PracticalHeadingMarkInput[]) => {
+    mutationFn: async (payload: { marks: PracticalHeadingMarkInput[]; absentStudents?: string[] }) => {
       return apiClient.post("/teacher/secondary/practical-marks", {
         componentId,
         examId,
-        marks,
+        marks: payload.marks,
+        absentStudents: payload.absentStudents,
       });
     },
     onSuccess: () => {
@@ -229,7 +230,11 @@ export function usePracticalMarkEntry({
       return;
     }
 
-    await saveMutation.mutateAsync(marksToSave);
+    const absentStudents = Object.entries(absentStatus)
+      .filter(([_, isAbsent]) => isAbsent)
+      .map(([studentId]) => studentId);
+
+    await saveMutation.mutateAsync({ marks: marksToSave, absentStudents });
   }, [localChanges, absentStatus, practicalHeadings, componentId, examId, saveMutation]);
 
   // Submit mutation - submits all component marks for students with practical marks
