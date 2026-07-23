@@ -165,14 +165,16 @@ export function StudentInfoRow({ data }: { data: PrePrimaryGradeSheetData }) {
   const underlineBase: React.CSSProperties = {
     display: "inline-block",
     borderBottom: `1px solid ${textColor}`,
-    padding: "0px 2px 4px 2px",
+    padding: "0px 2px 2px 2px",
     fontSize: "13px",
     fontFamily: FONT,
     color: textColor,
     fontWeight: 600,
+    // whiteSpace: "nowrap",
     flex: 1,
-    minWidth: "60px",
+    minWidth: "30px",
     lineHeight: 1.5,
+    textAlign: "center",
   };
 
   return (
@@ -184,7 +186,7 @@ export function StudentInfoRow({ data }: { data: PrePrimaryGradeSheetData }) {
         fontFamily: FONT,
         color: textColor,
         padding: "4px 0",
-        lineHeight: "1.5",
+        lineHeight: "1.6",
         display: "flex",
         flexDirection: "column",
         gap: "2px",
@@ -194,7 +196,7 @@ export function StudentInfoRow({ data }: { data: PrePrimaryGradeSheetData }) {
       <div
         style={{
           display: "flex",
-          alignItems: "flex-end",
+          alignItems: "center",
           gap: "8px",
           width: "100%",
         }}
@@ -203,9 +205,8 @@ export function StudentInfoRow({ data }: { data: PrePrimaryGradeSheetData }) {
         <span
           style={{
             ...underlineBase,
-            flex: 2,
-            minWidth: "120px",
-            textAlign: "center",
+            minWidth: "100px",
+            maxWidth: "150px",
           }}
         >
           {data.studentName || "\u00A0"}
@@ -214,9 +215,7 @@ export function StudentInfoRow({ data }: { data: PrePrimaryGradeSheetData }) {
         <span
           style={{
             ...underlineBase,
-            flex: 1,
             minWidth: "60px",
-            textAlign: "center",
           }}
         >
           {data.dateOfBirth || "\u00A0"}
@@ -228,38 +227,22 @@ export function StudentInfoRow({ data }: { data: PrePrimaryGradeSheetData }) {
       <div
         style={{
           display: "flex",
-          alignItems: "flex-end",
-          gap: "8px",
+          alignItems: "center",
+          gap: "4px",
           width: "100%",
         }}
       >
         <span style={labelStyle}>(</span>
-        <span
-          style={{ ...underlineBase, minWidth: "70px", textAlign: "center" }}
-        >
+        <span style={{ ...underlineBase, minWidth: "40px" }}>
           {data.dateOfBirthAD || "\u00A0"}
         </span>
         <span style={labelStyle}>&nbsp;A.D.)&nbsp;&nbsp;</span>
         <span style={labelStyle}>ROLL NO:</span>
-        <span
-          style={{
-            ...underlineBase,
-            flex: 0.5,
-            minWidth: "40px",
-            textAlign: "center",
-          }}
-        >
+        <span style={{ ...underlineBase, minWidth: "40px" }}>
           {data.rollNo || "\u00A0"}
         </span>
         <span style={labelStyle}>GRADE:</span>
-        <span
-          style={{
-            ...underlineBase,
-            flex: 0.5,
-            minWidth: "50px",
-            textAlign: "center",
-          }}
-        >
+        <span style={{ ...underlineBase, minWidth: "40px" }}>
           {data.className || "\u00A0"}
           {data.section ? ` (${data.section})` : ""}
         </span>
@@ -522,62 +505,61 @@ export function SummarySection({
   const displayGpa = gpa !== null && gpa !== undefined ? formatNum(gpa, 2) : "";
   const displayRank = rank !== null && rank !== undefined ? String(rank) : "";
 
-  const labelStyle: React.CSSProperties = {
-    fontSize: "12px",
-    fontWeight: 700,
-    color: textColor,
-    fontFamily: FONT,
-    whiteSpace: "nowrap",
-  };
-
-  const valueUnderline: React.CSSProperties = {
-    display: "inline-block",
+  const underlineVal: React.CSSProperties = {
     borderBottom: `1px solid ${textColor}`,
-    minWidth: "60px",
-    height: "14px",
-    verticalAlign: "bottom",
-    fontSize: "12px",
-    fontFamily: FONT,
-    paddingLeft: "4px",
+    padding: "0px 2px 2px 2px",
     fontWeight: 700,
+    whiteSpace: "nowrap",
+    fontSize: "13px",
+    textAlign: "center",
+    display: "inline-block",
+    lineHeight: 1.4,
     color: textColor,
   };
 
   return (
-    <div
+    <table
       style={{
-        display: "flex",
-        alignItems: "flex-end",
-        gap: "130px",
-        padding: "6px 2px",
+        width: "100%",
+        borderCollapse: "collapse",
+        marginBottom: "8px",
         fontFamily: FONT,
-        marginBottom: "4px",
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-end",
-          gap: "4px",
-          fontSize: "12px",
-        }}
-      >
-        <span style={labelStyle}>Grade Point Average (GPA) =</span>
-        <span style={valueUnderline}>{displayGpa}</span>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-        <span style={labelStyle}>Rank :</span>
-        <span
-          style={{
-            ...valueUnderline,
-            textAlign: "center",
-            verticalAlign: "middle",
-          }}
-        >
-          {displayRank}
-        </span>
-      </div>
-    </div>
+      <tbody>
+        <tr>
+          <td
+            style={{
+              width: "80%",
+              borderLeft: "0.5px solid #1A1A18",
+              borderBottom: "0.5px solid #1A1A18",
+              padding: "6px 14px",
+              fontSize: "12px",
+              fontWeight: 700,
+              color: textColor,
+              textAlign: "center",
+            }}
+          >
+            Grade Point Average (GPA) ={" "}
+            <strong style={underlineVal}>{displayGpa}</strong>
+          </td>
+          <td
+            style={{
+              width: "20%",
+              borderRight: "0.5px solid #1A1A18",
+              borderBottom: "0.5px solid #1A1A18",
+              padding: "6px 14px",
+              fontSize: "12px",
+              fontWeight: 700,
+              color: textColor,
+              textAlign: "center",
+            }}
+          >
+            Rank: <strong style={underlineVal}>{displayRank}</strong>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   );
 }
 
