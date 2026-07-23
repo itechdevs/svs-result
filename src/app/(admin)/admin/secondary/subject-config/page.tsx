@@ -505,6 +505,7 @@ export default function SecondarySubjectConfigPage() {
                       value={comp.fullMarks}
                       className="h-9 bg-background"
                       onKeyDown={(e) => { if (e.key === "-" || e.key === "e" || e.key === "E") e.preventDefault(); }}
+                      onWheel={(e) => (e.target as HTMLInputElement).blur()}
                       onChange={(e) => handleComponentChange(idx, "fullMarks", e.target.value)}
                     />
                   </div>
@@ -517,6 +518,7 @@ export default function SecondarySubjectConfigPage() {
                       className="h-9 bg-background"
                       value={comp.passMarks}
                       onKeyDown={(e) => { if (e.key === "-" || e.key === "e" || e.key === "E") e.preventDefault(); }}
+                      onWheel={(e) => (e.target as HTMLInputElement).blur()}
                       onChange={(e) => handleComponentChange(idx, "passMarks", e.target.value)}
                     />
                   </div>
@@ -556,6 +558,7 @@ export default function SecondarySubjectConfigPage() {
                               type="number"
                               value={heading.fullMarks}
                               onKeyDown={(e) => { if (e.key === "-" || e.key === "e" || e.key === "E") e.preventDefault(); }}
+                              onWheel={(e) => (e.target as HTMLInputElement).blur()}
                               onChange={(e) => handleSubCategoryChange(idx, hIdx, "fullMarks", e.target.value)}
                               className="h-8 text-xs"
                             />
@@ -566,6 +569,7 @@ export default function SecondarySubjectConfigPage() {
                               type="number"
                               value={heading.passMarks || 0}
                               onKeyDown={(e) => { if (e.key === "-" || e.key === "e" || e.key === "E") e.preventDefault(); }}
+                              onWheel={(e) => (e.target as HTMLInputElement).blur()}
                               onChange={(e) => handleSubCategoryChange(idx, hIdx, "passMarks", e.target.value)}
                               className="h-8 text-xs"
                             />
@@ -617,6 +621,7 @@ export default function SecondarySubjectConfigPage() {
                     min="1"
                     value={creditHours || ""}
                     onKeyDown={(e) => { if (e.key === "-" || e.key === "e" || e.key === "E") e.preventDefault(); }}
+                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
                     onChange={(e) => {
                       const v = e.target.value;
                       if (v === "" || v === "-") {
