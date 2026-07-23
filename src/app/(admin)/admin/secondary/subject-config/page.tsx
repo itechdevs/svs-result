@@ -38,16 +38,16 @@ import SanskarLoader from "@/components/shared/SanskarLoader";
 interface ComponentInput {
   id?: string;
   type: "THEORY" | "PRACTICAL";
-  fullMarks: number;
-  passMarks: number;
+  fullMarks: number | string;
+  passMarks: number | string;
   displayOrder: number;
-  practicalHeadings?: any[];
+  practicalHeadings?: HeadingInput[];
 }
 
 interface HeadingInput {
   name: string;
-  fullMarks: number;
-  passMarks: number;
+  fullMarks: number | string;
+  passMarks: number | string;
   displayOrder: number;
 }
 
@@ -96,7 +96,7 @@ export default function SecondarySubjectConfigPage() {
   // Configure Dialog states
   const [configOpen, setConfigOpen] = useState(false);
   const [activeSubject, setActiveSubject] = useState<any>(null);
-  const [creditHours, setCreditHours] = useState<number>(4);
+  const [creditHours, setCreditHours] = useState<number | string>(4);
   const [components, setComponents] = useState<ComponentInput[]>([]);
 
 
@@ -127,14 +127,14 @@ export default function SecondarySubjectConfigPage() {
         existingConfig.components.map((comp: any) => ({
           id: comp.id,
           type: comp.type,
-          fullMarks: Number(comp.fullMarks),
-          passMarks: Number(comp.passMarks),
+          fullMarks: String(comp.fullMarks),
+          passMarks: String(comp.passMarks),
           displayOrder: comp.displayOrder,
           practicalHeadings: comp.practicalHeadings?.map((h: any) => ({
             id: h.id,
             name: h.name,
-            fullMarks: Number(h.fullMarks),
-            passMarks: Number(h.passMarks || 0),
+            fullMarks: String(h.fullMarks),
+            passMarks: String(h.passMarks || 0),
             displayOrder: h.displayOrder,
           })) || [],
         }))
@@ -143,7 +143,7 @@ export default function SecondarySubjectConfigPage() {
       // Default standard CDC setup
       setCreditHours(4);
       setComponents([
-        { type: "THEORY", fullMarks: 75, passMarks: 26.25, displayOrder: 1 },
+        { type: "THEORY", fullMarks: "75", passMarks: "26.25", displayOrder: 1 },
       ]);
     }
     setConfigOpen(true);
@@ -155,7 +155,7 @@ export default function SecondarySubjectConfigPage() {
     const nextOrder = components.length + 1;
     setComponents([
       ...components,
-      { type: "THEORY", fullMarks: 50, passMarks: 17.5, displayOrder: nextOrder },
+      { type: "THEORY", fullMarks: "50", passMarks: "17.5", displayOrder: nextOrder },
     ]);
   };
 
@@ -167,11 +167,12 @@ export default function SecondarySubjectConfigPage() {
     const updated = [...components];
 
     if (field === "fullMarks" || field === "passMarks") {
-      const numValue = Number(value) || 0;
-      updated[index] = {
-        ...updated[index],
-        [field]: numValue,
-      };
+      if (value === "" || value === "-") {
+        updated[index] = { ...updated[index], [field]: "" };
+      } else {
+        const numValue = Number(value);
+        updated[index] = { ...updated[index], [field]: isNaN(numValue) ? "" : Math.max(0, numValue).toString() };
+      }
     } else {
       updated[index] = {
         ...updated[index],
@@ -187,6 +188,11 @@ export default function SecondarySubjectConfigPage() {
     setComponents(updated);
   };
 
+  const toNum = (val: any): number => {
+    const n = Number(val);
+    return isNaN(n) ? 0 : Math.max(0, n);
+  };
+
   const handleSaveConfig = () => {
     if (!activeSubject || !selectedYear || !selectedGrade) return;
 
@@ -199,8 +205,17 @@ export default function SecondarySubjectConfigPage() {
       syncedSubjectId: activeSubject.id,
       academicYearId: selectedYear,
       gradeLevel: selectedGrade,
-      creditHours: Number(creditHours) || 0,
-      components,
+      creditHours: toNum(creditHours),
+      components: components.map((comp) => ({
+        ...comp,
+        fullMarks: toNum(comp.fullMarks),
+        passMarks: toNum(comp.passMarks),
+        practicalHeadings: comp.practicalHeadings?.map((h) => ({
+          ...h,
+          fullMarks: toNum(h.fullMarks),
+          passMarks: toNum(h.passMarks),
+        })),
+      })),
     });
   };
 
@@ -210,7 +225,7 @@ export default function SecondarySubjectConfigPage() {
     if (!comp.practicalHeadings) comp.practicalHeadings = [];
 
     const nextOrder = comp.practicalHeadings.length + 1;
-    comp.practicalHeadings.push({ name: "", fullMarks: 10, passMarks: 4, displayOrder: nextOrder });
+    comp.practicalHeadings.push({ name: "", fullMarks: "10", passMarks: "4", displayOrder: nextOrder });
     setComponents(updated);
   };
 
@@ -225,9 +240,18 @@ export default function SecondarySubjectConfigPage() {
   const handleSubCategoryChange = (compIndex: number, subIndex: number, field: keyof HeadingInput, value: any) => {
     const updated = [...components];
     if (updated[compIndex].practicalHeadings) {
+      let parsedValue: any = value;
+      if (field === "fullMarks" || field === "passMarks") {
+        if (value === "" || value === "-") {
+          parsedValue = "";
+        } else {
+          const numValue = Number(value);
+          parsedValue = isNaN(numValue) ? "" : Math.max(0, numValue).toString();
+        }
+      }
       updated[compIndex].practicalHeadings[subIndex] = {
         ...updated[compIndex].practicalHeadings[subIndex],
-        [field]: field === "fullMarks" || field === "passMarks" ? (Number(value) || 0) : value,
+        [field]: parsedValue,
       };
     }
     setComponents(updated);
@@ -236,7 +260,7 @@ export default function SecondarySubjectConfigPage() {
 
   const handleLoadDefaults = () => {
     setComponents([
-      { type: "THEORY", fullMarks: 75, passMarks: 26.25, displayOrder: 1 },
+      { type: "THEORY", fullMarks: "75", passMarks: "26.25", displayOrder: 1 },
     ]);
     setCreditHours(4);
   };
@@ -480,6 +504,7 @@ export default function SecondarySubjectConfigPage() {
                       type="number"
                       value={comp.fullMarks}
                       className="h-9 bg-background"
+                      onKeyDown={(e) => { if (e.key === "-" || e.key === "e" || e.key === "E") e.preventDefault(); }}
                       onChange={(e) => handleComponentChange(idx, "fullMarks", e.target.value)}
                     />
                   </div>
@@ -491,6 +516,7 @@ export default function SecondarySubjectConfigPage() {
                       step="1"
                       className="h-9 bg-background"
                       value={comp.passMarks}
+                      onKeyDown={(e) => { if (e.key === "-" || e.key === "e" || e.key === "E") e.preventDefault(); }}
                       onChange={(e) => handleComponentChange(idx, "passMarks", e.target.value)}
                     />
                   </div>
@@ -529,6 +555,7 @@ export default function SecondarySubjectConfigPage() {
                             <Input
                               type="number"
                               value={heading.fullMarks}
+                              onKeyDown={(e) => { if (e.key === "-" || e.key === "e" || e.key === "E") e.preventDefault(); }}
                               onChange={(e) => handleSubCategoryChange(idx, hIdx, "fullMarks", e.target.value)}
                               className="h-8 text-xs"
                             />
@@ -538,6 +565,7 @@ export default function SecondarySubjectConfigPage() {
                             <Input
                               type="number"
                               value={heading.passMarks || 0}
+                              onKeyDown={(e) => { if (e.key === "-" || e.key === "e" || e.key === "E") e.preventDefault(); }}
                               onChange={(e) => handleSubCategoryChange(idx, hIdx, "passMarks", e.target.value)}
                               className="h-8 text-xs"
                             />
@@ -588,7 +616,16 @@ export default function SecondarySubjectConfigPage() {
                     step="1"
                     min="1"
                     value={creditHours || ""}
-                    onChange={(e) => setCreditHours(Number(e.target.value) || 0)}
+                    onKeyDown={(e) => { if (e.key === "-" || e.key === "e" || e.key === "E") e.preventDefault(); }}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === "" || v === "-") {
+                        setCreditHours("");
+                      } else {
+                        const n = Number(v);
+                        setCreditHours(isNaN(n) ? creditHours : String(Math.max(0, n)));
+                      }
+                    }}
                     className="w-20 h-8 font-bold text-center"
                   />
                   <span className="font-extrabold text-primary text-base">CH</span>
