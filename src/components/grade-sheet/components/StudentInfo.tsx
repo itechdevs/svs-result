@@ -75,8 +75,8 @@ export default function StudentInfo({
         <span
           style={{
             ...underlineBase,
-            minWidth: "100px",
-            maxWidth: "150px",
+            minWidth: "200px",
+            maxWidth: "200px",
           }}
         >
           {studentName}
@@ -123,7 +123,7 @@ export default function StudentInfo({
           {examName ? examName.toUpperCase() : "EXAMINATION"}
         </span>
         <span style={labelStyle}>CONDUCTED IN</span>
-        <span style={{ ...underlineBase, minWidth: "45px" }}>{nepaliYear}</span>
+        <span style={{ ...underlineBase, minWidth: "100px", maxWidth: "150px" }}>{nepaliYear}</span>
         <span style={labelStyle}>B.S. ARE GIVEN BELOW.</span>
       </div>
     </div>
