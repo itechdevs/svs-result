@@ -512,7 +512,7 @@ export default function PrePrimaryGradeSheet({
         <base href="${baseUrl}">
         <title>Pre-Primary Grade Sheet</title>
         <style>
-          @page { size: A4 portrait; margin: 8mm; }
+          @page { size: A4 portrait; margin: 4mm; }
           @media print {
             body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
@@ -607,7 +607,7 @@ export default function PrePrimaryGradeSheet({
           }}
         />
 
-        <BackgroundPattern schoolName={data.schoolName} />
+        {/* <BackgroundPattern schoolName={data.schoolName} /> */}
 
         {/* Watermark logo — centered, low opacity */}
         <div
