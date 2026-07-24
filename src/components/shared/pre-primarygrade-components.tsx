@@ -205,8 +205,8 @@ export function StudentInfoRow({ data }: { data: PrePrimaryGradeSheetData }) {
         <span
           style={{
             ...underlineBase,
-            minWidth: "100px",
-            maxWidth: "150px",
+            minWidth: "200px",
+            maxWidth: "200px",
           }}
         >
           {data.studentName || "\u00A0"}
@@ -220,7 +220,7 @@ export function StudentInfoRow({ data }: { data: PrePrimaryGradeSheetData }) {
         >
           {data.dateOfBirth || "\u00A0"}
         </span>
-        <span style={labelStyle}>B. S.</span>
+        <span style={labelStyle}>B.S.</span>
       </div>
 
       {/* Line 2: (AD) ROLL NO: _roll_ GRADE: _class_ IN THE */}
