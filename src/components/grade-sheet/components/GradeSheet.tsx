@@ -363,7 +363,7 @@ export default function GradeSheet({
         }}
       >
         {/* Layer 0a: Repeating text pattern */}
-        <BackgroundPattern schoolName={result.schoolName} />
+        {/* <BackgroundPattern schoolName={result.schoolName} /> */}
 
         {/* Layer 0b: Logo watermark */}
         <Watermark logo={result.logo} schoolName={result.schoolName} />
