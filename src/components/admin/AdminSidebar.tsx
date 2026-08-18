@@ -126,7 +126,6 @@ const NAV_ITEMS: NavItem[] = [
         category: "SECONDARY",
       },
       { label: "Subject Configs", href: ROUTES.ADMIN_SECONDARY_SUBJECT_CONFIG },
-      { label: "Term Weights", href: ROUTES.ADMIN_SECONDARY_TERM_WEIGHTS },
       {
         label: "Mark Verification",
         href: "/admin/secondary/mark-verification",

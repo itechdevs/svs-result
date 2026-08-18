@@ -31,6 +31,7 @@ import {
 import SanskarLoader from "@/components/shared/SanskarLoader";
 import { SecondaryMarksheetModal } from "@/components/secondary/SecondaryMarksheetModal";
 import { SecondaryGradeSheetModal } from "@/components/secondary/SecondaryGradeSheetModal";
+import { SecondaryTermWeightConfig } from "@/components/secondary/SecondaryTermWeightConfig";
 
 function SecondaryResultCompilationPage() {
   const searchParams = useSearchParams();
@@ -193,7 +194,7 @@ function SecondaryResultCompilationPage() {
   };
 
   const handleGenerateMarksheet = (studentId: string, resultId: string) => {
-    const body = activeTab === "term" 
+    const body = activeTab === "term"
       ? { termResultId: resultId }
       : { annualResultId: resultId };
 
@@ -275,12 +276,12 @@ function SecondaryResultCompilationPage() {
     if (full <= 0) return { grade: '—', gp: '—' };
     const pct = (obtained / full) * 100;
     if (pct >= 90) return { grade: 'A+', gp: '4.00' };
-    if (pct >= 80) return { grade: 'A',  gp: '3.60' };
+    if (pct >= 80) return { grade: 'A', gp: '3.60' };
     if (pct >= 70) return { grade: 'B+', gp: '3.20' };
-    if (pct >= 60) return { grade: 'B',  gp: '2.80' };
+    if (pct >= 60) return { grade: 'B', gp: '2.80' };
     if (pct >= 50) return { grade: 'C+', gp: '2.40' };
-    if (pct >= 40) return { grade: 'C',  gp: '2.00' };
-    if (pct >= 35) return { grade: 'D',  gp: '1.60' };
+    if (pct >= 40) return { grade: 'C', gp: '2.00' };
+    if (pct >= 35) return { grade: 'D', gp: '1.60' };
     return { grade: 'NG', gp: '0.00' };
   };
 
@@ -306,7 +307,7 @@ function SecondaryResultCompilationPage() {
     return { grade, gp, ch, isNG, thObtained, prObtained, totalObtained, totalFull, thFull, prFull, thCH, prCH, thGrade, prGrade };
   };
 
-  const isTabLoading = isLoadingYears || isLoadingExams || 
+  const isTabLoading = isLoadingYears || isLoadingExams ||
     (activeTab === "term" ? isLoadingTermResults : isLoadingAnnualResults);
 
   return (
@@ -337,7 +338,7 @@ function SecondaryResultCompilationPage() {
           className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-all ${activeTab === "annual" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
           onClick={() => setQueryParam("tab", "annual")}
         >
-          Annual Result Compilation
+          Combined Result Compilation
         </button>
       </div>
 
@@ -377,7 +378,7 @@ function SecondaryResultCompilationPage() {
             </SelectContent>
           </Select>
         </div>
-        
+
         {activeTab === "term" && (
           <div>
             <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
@@ -403,6 +404,14 @@ function SecondaryResultCompilationPage() {
         )}
       </div>
 
+      {/* Term Weight Config for Annual Compilation */}
+      {activeTab === "annual" && selectedYear && selectedGrade && (
+        <SecondaryTermWeightConfig 
+          academicYearId={selectedYear} 
+          gradeLevel={selectedGrade} 
+        />
+      )}
+
       {/* Main engine execution workflow cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {activeTab === "term" ? (
@@ -426,7 +435,7 @@ function SecondaryResultCompilationPage() {
                 Compile Term Results
               </Button>
             </div>
-            
+
             <div className="bg-card border border-border rounded-xl p-5 flex flex-col justify-between shadow-sm">
               <div>
                 <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center mb-3">
@@ -482,9 +491,9 @@ function SecondaryResultCompilationPage() {
                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
                   <Award className="w-4.5 h-4.5 text-primary" />
                 </div>
-                <h3 className="font-bold text-sm text-foreground">Extract Annual Weightages</h3>
+                <h3 className="font-bold text-sm text-foreground">Extract Combined Weightages</h3>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Processes term-by-term records against the configured weights for the year. Outputs final annual GPAs.
+                  Processes term-by-term records against the configured weights for the year. Outputs final combined GPAs.
                 </p>
               </div>
               <Button
@@ -493,7 +502,7 @@ function SecondaryResultCompilationPage() {
                 className="mt-4 w-full bg-primary hover:bg-primary/95 text-primary-foreground text-xs font-bold"
               >
                 {compileAnnualMutation.isPending && <Loader2 className="w-3 h-3 mr-2 animate-spin animate-pulse" />}
-                Compile Annual Weighted Results
+                Compile Combined Weighted Results
               </Button>
             </div>
 
@@ -502,9 +511,9 @@ function SecondaryResultCompilationPage() {
                 <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center mb-3">
                   <CheckCircle className="w-4.5 h-4.5 text-emerald-500" />
                 </div>
-                <h3 className="font-bold text-sm text-foreground">Publish Annual Results</h3>
+                <h3 className="font-bold text-sm text-foreground">Publish Combined Results</h3>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Locks the final annual grades in. Allows printing final student transcripts with CDC letter templates.
+                  Locks the final combined grades in. Allows printing final student transcripts with CDC letter templates.
                 </p>
               </div>
               <Button
@@ -514,7 +523,7 @@ function SecondaryResultCompilationPage() {
                 className="mt-4 w-full text-xs font-bold text-emerald-600 dark:text-emerald-400 border-emerald-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
               >
                 {publishAnnualMutation.isPending && <Loader2 className="w-3 h-3 mr-2 animate-spin" />}
-                Publish Annual Transcripts
+                Publish Combined Transcripts
               </Button>
             </div>
 
@@ -731,8 +740,9 @@ function SecondaryResultCompilationPage() {
       ) : (
         // Annual results table
         <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-border/80 bg-muted/20">
-            <h3 className="font-bold text-xs uppercase text-muted-foreground">Student Annual compilation records ({annualResults?.length || 0})</h3>
+          <div className="p-4 border-b border-border/80 bg-muted/20 flex justify-between items-center">
+            <h3 className="font-bold text-xs uppercase text-muted-foreground">Student Combined compilation records ({annualResults?.length || 0})</h3>
+            <span className="text-[10px] text-muted-foreground font-medium">Auto-populated based on configured term weightages</span>
           </div>
           <div className="overflow-x-auto">
             <Table>
