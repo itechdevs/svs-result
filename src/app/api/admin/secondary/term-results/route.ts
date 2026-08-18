@@ -29,7 +29,10 @@ export const GET = withHandler(
           include: {
             subjectConfig: {
               include: {
-                syncedSubject: true
+                syncedSubject: true,
+                components: {
+                  select: { type: true, fullMarks: true, creditHour: true },
+                }
               }
             }
           }
@@ -38,6 +41,16 @@ export const GET = withHandler(
           select: {
             id: true,
             generatedAt: true
+          }
+        },
+        exam: {
+          select: {
+            id: true,
+            name: true,
+            gradeLevel: true,
+            academicYear: {
+              select: { name: true }
+            }
           }
         }
       },

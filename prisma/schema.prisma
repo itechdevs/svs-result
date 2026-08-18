@@ -932,7 +932,7 @@ model SecondarySubjectConfig {
   syncedSubjectId String
   academicYearId  String
   gradeLevel      String // "Grade 6"…"Grade 10"
-  creditHours     Int // totalFullMarks / 25
+  // creditHours removed: now computed as Σ(component.creditHour) at calc time
   isActive        Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -951,6 +951,10 @@ model SecondarySubjectComponent {
   id              String                 @id @default(cuid())
   subjectConfigId String
   type            SecondaryComponentType
+  // NEB v2: each component carries its own credit hour weight.
+  // e.g. English Theory = 2, English Practical = 1
+  // e.g. Math Theory    = 3, Math Practical    = 2
+  creditHour      Decimal                @db.Decimal(4, 2) @default(1)
   fullMarks       Decimal                @db.Decimal(6, 2)
   passMarks       Decimal                @db.Decimal(6, 2)
   displayOrder    Int                    @default(0)
@@ -962,7 +966,10 @@ model SecondarySubjectComponent {
   componentMarks    SecondaryComponentMark[]
   practicalHeadings SecondaryPracticalHeading[]
 
-  @@unique([subjectConfigId, type])
+  // NOT unique on type alone — a subject may have Theory-1 + Theory-2
+  // Uniqueness is enforced by (subjectConfigId, type, displayOrder)
+  @@unique([subjectConfigId, type, displayOrder])
+  @@index([subjectConfigId])
   @@map("secondary_subject_components")
 }
 

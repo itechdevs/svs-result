@@ -270,15 +270,40 @@ function SecondaryResultCompilationPage() {
     return rows;
   }, [annualResults]);
 
+  // NEB grade lookup from percentage
+  const getGradeFromPct = (obtained: number, full: number) => {
+    if (full <= 0) return { grade: '—', gp: '—' };
+    const pct = (obtained / full) * 100;
+    if (pct >= 90) return { grade: 'A+', gp: '4.00' };
+    if (pct >= 80) return { grade: 'A',  gp: '3.60' };
+    if (pct >= 70) return { grade: 'B+', gp: '3.20' };
+    if (pct >= 60) return { grade: 'B',  gp: '2.80' };
+    if (pct >= 50) return { grade: 'C+', gp: '2.40' };
+    if (pct >= 40) return { grade: 'C',  gp: '2.00' };
+    if (pct >= 35) return { grade: 'D',  gp: '1.60' };
+    return { grade: 'NG', gp: '0.00' };
+  };
+
   const renderSubjectRow = (subject: any) => {
-    const grade = subject?.grade || 'N/A';
-    const gp = Number(subject?.gradePoint || 0).toFixed(2);
-    const ch = subject?.creditHours || subject?.creditHours || 0;
-    const marks = subject?.totalObtained != null
-      ? `${subject.totalObtained}/${subject.totalFullMarks || '—'}`
-      : '—';
-    const isNG = subject?.isNG;
-    return { grade, gp, ch, marks, isNG };
+    const isNG = subject?.isNG ?? true;
+    const grade = isNG ? 'NG' : (subject?.grade || 'NG');
+    const gp = isNG ? '0.00' : Number(subject?.gradePoint || 0).toFixed(2);
+    const components = subject?.subjectConfig?.components || [];
+    const ch = components.reduce((sum: number, c: any) => sum + Number(c.creditHour || 0), 0);
+    const thObtained = subject?.theoryMarks != null ? Number(subject.theoryMarks) : null;
+    const prObtained = subject?.practicalMarks != null ? Number(subject.practicalMarks) : null;
+    const totalObtained = subject?.totalObtained != null ? Number(subject.totalObtained) : null;
+    const totalFull = subject?.totalFullMarks != null ? Number(subject.totalFullMarks) : null;
+    const thComp = components.find((c: any) => c.type === 'THEORY');
+    const prComp = components.find((c: any) => c.type === 'PRACTICAL');
+    const thFull = thComp ? Number(thComp.fullMarks) : null;
+    const prFull = prComp ? Number(prComp.fullMarks) : null;
+    const thCH = thComp ? Number(thComp.creditHour) : null;
+    const prCH = prComp ? Number(prComp.creditHour) : null;
+    // Per-component grade/GP
+    const thGrade = (thObtained !== null && thFull) ? getGradeFromPct(thObtained, thFull) : null;
+    const prGrade = (prObtained !== null && prFull) ? getGradeFromPct(prObtained, prFull) : null;
+    return { grade, gp, ch, isNG, thObtained, prObtained, totalObtained, totalFull, thFull, prFull, thCH, prCH, thGrade, prGrade };
   };
 
   const isTabLoading = isLoadingYears || isLoadingExams || 
@@ -536,24 +561,41 @@ function SecondaryResultCompilationPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[8%]">Roll</TableHead>
-                  <TableHead className="w-[20%]">Student Name</TableHead>
-                  <TableHead className="w-[18%]">Subject</TableHead>
-                  <TableHead className="w-[8%] text-center">Grade</TableHead>
-                  <TableHead className="w-[8%] text-center">GPA</TableHead>
-                  <TableHead className="w-[8%] text-center">C.H.</TableHead>
-                  <TableHead className="w-[12%] text-center">Marks</TableHead>
-                  <TableHead className="w-[10%] text-center">Result</TableHead>
-                  <TableHead className="w-[8%] text-right">Actions</TableHead>
+                  <TableHead className="w-[5%]" rowSpan={2}>Roll</TableHead>
+                  <TableHead className="w-[14%]" rowSpan={2}>Student Name</TableHead>
+                  <TableHead className="w-[14%]" rowSpan={2}>Subject</TableHead>
+                  <TableHead className="text-center bg-blue-50/60 dark:bg-blue-950/20 border-b-0" colSpan={4}>
+                    <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Theory</span>
+                  </TableHead>
+                  <TableHead className="text-center bg-purple-50/60 dark:bg-purple-950/20 border-b-0" colSpan={4}>
+                    <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">Practical</span>
+                  </TableHead>
+                  <TableHead className="w-[7%] text-center" rowSpan={2}>Total</TableHead>
+                  <TableHead className="w-[7%] text-center" rowSpan={2}>Grade</TableHead>
+                  <TableHead className="w-[5%] text-center" rowSpan={2}>GP</TableHead>
+                  <TableHead className="w-[5%] text-center" rowSpan={2}>C.H.</TableHead>
+                  <TableHead className="w-[8%] text-center" rowSpan={2}>Result</TableHead>
+                  <TableHead className="w-[9%] text-right" rowSpan={2}>Actions</TableHead>
+                </TableRow>
+                <TableRow>
+                  <TableHead className="text-center text-[9px] bg-blue-50/40 dark:bg-blue-950/10 text-blue-500 font-semibold py-1">Marks</TableHead>
+                  <TableHead className="text-center text-[9px] bg-blue-50/40 dark:bg-blue-950/10 text-blue-500 font-semibold py-1">Grade</TableHead>
+                  <TableHead className="text-center text-[9px] bg-blue-50/40 dark:bg-blue-950/10 text-blue-500 font-semibold py-1">GP</TableHead>
+                  <TableHead className="text-center text-[9px] bg-blue-50/40 dark:bg-blue-950/10 text-blue-500 font-semibold py-1">C.H.</TableHead>
+                  <TableHead className="text-center text-[9px] bg-purple-50/40 dark:bg-purple-950/10 text-purple-500 font-semibold py-1">Marks</TableHead>
+                  <TableHead className="text-center text-[9px] bg-purple-50/40 dark:bg-purple-950/10 text-purple-500 font-semibold py-1">Grade</TableHead>
+                  <TableHead className="text-center text-[9px] bg-purple-50/40 dark:bg-purple-950/10 text-purple-500 font-semibold py-1">GP</TableHead>
+                  <TableHead className="text-center text-[9px] bg-purple-50/40 dark:bg-purple-950/10 text-purple-500 font-semibold py-1">C.H.</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {termFlatRows.length > 0 ? (
-                  termFlatRows.map(({ result, subject, isFirstSubject, rowSpan, isSummaryRow }) => {
-                    const { grade, gp, ch, marks, isNG } = renderSubjectRow(subject);
+                  termFlatRows.map(({ result, subject, isFirstSubject, rowSpan, isSummaryRow }, rowIdx) => {
+                    const { grade, gp, ch, isNG, thObtained, prObtained, totalObtained, totalFull, thFull, prFull, thCH, prCH, thGrade, prGrade } = renderSubjectRow(subject);
                     const subjectName = subject?.subjectConfig?.syncedSubject?.name || 'Unknown';
+                    const rowKey = subject?.id ? `sr-${subject.id}` : `term-${result.id}-${rowIdx}`;
                     return (
-                      <TableRow key={`${result.id}|${subjectName}`} className="hover:bg-muted/10">
+                      <TableRow key={rowKey} className="hover:bg-muted/10">
                         {isFirstSubject && (
                           <>
                             <TableCell rowSpan={rowSpan} className="font-mono text-xs align-top">
@@ -580,13 +622,46 @@ function SecondaryResultCompilationPage() {
                           </>
                         ) : (
                           <>
-                            <TableCell className="text-xs">{subjectName}</TableCell>
-                            <TableCell className="text-center font-bold">
+                            <TableCell className="text-xs font-medium">{subjectName}</TableCell>
+                            {/* Theory: Marks / Grade / GP / C.H. */}
+                            <TableCell className="text-center text-xs font-mono bg-blue-50/30 dark:bg-blue-950/10">
+                              {thObtained !== null && thFull != null
+                                ? <span className={thGrade?.grade === 'NG' ? 'text-red-600 font-bold' : ''}>{thObtained}/{thFull}</span>
+                                : <span className="text-muted-foreground">—</span>}
+                            </TableCell>
+                            <TableCell className="text-center text-xs font-bold bg-blue-50/30 dark:bg-blue-950/10">
+                              {thGrade ? <span className={thGrade.grade === 'NG' ? 'text-red-600' : 'text-blue-700 dark:text-blue-300'}>{thGrade.grade}</span> : <span className="text-muted-foreground">—</span>}
+                            </TableCell>
+                            <TableCell className="text-center text-xs bg-blue-50/30 dark:bg-blue-950/10">
+                              {thGrade ? thGrade.gp : '—'}
+                            </TableCell>
+                            <TableCell className="text-center text-xs bg-blue-50/30 dark:bg-blue-950/10">
+                              {thCH ?? '—'}
+                            </TableCell>
+                            {/* Practical: Marks / Grade / GP / C.H. */}
+                            <TableCell className="text-center text-xs font-mono bg-purple-50/30 dark:bg-purple-950/10">
+                              {prObtained !== null && prFull != null
+                                ? <span className={prGrade?.grade === 'NG' ? 'text-red-600 font-bold' : ''}>{prObtained}/{prFull}</span>
+                                : <span className="text-muted-foreground">—</span>}
+                            </TableCell>
+                            <TableCell className="text-center text-xs font-bold bg-purple-50/30 dark:bg-purple-950/10">
+                              {prGrade ? <span className={prGrade.grade === 'NG' ? 'text-red-600' : 'text-purple-700 dark:text-purple-300'}>{prGrade.grade}</span> : <span className="text-muted-foreground">—</span>}
+                            </TableCell>
+                            <TableCell className="text-center text-xs bg-purple-50/30 dark:bg-purple-950/10">
+                              {prGrade ? prGrade.gp : '—'}
+                            </TableCell>
+                            <TableCell className="text-center text-xs bg-purple-50/30 dark:bg-purple-950/10">
+                              {prCH ?? '—'}
+                            </TableCell>
+                            {/* Total */}
+                            <TableCell className="text-center text-xs font-mono font-bold">
+                              {totalObtained !== null ? `${totalObtained}${totalFull != null ? `/${totalFull}` : ''}` : '—'}
+                            </TableCell>
+                            <TableCell className="text-center font-bold text-xs">
                               <span className={isNG ? 'text-red-600' : 'text-emerald-600'}>{grade}</span>
                             </TableCell>
                             <TableCell className="text-center text-xs">{gp}</TableCell>
                             <TableCell className="text-center text-xs">{ch}</TableCell>
-                            <TableCell className="text-center text-xs font-mono">{marks}</TableCell>
                           </>
                         )}
                         {isFirstSubject && (
@@ -663,24 +738,41 @@ function SecondaryResultCompilationPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[8%]">Roll</TableHead>
-                  <TableHead className="w-[20%]">Student Name</TableHead>
-                  <TableHead className="w-[18%]">Subject</TableHead>
-                  <TableHead className="w-[8%] text-center">Grade</TableHead>
-                  <TableHead className="w-[8%] text-center">GPA</TableHead>
-                  <TableHead className="w-[8%] text-center">C.H.</TableHead>
-                  <TableHead className="w-[12%] text-center">Marks</TableHead>
-                  <TableHead className="w-[10%] text-center">Result</TableHead>
-                  <TableHead className="w-[8%] text-right">Actions</TableHead>
+                  <TableHead className="w-[5%]" rowSpan={2}>Roll</TableHead>
+                  <TableHead className="w-[14%]" rowSpan={2}>Student Name</TableHead>
+                  <TableHead className="w-[14%]" rowSpan={2}>Subject</TableHead>
+                  <TableHead className="text-center bg-blue-50/60 dark:bg-blue-950/20 border-b-0" colSpan={3}>
+                    <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Theory</span>
+                  </TableHead>
+                  <TableHead className="text-center bg-purple-50/60 dark:bg-purple-950/20 border-b-0" colSpan={3}>
+                    <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">Practical</span>
+                  </TableHead>
+                  <TableHead className="w-[7%] text-center" rowSpan={2}>Total</TableHead>
+                  <TableHead className="w-[7%] text-center" rowSpan={2}>Grade</TableHead>
+                  <TableHead className="w-[5%] text-center" rowSpan={2}>GP</TableHead>
+                  <TableHead className="w-[5%] text-center" rowSpan={2}>C.H.</TableHead>
+                  <TableHead className="w-[8%] text-center" rowSpan={2}>Result</TableHead>
+                  <TableHead className="w-[9%] text-right" rowSpan={2}>Actions</TableHead>
+                </TableRow>
+                <TableRow>
+                  <TableHead className="text-center text-[9px] bg-blue-50/40 dark:bg-blue-950/10 text-blue-500 font-semibold py-1">Marks</TableHead>
+                  <TableHead className="text-center text-[9px] bg-blue-50/40 dark:bg-blue-950/10 text-blue-500 font-semibold py-1">Grade</TableHead>
+                  <TableHead className="text-center text-[9px] bg-blue-50/40 dark:bg-blue-950/10 text-blue-500 font-semibold py-1">GP</TableHead>
+                  <TableHead className="text-center text-[9px] bg-blue-50/40 dark:bg-blue-950/10 text-blue-500 font-semibold py-1">C.H.</TableHead>
+                  <TableHead className="text-center text-[9px] bg-purple-50/40 dark:bg-purple-950/10 text-purple-500 font-semibold py-1">Marks</TableHead>
+                  <TableHead className="text-center text-[9px] bg-purple-50/40 dark:bg-purple-950/10 text-purple-500 font-semibold py-1">Grade</TableHead>
+                  <TableHead className="text-center text-[9px] bg-purple-50/40 dark:bg-purple-950/10 text-purple-500 font-semibold py-1">GP</TableHead>
+                  <TableHead className="text-center text-[9px] bg-purple-50/40 dark:bg-purple-950/10 text-purple-500 font-semibold py-1">C.H.</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {annualFlatRows.length > 0 ? (
-                  annualFlatRows.map(({ result, subject, isFirstSubject, rowSpan, isSummaryRow }) => {
-                    const { grade, gp, ch, marks, isNG } = renderSubjectRow(subject);
+                  annualFlatRows.map(({ result, subject, isFirstSubject, rowSpan, isSummaryRow }, rowIdx) => {
+                    const { grade, gp, ch, isNG, thObtained, prObtained, totalObtained, totalFull, thFull, prFull, thCH, prCH, thGrade, prGrade } = renderSubjectRow(subject);
                     const subjectName = subject?.subjectConfig?.syncedSubject?.name || 'Unknown';
+                    const rowKey = subject?.id ? `ar-${subject.id}` : `annual-${result.id}-${rowIdx}`;
                     return (
-                      <TableRow key={`${result.id}|${subjectName}`} className="hover:bg-muted/10">
+                      <TableRow key={rowKey} className="hover:bg-muted/10">
                         {isFirstSubject && (
                           <>
                             <TableCell rowSpan={rowSpan} className="font-mono text-xs align-top">
@@ -707,13 +799,43 @@ function SecondaryResultCompilationPage() {
                           </>
                         ) : (
                           <>
-                            <TableCell className="text-xs">{subjectName}</TableCell>
-                            <TableCell className="text-center font-bold">
+                            <TableCell className="text-xs font-medium">{subjectName}</TableCell>
+                            <TableCell className="text-center text-xs font-mono bg-blue-50/30 dark:bg-blue-950/10">
+                              {thObtained !== null && thFull != null
+                                ? <span className={thGrade?.grade === 'NG' ? 'text-red-600 font-bold' : ''}>{thObtained}/{thFull}</span>
+                                : <span className="text-muted-foreground">—</span>}
+                            </TableCell>
+                            <TableCell className="text-center text-xs font-bold bg-blue-50/30 dark:bg-blue-950/10">
+                              {thGrade ? <span className={thGrade.grade === 'NG' ? 'text-red-600' : 'text-blue-700 dark:text-blue-300'}>{thGrade.grade}</span> : <span className="text-muted-foreground">—</span>}
+                            </TableCell>
+                            <TableCell className="text-center text-xs bg-blue-50/30 dark:bg-blue-950/10">
+                              {thGrade ? thGrade.gp : '—'}
+                            </TableCell>
+                            <TableCell className="text-center text-xs bg-blue-50/30 dark:bg-blue-950/10">
+                              {thCH ?? '—'}
+                            </TableCell>
+                            <TableCell className="text-center text-xs font-mono bg-purple-50/30 dark:bg-purple-950/10">
+                              {prObtained !== null && prFull != null
+                                ? <span className={prGrade?.grade === 'NG' ? 'text-red-600 font-bold' : ''}>{prObtained}/{prFull}</span>
+                                : <span className="text-muted-foreground">—</span>}
+                            </TableCell>
+                            <TableCell className="text-center text-xs font-bold bg-purple-50/30 dark:bg-purple-950/10">
+                              {prGrade ? <span className={prGrade.grade === 'NG' ? 'text-red-600' : 'text-purple-700 dark:text-purple-300'}>{prGrade.grade}</span> : <span className="text-muted-foreground">—</span>}
+                            </TableCell>
+                            <TableCell className="text-center text-xs bg-purple-50/30 dark:bg-purple-950/10">
+                              {prGrade ? prGrade.gp : '—'}
+                            </TableCell>
+                            <TableCell className="text-center text-xs bg-purple-50/30 dark:bg-purple-950/10">
+                              {prCH ?? '—'}
+                            </TableCell>
+                            <TableCell className="text-center text-xs font-mono font-bold">
+                              {totalObtained !== null ? `${totalObtained}${totalFull != null ? `/${totalFull}` : ''}` : '—'}
+                            </TableCell>
+                            <TableCell className="text-center font-bold text-xs">
                               <span className={isNG ? 'text-red-600' : 'text-emerald-600'}>{grade}</span>
                             </TableCell>
                             <TableCell className="text-center text-xs">{gp}</TableCell>
                             <TableCell className="text-center text-xs">{ch}</TableCell>
-                            <TableCell className="text-center text-xs font-mono">{marks}</TableCell>
                           </>
                         )}
                         {isFirstSubject && (

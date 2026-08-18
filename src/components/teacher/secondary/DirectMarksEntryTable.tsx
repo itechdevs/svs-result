@@ -21,7 +21,7 @@ interface DirectMarksEntryTableProps {
   rows: MarkEntryRow[];
   fullMarks: number;
   passMarks: number;
-  componentType: "THEORY";
+  componentType: string;
   onMarkChange: (studentId: string, marks: number | null, isAbsent: boolean) => void;
   onSaveAll: () => Promise<void>;
   onSubmitAll: () => Promise<void>;
@@ -88,7 +88,7 @@ export function DirectMarksEntryTable({
       {/* Action Bar */}
       <div className="flex items-center justify-between gap-4 p-4 bg-muted/30 rounded-lg border">
         <div className="flex items-center gap-2 text-sm">
-          <span className="font-semibold">Theory Examination</span>
+          <span className="font-semibold capitalize">{componentType.toLowerCase()} Examination</span>
           <span className="text-muted-foreground">•</span>
           <span className="text-muted-foreground">
             Full Marks: <span className="font-semibold text-foreground">{fullMarks}</span>

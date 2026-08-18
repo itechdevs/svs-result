@@ -9,10 +9,8 @@ import { Button } from "@/components/ui/button";
 import { SecondaryMarkEntryFilters } from "@/components/teacher/secondary/SecondaryMarkEntryFilters";
 import { ComponentTabs } from "@/components/teacher/secondary/ComponentTabs";
 import { DirectMarksEntryTable } from "@/components/teacher/secondary/DirectMarksEntryTable";
-import { PracticalMarksEntryTable } from "@/components/teacher/secondary/PracticalMarksEntryTable";
 import { useSecondaryComponents } from "@/hooks/use-secondary-components";
 import { useSecondaryMarkEntry } from "@/hooks/use-secondary-mark-entry";
-import { usePracticalMarkEntry } from "@/hooks/use-practical-mark-entry";
 import { useStudents } from "@/hooks/use-students";
 import type { SecondaryComponentType } from "@/types/secondary-marks";
 import SanskarLoader from "@/components/shared/SanskarLoader";
@@ -88,29 +86,6 @@ export default function SecondaryMarkEntryPage() {
     })),
   });
 
-  // Practical marks entry hook
-  const {
-    practicalMarkEntryRows,
-    isLoading: isLoadingPracticalMarks,
-    updateHeadingMark,
-    updateAbsent,
-    saveAll: savePracticalAll,
-    submitAll: submitPracticalAll,
-    isSaving: isSavingPractical,
-    isSubmitting: isSubmittingPractical,
-    hasUnsavedChanges: hasPracticalUnsavedChanges,
-    stats: practicalStats,
-  } = usePracticalMarkEntry({
-    componentId: activeComponent?.id || "",
-    examId,
-    practicalHeadings: activeComponent?.practicalHeadings || [],
-    students: students.map((s) => ({
-      id: s.id,
-      name: s.name,
-      rollNumber: s.rollNumber || "",
-      section: s.section || "",
-    })),
-  });
 
   // Auto-select first component when config loads - moved to useEffect
   useEffect(() => {
@@ -219,22 +194,8 @@ export default function SecondaryMarkEntryPage() {
           {/* Marks Entry Table */}
           {activeComponent && (
             <>
-              {isLoadingStudents || isLoadingMarks || isLoadingPracticalMarks ? (
+              {isLoadingStudents || isLoadingMarks ? (
                 <SanskarLoader message="Loading students and marks..." />
-              ) : activeComponent.type === "PRACTICAL" ? (
-                <PracticalMarksEntryTable
-                  rows={practicalMarkEntryRows}
-                  practicalHeadings={activeComponent.practicalHeadings || []}
-                  fullMarks={Number(activeComponent.fullMarks)}
-                  passMarks={Number(activeComponent.passMarks)}
-                  onMarkChange={updateHeadingMark}
-                  onAbsentChange={updateAbsent}
-                  onSaveAll={savePracticalAll}
-                  onSubmitAll={submitPracticalAll}
-                  isSaving={isSavingPractical}
-                  isSubmitting={isSubmittingPractical}
-                  hasUnsavedChanges={hasPracticalUnsavedChanges}
-                />
               ) : (
                 <DirectMarksEntryTable
                   rows={markEntryRows}

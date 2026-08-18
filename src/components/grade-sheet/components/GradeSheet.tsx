@@ -422,7 +422,11 @@ export default function GradeSheet({
               <GradeTable subjects={result.subjects} />
 
               {/* GPA + Rank strip */}
-              <GPASummary gpa={result.gpa} rank={result.rank} />
+              <GPASummary
+                gpa={result.gpa}
+                rank={result.rank}
+                hasNG={result.hasNG ?? result.subjects.some(s => s.finalGrade === 'NG')}
+              />
 
               {/* Notes + Intervals */}
               <GradeLegend />

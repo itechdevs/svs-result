@@ -8,7 +8,7 @@ import { secondaryMarksheetSchema } from "@/lib/schemas";
 export const POST = withHandler(
   async (req: NextRequest, { user }) => {
     const body = secondaryMarksheetSchema.parse(await req.json());
-    
+
     if (body.termResultId) {
       const termResult = await prisma.secondaryTermResult.findUnique({
         where: { id: body.termResultId },
@@ -46,7 +46,7 @@ export const POST = withHandler(
       });
       if (!termResult) return notFound("Term result not found");
       if (!termResult.isPublished) return badRequest("Cannot generate marksheet for unpublished result");
-      
+
       const marksheet = await prisma.secondaryMarksheet.upsert({
         where: { termResultId: body.termResultId },
         update: {
@@ -96,7 +96,7 @@ export const POST = withHandler(
       });
       if (!annualResult) return notFound("Annual result not found");
       if (!annualResult.isPublished) return badRequest("Cannot generate marksheet for unpublished result");
-      
+
       const marksheet = await prisma.secondaryMarksheet.upsert({
         where: { annualResultId: body.annualResultId },
         update: {

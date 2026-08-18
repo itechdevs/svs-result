@@ -434,6 +434,9 @@ export const secondaryComponentTypeSchema = z.enum([
 export const secondarySubjectComponentSchema = z.object({
   id: z.string().cuid().optional(), // optional for creates, required for updates
   type: secondaryComponentTypeSchema,
+  // NEB v2: credit hour is per-component, not per-subject
+  // e.g. English Theory = 2 CH, English Practical = 1 CH
+  creditHour: z.number().positive().default(1),
   fullMarks: z.number().positive(),
   passMarks: z.number().nonnegative(),
   displayOrder: z.number().int().min(0).default(0),
@@ -444,7 +447,7 @@ export const createSecondarySubjectConfigSchema = z.object({
   syncedSubjectId: z.string().cuid(),
   academicYearId: z.string().cuid(),
   gradeLevel: z.string(),
-  creditHours: z.number().int().positive(),
+  // creditHours removed from subject level — now Σ(component.creditHour)
   components: z.array(secondarySubjectComponentSchema).min(1),
 });
 

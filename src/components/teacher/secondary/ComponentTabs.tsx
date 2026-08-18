@@ -63,11 +63,6 @@ export function ComponentTabs({
                 <span className="font-semibold">{component.fullMarks}</span>
                 <span className="text-muted-foreground">FM</span>
               </div>
-              {component.type === "PRACTICAL" && component.practicalHeadings && (
-                <span className="px-1.5 py-0.5 bg-background rounded text-[10px] font-semibold">
-                  {component.practicalHeadings.length} headings
-                </span>
-              )}
             </button>
           );
         })}

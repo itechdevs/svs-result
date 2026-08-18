@@ -156,12 +156,13 @@ const styles = PdfStyleSheet.create({
     color: COLORS.text,
   },
 
-  colSn: { width: "6%", textAlign: "center" },
-  colSubject: { width: "32%" },
-  colCH: { width: "14%", textAlign: "center" },
-  colGrade: { width: "12%", textAlign: "center" },
-  colGP: { width: "16%", textAlign: "center" },
-  colRemarks: { width: "20%", textAlign: "center" },
+  colCode: { width: "12%", textAlign: "center" },
+  colSubject: { width: "38%" },
+  colCH: { width: "10%", textAlign: "center" },
+  colGP: { width: "10%", textAlign: "center" },
+  colGrade: { width: "10%", textAlign: "center" },
+  colFinalGrade: { width: "12%", textAlign: "center" },
+  colRemarks: { width: "8%", textAlign: "center" },
 
   // GPA strip
   gpaStrip: {
@@ -360,7 +361,14 @@ const GRADE_INTERVALS = [
 
 interface AnnualSubjectResult {
   subject: string;
-  creditHours: number;
+  subjectCode?: string;
+  thCreditHours: number;
+  prCreditHours: number;
+  totalCreditHours: number;
+  thGP?: number;
+  prGP?: number;
+  thGrade?: string;
+  prGrade?: string;
   weightedTotalObtained: number;
   weightedTotalFull: number;
   percentage: number;
@@ -537,113 +545,72 @@ export function SecondaryAnnualMarksheetPDF({
 
             {/* Marks Table */}
             <View style={styles.table}>
-              <View
-                style={[styles.tableHeader, { backgroundColor: "#ffffff" }]}
-              >
-                <Text
-                  style={[styles.th, styles.colSn, { color: COLORS.primary }]}
-                >
-                  S.N.
-                </Text>
-                <Text
-                  style={[
-                    styles.th,
-                    styles.colSubject,
-                    { color: COLORS.primary },
-                  ]}
-                >
-                  SUBJECTS
-                </Text>
-                <Text
-                  style={[styles.th, styles.colCH, { color: COLORS.primary }]}
-                >
-                  CREDIT HOUR (CH)
-                </Text>
-                <Text
-                  style={[
-                    styles.th,
-                    styles.colGrade,
-                    { color: COLORS.primary },
-                  ]}
-                >
-                  GRADE
-                </Text>
-                <Text
-                  style={[styles.th, styles.colGP, { color: COLORS.primary }]}
-                >
-                  GRADE POINT
-                </Text>
-                <Text
-                  style={[
-                    styles.th,
-                    styles.colRemarks,
-                    { borderRight: 0, color: COLORS.primary },
-                  ]}
-                >
-                  REMARKS
-                </Text>
+              <View style={[styles.tableHeader, { backgroundColor: "#ffffff" }]}>
+                <Text style={[styles.th, styles.colCode, { color: COLORS.primary }]}>Subject Code</Text>
+                <Text style={[styles.th, styles.colSubject, { color: COLORS.primary }]}>Subjects</Text>
+                <Text style={[styles.th, styles.colCH, { color: COLORS.primary }]}>Credit Hour</Text>
+                <Text style={[styles.th, styles.colGP, { color: COLORS.primary }]}>Grade Point</Text>
+                <Text style={[styles.th, styles.colGrade, { color: COLORS.primary }]}>Grade</Text>
+                <Text style={[styles.th, styles.colFinalGrade, { color: COLORS.primary }]}>Final Grade</Text>
+                <Text style={[styles.th, styles.colRemarks, { borderRight: 0, color: COLORS.primary }]}>Remarks</Text>
               </View>
 
-              {[...data.subjectResults].sort((a, b) => a.subject.localeCompare(b.subject)).map((subject, index) => (
-                <View
-                  key={index}
-                  style={index % 2 === 0 ? styles.tableRow : styles.tableRowAlt}
-                >
-                  <Text style={[styles.td, styles.colSn]}>{index + 1}.</Text>
-                  <Text
-                    style={[
-                      styles.td,
-                      styles.colSubject,
-                      { fontFamily: "Helvetica-Bold" },
-                    ]}
-                  >
-                    {subject.subject.toUpperCase()}
-                  </Text>
-                  <Text style={[styles.td, styles.colCH]}>
-                    {formatNum(subject.creditHours, 2)}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.td,
-                      styles.colGrade,
-                      { fontFamily: "Helvetica-Bold" },
-                    ]}
-                  >
-                    {subject.grade}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.td,
-                      styles.colGP,
-                      { fontFamily: "Helvetica-Bold" },
-                    ]}
-                  >
-                    {subject.gradePoint > 0
-                      ? formatNum(subject.gradePoint, 2)
-                      : "\u2013"}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.td,
-                      styles.colRemarks,
-                      {
-                        borderRight: 0,
-                        fontFamily: "Helvetica",
-                      },
-                    ]}
-                  >
-                    {GRADE_INTERVALS.find((g) => g.grade === subject.grade)
-                      ?.desc || "Unknown"}
-                    .
-                  </Text>
-                </View>
-              ))}
+              {[...data.subjectResults].sort((a, b) => a.subject.localeCompare(b.subject)).map((subject, index) => {
+                const hasTh = subject.thCreditHours > 0;
+                const hasPr = subject.prCreditHours > 0;
+                const rowStyle = index % 2 === 0 ? styles.tableRow : styles.tableRowAlt;
+
+                return (
+                  <React.Fragment key={index}>
+                    {hasTh && (
+                      <View style={rowStyle}>
+                        <Text style={[styles.td, styles.colCode]}>{subject.subjectCode || ""}</Text>
+                        <Text style={[styles.td, styles.colSubject]}>{subject.subject.toUpperCase()} (TH)</Text>
+                        <Text style={[styles.td, styles.colCH]}>{formatNum(subject.thCreditHours, 2)}</Text>
+                        <Text style={[styles.td, styles.colGP]}>{subject.thGP != null && subject.thGP > 0 ? formatNum(subject.thGP, 2) : "—"}</Text>
+                        <Text style={[styles.td, styles.colGrade]}>{subject.thGrade || "—"}</Text>
+                        <Text style={[styles.td, styles.colFinalGrade, { fontFamily: "Helvetica-Bold" }]}>{subject.grade}</Text>
+                        <Text style={[styles.td, styles.colRemarks, { borderRight: 0 }]}>{subject.isNG ? "NG" : ""}</Text>
+                      </View>
+                    )}
+                    {hasPr && (
+                      <View style={rowStyle}>
+                        <Text style={[styles.td, styles.colCode]}>{subject.subjectCode || ""}</Text>
+                        <Text style={[styles.td, styles.colSubject]}>{subject.subject.toUpperCase()} (PR/IN)</Text>
+                        <Text style={[styles.td, styles.colCH]}>{formatNum(subject.prCreditHours, 2)}</Text>
+                        <Text style={[styles.td, styles.colGP]}>{subject.prGP != null && subject.prGP > 0 ? formatNum(subject.prGP, 2) : "—"}</Text>
+                        <Text style={[styles.td, styles.colGrade]}>{subject.prGrade || "—"}</Text>
+                        <Text style={[styles.td, styles.colFinalGrade]}>{hasTh ? "" : subject.grade}</Text>
+                        <Text style={[styles.td, styles.colRemarks, { borderRight: 0 }]}>{!hasTh && subject.isNG ? "NG" : ""}</Text>
+                      </View>
+                    )}
+                    {!hasTh && !hasPr && (
+                      <View style={rowStyle}>
+                        <Text style={[styles.td, styles.colCode]}>{subject.subjectCode || ""}</Text>
+                        <Text style={[styles.td, styles.colSubject]}>{subject.subject.toUpperCase()}</Text>
+                        <Text style={[styles.td, styles.colCH]}>{formatNum(subject.totalCreditHours, 2)}</Text>
+                        <Text style={[styles.td, styles.colGP]}>{subject.gradePoint > 0 ? formatNum(subject.gradePoint, 2) : "—"}</Text>
+                        <Text style={[styles.td, styles.colGrade]}>{subject.grade}</Text>
+                        <Text style={[styles.td, styles.colFinalGrade, { fontFamily: "Helvetica-Bold" }]}>{subject.grade}</Text>
+                        <Text style={[styles.td, styles.colRemarks, { borderRight: 0 }]}>{subject.isNG ? "NG" : ""}</Text>
+                      </View>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+
+              {/* Total Row */}
+              <View style={[styles.tableRow, { backgroundColor: "#ffffff", borderBottom: 0 }]}>
+                <Text style={[styles.td, { width: "50%", textAlign: "right", fontFamily: "Helvetica-Bold", borderRight: `0.5pt solid ${COLORS.border}` }]}>Total</Text>
+                <Text style={[styles.td, { width: "10%", textAlign: "center", fontFamily: "Helvetica-Bold", borderRight: `0.5pt solid ${COLORS.border}` }]}>{formatNum(data.totalCreditHours, 2)}</Text>
+                <Text style={[styles.td, { width: "40%", textAlign: "right", borderRight: 0, fontFamily: "Helvetica-Bold", paddingRight: 24 }]}>Grade Point Average (GPA):  {data.ngSubjects > 0 ? "NG" : formatNum(data.gpa, 2)}</Text>
+              </View>
             </View>
 
             {/* GPA Strip */}
             <View style={styles.gpaStrip}>
               <Text style={styles.gpaLabel}>
-                Grade Point Average (GPA) = {formatNum(data.gpa, 2)}
+                Grade Point Average (GPA) = {data.ngSubjects > 0 ? "NG" : formatNum(data.gpa, 2)}
               </Text>
               <View
                 style={{ flexDirection: "row", alignItems: "center", gap: 4 }}

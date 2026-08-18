@@ -13,22 +13,29 @@ export const POST = withHandler(
   async (req: NextRequest, { params, user }) => {
     const { id } = await params;
     const body = verifySchema.parse(await req.json());
-    
+
     const result = await prisma.secondaryComponentMark.findUnique({
       where: { id },
     });
-    
+
     if (!result) return notFound("Mark record not found");
 
     if (result.status !== "SUBMITTED") {
       return badRequest(`Cannot verify a record with status '${result.status}'. It must be SUBMITTED first.`);
     }
 
+    // Defensive: verify the user actually exists in DB before writing verifiedById.
+    // If the session carries a stale/mismatched ID, fall back to null rather than crashing.
+    const verifyingUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { id: true },
+    });
+
     const updated = await prisma.secondaryComponentMark.update({
       where: { id },
       data: {
         status: "VERIFIED",
-        verifiedById: user.id,
+        verifiedById: verifyingUser?.id ?? null,
         verifiedAt: new Date(),
         ...(body.remarks && { remarks: body.remarks }),
       },

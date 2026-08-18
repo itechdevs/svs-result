@@ -6,6 +6,7 @@ import { SecondaryTermMarksheetPDF } from './SecondaryTermMarksheetPDF';
 import { SecondaryAnnualMarksheetPDF } from './SecondaryAnnualMarksheetPDF';
 import { Download, FileText, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { getSecondaryGrade } from '@/lib/secondary-grades';
 
 interface TermMarksheetData {
   type: 'term';
@@ -23,7 +24,9 @@ interface TermMarksheetData {
   };
   subjectResults: Array<{
     subject: string;
-    creditHours: number;
+    thCreditHours: number;
+    prCreditHours: number;
+    totalCreditHours: number;
     internalMarks: number;
     theoryMarks: number;
     practicalMarks: number;
@@ -32,6 +35,11 @@ interface TermMarksheetData {
     gradePoint: number;
     grade: string;
     isNG: boolean;
+    thGrade?: string;
+    thGP?: number;
+    prGrade?: string;
+    prGP?: number;
+    subjectCode?: string;
   }>;
   totalSubjects: number;
   passedSubjects: number;
@@ -55,13 +63,20 @@ interface AnnualMarksheetData {
   };
   subjectResults: Array<{
     subject: string;
-    creditHours: number;
+    thCreditHours: number;
+    prCreditHours: number;
+    totalCreditHours: number;
     weightedTotalObtained: number;
     weightedTotalFull: number;
     percentage: number;
     gradePoint: number;
     grade: string;
     isNG: boolean;
+    thGrade?: string;
+    thGP?: number;
+    prGrade?: string;
+    prGP?: number;
+    subjectCode?: string;
   }>;
   totalSubjects: number;
   passedSubjects: number;
@@ -81,15 +96,15 @@ interface SecondaryMarksheetDownloadProps {
   variant?: 'button' | 'icon';
 }
 
-export function SecondaryMarksheetDownload({ 
-  data, 
-  variant = 'button' 
+export function SecondaryMarksheetDownload({
+  data,
+  variant = 'button'
 }: SecondaryMarksheetDownloadProps) {
   const fileName = data.type === 'term'
     ? `Term_Marksheet_${data.student.name}_${data.student.rollNumber}.pdf`
     : `Annual_Transcript_${data.student.name}_${data.student.rollNumber}.pdf`;
 
-  const document = data.type === 'term' 
+  const document = data.type === 'term'
     ? <SecondaryTermMarksheetPDF data={data} />
     : <SecondaryAnnualMarksheetPDF data={data} />;
 
@@ -154,18 +169,61 @@ export function prepareTermMarksheetData(
     academicYear: {
       name: termResult?.academicYear?.name || 'Unknown Year',
     },
-    subjectResults: (subjectResults || []).map(sr => ({
-      subject: sr?.subjectConfig?.syncedSubject?.name || 'Unknown Subject',
-      creditHours: sr?.creditHours || 0,
-      internalMarks: Number(sr?.internalMarks || 0),
-      theoryMarks: Number(sr?.theoryMarks || 0),
-      practicalMarks: Number(sr?.practicalMarks || 0),
-      totalObtained: Number(sr?.totalObtained || 0),
-      totalFullMarks: Number(sr?.totalFullMarks || 0),
-      gradePoint: Number(sr?.gradePoint || 0),
-      grade: sr?.grade || 'N/A',
-      isNG: sr?.isNG || false,
-    })),
+    subjectResults: (subjectResults || []).map(sr => {
+      const components = sr?.subjectConfig?.components || [];
+      const thComp = components.find((c: any) => c.type === 'THEORY');
+      const prComp = components.find((c: any) => c.type === 'PRACTICAL');
+
+      const thCH = thComp ? Number(thComp.creditHour) : 0;
+      const prCH = prComp ? Number(prComp.creditHour) : 0;
+
+      const thFull = thComp ? Number(thComp.fullMarks) : null;
+      const prFull = prComp ? Number(prComp.fullMarks) : null;
+
+      const thObtained = sr?.theoryMarks != null ? Number(sr.theoryMarks) : null;
+      const prObtained = sr?.practicalMarks != null ? Number(sr.practicalMarks) : null;
+
+      let thGradeStr, thGPNum, prGradeStr, prGPNum;
+
+      if (thObtained !== null && thFull) {
+        const pct = (thObtained / thFull) * 100;
+        const scale = getSecondaryGrade(pct);
+        thGradeStr = scale.grade;
+        thGPNum = scale.gradePoint;
+      }
+
+      if (prObtained !== null && prFull) {
+        const pct = (prObtained / prFull) * 100;
+        const scale = getSecondaryGrade(pct);
+        prGradeStr = scale.grade;
+        prGPNum = scale.gradePoint;
+      }
+
+      const finalGrade = sr?.grade || 'N/A';
+      const effectiveFinalGrade = thGradeStr === 'NG' || prGradeStr === 'NG' ? 'NG' : finalGrade;
+      const effectiveIsNG = effectiveFinalGrade === 'NG';
+      const effectiveGP = thComp ? (thGPNum || 0) : Number(sr?.gradePoint || 0);
+
+      return {
+        subject: sr?.subjectConfig?.syncedSubject?.name || 'Unknown Subject',
+        subjectCode: sr?.subjectConfig?.syncedSubject?.code || '',
+        thCreditHours: thCH,
+        prCreditHours: prCH,
+        totalCreditHours: sr?.creditHours || 0,
+        internalMarks: Number(sr?.internalMarks || 0),
+        theoryMarks: Number(sr?.theoryMarks || 0),
+        practicalMarks: Number(sr?.practicalMarks || 0),
+        totalObtained: Number(sr?.totalObtained || 0),
+        totalFullMarks: Number(sr?.totalFullMarks || 0),
+        gradePoint: effectiveIsNG ? 0 : effectiveGP,
+        grade: effectiveFinalGrade,
+        isNG: effectiveIsNG,
+        thGrade: thGradeStr,
+        thGP: thGPNum,
+        prGrade: prGradeStr,
+        prGP: prGPNum,
+      };
+    }),
     totalSubjects: termResult?.totalSubjects || 0,
     passedSubjects: termResult?.passedSubjects || 0,
     ngSubjects: termResult?.ngSubjects || 0,
@@ -191,16 +249,62 @@ export function prepareAnnualMarksheetData(
     academicYear: {
       name: annualResult?.academicYear?.name || 'Unknown Year',
     },
-    subjectResults: (subjectResults || []).map(sr => ({
-      subject: sr?.subjectConfig?.syncedSubject?.name || 'Unknown Subject',
-      creditHours: sr?.creditHours || 0,
-      weightedTotalObtained: Number(sr?.weightedTotalObtained || 0),
-      weightedTotalFull: Number(sr?.weightedTotalFull || 0),
-      percentage: Number(sr?.percentage || 0),
-      gradePoint: Number(sr?.gradePoint || 0),
-      grade: sr?.grade || 'N/A',
-      isNG: sr?.isNG || false,
-    })),
+    subjectResults: (subjectResults || []).map(sr => {
+      const components = sr?.subjectConfig?.components || [];
+      const thComp = components.find((c: any) => c.type === 'THEORY');
+      const prComp = components.find((c: any) => c.type === 'PRACTICAL');
+
+      const thCH = thComp ? Number(thComp.creditHour) : 0;
+      const prCH = prComp ? Number(prComp.creditHour) : 0;
+
+      const thFull = thComp ? Number(thComp.fullMarks) : null;
+      const prFull = prComp ? Number(prComp.fullMarks) : null;
+
+      // In annual, theoryMarks and practicalMarks are not always stored at the top level
+      // but if we are blending them, we might not have raw obtained vs full easily available.
+      // However, if we do have theoryMarks/practicalMarks:
+      const thObtained = sr?.theoryMarks != null ? Number(sr.theoryMarks) : null;
+      const prObtained = sr?.practicalMarks != null ? Number(sr.practicalMarks) : null;
+
+      let thGradeStr, thGPNum, prGradeStr, prGPNum;
+
+      if (thObtained !== null && thFull) {
+        const pct = (thObtained / thFull) * 100;
+        const scale = getSecondaryGrade(pct);
+        thGradeStr = scale.grade;
+        thGPNum = scale.gradePoint;
+      }
+
+      if (prObtained !== null && prFull) {
+        const pct = (prObtained / prFull) * 100;
+        const scale = getSecondaryGrade(pct);
+        prGradeStr = scale.grade;
+        prGPNum = scale.gradePoint;
+      }
+
+      const finalGrade = sr?.grade || 'N/A';
+      const effectiveFinalGrade = thGradeStr === 'NG' || prGradeStr === 'NG' ? 'NG' : finalGrade;
+      const effectiveIsNG = effectiveFinalGrade === 'NG';
+      const effectiveGP = thComp ? (thGPNum || 0) : Number(sr?.gradePoint || 0);
+
+      return {
+        subject: sr?.subjectConfig?.syncedSubject?.name || 'Unknown Subject',
+        subjectCode: sr?.subjectConfig?.syncedSubject?.code || '',
+        thCreditHours: thCH,
+        prCreditHours: prCH,
+        totalCreditHours: sr?.creditHours || 0,
+        weightedTotalObtained: Number(sr?.weightedTotalObtained || 0),
+        weightedTotalFull: Number(sr?.weightedTotalFull || 0),
+        percentage: Number(sr?.percentage || 0),
+        gradePoint: effectiveIsNG ? 0 : effectiveGP,
+        grade: effectiveFinalGrade,
+        isNG: effectiveIsNG,
+        thGrade: thGradeStr,
+        thGP: thGPNum,
+        prGrade: prGradeStr,
+        prGP: prGPNum,
+      };
+    }),
     totalSubjects: annualResult?.totalSubjects || 0,
     passedSubjects: annualResult?.passedSubjects || 0,
     ngSubjects: annualResult?.ngSubjects || 0,

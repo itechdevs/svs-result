@@ -9,7 +9,7 @@ import { compileSecondaryAnnualSchema } from "@/lib/schemas";
 export const POST = withHandler(
   async (req: NextRequest) => {
     const body = compileSecondaryAnnualSchema.parse(await req.json());
-    
+
     const termWeights = await prisma.secondaryTermWeight.findMany({
       where: {
         academicYearId: body.academicYearId,
@@ -36,6 +36,7 @@ export const POST = withHandler(
         gradeLevel: body.gradeLevel,
         isActive: true,
       },
+      include: { components: true },
     });
 
     if (subjectConfigs.length === 0) {
@@ -56,7 +57,7 @@ export const POST = withHandler(
     // Group by student then by subject
     // studentId => subjectConfigId => terms array
     const studentSubjectMap = new Map<string, Map<string, typeof termSubjectResults>>();
-    
+
     for (const res of termSubjectResults) {
       if (!studentSubjectMap.has(res.syncedStudentId)) {
         studentSubjectMap.set(res.syncedStudentId, new Map());
@@ -79,25 +80,26 @@ export const POST = withHandler(
 
       for (const config of subjectConfigs) {
         const studentTermsForSubject = subjectMap.get(config.id) || [];
-        
+        const subjectCreditHours = config.components.reduce((sum, c) => sum + Number(c.creditHour ?? 1), 0);
+
         let weightedObtained = 0;
         let weightedFull = 0;
 
         for (const tw of termWeights) {
           const weightFrac = Number(tw.weightPercent) / 100;
           const termRes = studentTermsForSubject.find(t => t.examId === tw.examId);
-          
+
           let termObt = 0;
           let termFull = 0; // Usually fullMarks shouldn't change across terms, but just in case we can use their totalFullMarks
-          
+
           if (termRes) {
             termObt = Number(termRes.totalObtained);
             termFull = Number(termRes.totalFullMarks);
           } else {
-             // If absent, we still add to the full marks denominator. 
-             // We can find the fullMarks from the config component sums
-             termFull = 0; // Ideally we calculate it from config, but we'll assume standard is 100
-             // actually it's better to fetch it if possible. Let's ignore missed termFull if they had 0
+            // If absent, we still add to the full marks denominator. 
+            // We can find the fullMarks from the config component sums
+            termFull = 0; // Ideally we calculate it from config, but we'll assume standard is 100
+            // actually it's better to fetch it if possible. Let's ignore missed termFull if they had 0
           }
 
           weightedObtained += (termObt * weightFrac);
@@ -108,9 +110,9 @@ export const POST = withHandler(
         if (weightedFull > 0) percentage = (weightedObtained / weightedFull) * 100;
 
         const gradeInfo = getSecondaryGrade(percentage);
-        const weightedPoint = gradeInfo.gradePoint * config.creditHours;
+        const weightedPoint = gradeInfo.gradePoint * subjectCreditHours;
 
-        totalCreditHours += config.creditHours;
+        totalCreditHours += subjectCreditHours;
         totalWeightedPoints += weightedPoint;
 
         if (gradeInfo.isNG) {
@@ -125,16 +127,19 @@ export const POST = withHandler(
           weightedTotalObtained: weightedObtained,
           weightedTotalFull: weightedFull,
           percentage,
-          grade: gradeInfo.grade,
-          gradePoint: gradeInfo.gradePoint,
+          grade: gradeInfo.isNG ? 'NG' : gradeInfo.grade,
+          gradePoint: gradeInfo.isNG ? 0 : gradeInfo.gradePoint,
           isNG: gradeInfo.isNG,
-          creditHours: config.creditHours,
-          weightedPoint,
+          creditHours: subjectCreditHours,
+          weightedPoint: gradeInfo.isNG ? 0 : weightedPoint,
         });
       }
 
-      const gpa = totalCreditHours > 0 ? (totalWeightedPoints / totalCreditHours) : 0;
+      const calculatedGpa = totalCreditHours > 0 ? (totalWeightedPoints / totalCreditHours) : 0;
       const resultStatus = totalNg > 0 ? "NG_BLOCKED" : "PROMOTED";
+
+      // Rule: If 1 or more subjects fail, force overall GPA to 0.
+      const finalGpa = totalNg > 0 ? 0 : Number(calculatedGpa.toFixed(2));
 
       annualResultsData.push({
         syncedStudentId: studentId,
@@ -144,7 +149,7 @@ export const POST = withHandler(
         ngSubjects: totalNg,
         totalCreditHours,
         totalWeightedPoints,
-        gpa: Number(gpa.toFixed(2)),
+        gpa: finalGpa,
         hasNG: totalNg > 0,
         resultStatus: resultStatus,
       });

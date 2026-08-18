@@ -4,12 +4,12 @@ import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import { motion } from "motion/react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { 
-  CheckCircle, 
-  Clock, 
-  AlertCircle, 
-  User, 
-  BookOpen, 
+import {
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  User,
+  BookOpen,
   FileCheck,
   Loader2,
   Filter,
@@ -151,7 +151,7 @@ function SecondaryMarkVerificationPage() {
 
   // Verify single mark mutation
   const verifySingleMutation = useMutation({
-    mutationFn: (markId: string) => 
+    mutationFn: (markId: string) =>
       apiClient.post(`/admin/secondary/marks/${markId}/verify`, { remarks: "Verified by admin" }),
     onSuccess: () => {
       toast.success("Mark verified successfully");
@@ -167,7 +167,7 @@ function SecondaryMarkVerificationPage() {
   const verifyAllSubmittedMutation = useMutation({
     mutationFn: async () => {
       const submittedMarks = marks?.filter(m => m.status === "SUBMITTED") || [];
-      const promises = submittedMarks.map(mark => 
+      const promises = submittedMarks.map(mark =>
         apiClient.post(`/admin/secondary/marks/${mark.id}/verify`, { remarks: "Bulk verified by admin" })
       );
       await Promise.all(promises);
