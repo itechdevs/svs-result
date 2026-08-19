@@ -266,16 +266,29 @@ export function prepareAnnualMarksheetData(
       const thObtained = sr?.theoryMarks != null ? Number(sr.theoryMarks) : null;
       const prObtained = sr?.practicalMarks != null ? Number(sr.practicalMarks) : null;
 
+      // Fetch from componentDetails if available
+      const compDetails = sr?.componentDetails || [];
+      const thComponentData = compDetails.find((c: any) => c.type === 'THEORY');
+      const prComponentData = compDetails.find((c: any) => c.type === 'PRACTICAL');
+
       let thGradeStr, thGPNum, prGradeStr, prGPNum;
 
-      if (thObtained !== null && thFull) {
+      if (thComponentData) {
+        thGradeStr = thComponentData.grade;
+        thGPNum = thComponentData.gradePoint;
+      } else if (thObtained !== null && thFull) {
+        // Fallback
         const pct = (thObtained / thFull) * 100;
         const scale = getSecondaryGrade(pct);
         thGradeStr = scale.grade;
         thGPNum = scale.gradePoint;
       }
 
-      if (prObtained !== null && prFull) {
+      if (prComponentData) {
+        prGradeStr = prComponentData.grade;
+        prGPNum = prComponentData.gradePoint;
+      } else if (prObtained !== null && prFull) {
+        // Fallback
         const pct = (prObtained / prFull) * 100;
         const scale = getSecondaryGrade(pct);
         prGradeStr = scale.grade;
@@ -283,9 +296,9 @@ export function prepareAnnualMarksheetData(
       }
 
       const finalGrade = sr?.grade || 'N/A';
-      const effectiveFinalGrade = thGradeStr === 'NG' || prGradeStr === 'NG' ? 'NG' : finalGrade;
-      const effectiveIsNG = effectiveFinalGrade === 'NG';
-      const effectiveGP = thComp ? (thGPNum || 0) : Number(sr?.gradePoint || 0);
+      const effectiveFinalGrade = finalGrade;
+      const effectiveIsNG = sr?.isNG === true || finalGrade === 'NG';
+      const effectiveGP = Number(sr?.gradePoint || 0);
 
       return {
         subject: sr?.subjectConfig?.syncedSubject?.name || 'Unknown Subject',

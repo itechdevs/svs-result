@@ -34,8 +34,10 @@ export const PUT = withHandler(
       }
     }
 
-    // Reset status to SUBMITTED if it was VERIFIED (needs re-verification after edit)
-    const newStatus = mark.status === "VERIFIED" ? "SUBMITTED" : mark.status;
+    // Admin edits always set the mark back to SUBMITTED so it can be
+    // (re-)verified. This prevents a MIXED state (e.g., Theory=DRAFT,
+    // Practical=SUBMITTED) that would block the Verify button on the UI.
+    const newStatus = "SUBMITTED";
 
     const updated = await prisma.secondaryComponentMark.update({
       where: { id },
@@ -44,8 +46,8 @@ export const PUT = withHandler(
         isAbsent: body.isAbsent,
         ...(body.remarks !== undefined && { remarks: body.remarks }),
         status: newStatus,
-        verifiedById: newStatus === "SUBMITTED" ? null : undefined,
-        verifiedAt: newStatus === "SUBMITTED" ? null : undefined,
+        verifiedById: null,
+        verifiedAt: null,
       },
     });
 

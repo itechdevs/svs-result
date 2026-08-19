@@ -113,14 +113,26 @@ function mapAnnualResultToStudentResult(annualResult: any): StudentResult {
     const thCH = thComp ? Number(thComp.creditHour) : (sr?.creditHours || 0);
     const prCH = prComp ? Number(prComp.creditHour) : 0;
 
+    // Check for componentDetails first (Annual route enriches this)
+    const compDetails = sr?.componentDetails || [];
+    const thComponentData = compDetails.find((c: any) => c.type === 'THEORY');
+    const prComponentData = compDetails.find((c: any) => c.type === 'PRACTICAL');
+
     let thGradeStr = '—', thGPNum = 0, prGradeStr = '—', prGPNum = 0;
 
-    if (thObtained !== null && thFull) {
+    if (thComponentData) {
+      thGradeStr = thComponentData.grade;
+      thGPNum = thComponentData.gradePoint;
+    } else if (thObtained !== null && thFull) {
       const scale = getSecondaryGrade((thObtained / thFull) * 100);
       thGradeStr = scale.grade;
       thGPNum = scale.gradePoint;
     }
-    if (prObtained !== null && prFull) {
+
+    if (prComponentData) {
+      prGradeStr = prComponentData.grade;
+      prGPNum = prComponentData.gradePoint;
+    } else if (prObtained !== null && prFull) {
       const scale = getSecondaryGrade((prObtained / prFull) * 100);
       prGradeStr = scale.grade;
       prGPNum = scale.gradePoint;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
+import React, { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -271,6 +271,28 @@ function SecondaryResultCompilationPage() {
     return rows;
   }, [annualResults]);
 
+  // Pivot Table calculation for Annual Results
+  const pivotSubjects = useMemo(() => {
+    if (activeTab !== "annual" || !annualResults) return [];
+    const subjectsMap = new Map<string, { code: string; name: string; thFull: number; prFull: number }>();
+    annualResults.forEach(r => {
+      r.subjectResults?.forEach((s: any) => {
+        const code = s.subjectConfig?.syncedSubject?.code || s.subjectConfig?.syncedSubject?.name;
+        const name = s.subjectConfig?.syncedSubject?.name || 'Unknown';
+        if (code && !subjectsMap.has(code)) {
+          // Always use original (non-weighted) full marks from subjectConfig.components
+          const confComps = s.subjectConfig?.components || [];
+          const thComp = confComps.find((c: any) => c.type === 'THEORY' || c.type === 'INTERNAL');
+          const prComp = confComps.find((c: any) => c.type === 'PRACTICAL');
+          const thFull = thComp ? Number(thComp.fullMarks) : 0;
+          const prFull = prComp ? Number(prComp.fullMarks) : 0;
+          subjectsMap.set(code, { code, name, thFull, prFull });
+        }
+      });
+    });
+    return Array.from(subjectsMap.values());
+  }, [annualResults, activeTab]);
+
   // NEB grade lookup from percentage
   const getGradeFromPct = (obtained: number, full: number) => {
     if (full <= 0) return { grade: '—', gp: '—' };
@@ -404,16 +426,16 @@ function SecondaryResultCompilationPage() {
         )}
       </div>
 
-      {/* Term Weight Config for Annual Compilation */}
+      {/* Term Weight Configuration — Annual Tab Only */}
       {activeTab === "annual" && selectedYear && selectedGrade && (
-        <SecondaryTermWeightConfig 
-          academicYearId={selectedYear} 
-          gradeLevel={selectedGrade} 
+        <SecondaryTermWeightConfig
+          academicYearId={selectedYear}
+          gradeLevel={selectedGrade}
         />
       )}
 
       {/* Main engine execution workflow cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 ${activeTab === "annual" ? "md:grid-cols-2" : ""}`}>
         {activeTab === "term" ? (
           <>
             <div className="bg-card border border-border rounded-xl p-5 flex flex-col justify-between shadow-sm">
@@ -506,27 +528,6 @@ function SecondaryResultCompilationPage() {
               </Button>
             </div>
 
-            <div className="bg-card border border-border rounded-xl p-5 flex flex-col justify-between shadow-sm">
-              <div>
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center mb-3">
-                  <CheckCircle className="w-4.5 h-4.5 text-emerald-500" />
-                </div>
-                <h3 className="font-bold text-sm text-foreground">Publish Combined Results</h3>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Locks the final combined grades in. Allows printing final student transcripts with CDC letter templates.
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                disabled={!selectedYear || !selectedGrade || annualResults?.length === 0 || publishAnnualMutation.isPending}
-                onClick={handlePublishAnnual}
-                className="mt-4 w-full text-xs font-bold text-emerald-600 dark:text-emerald-400 border-emerald-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
-              >
-                {publishAnnualMutation.isPending && <Loader2 className="w-3 h-3 mr-2 animate-spin" />}
-                Publish Combined Transcripts
-              </Button>
-            </div>
-
             <div className="bg-primary/5 border border-primary/20 rounded-xl p-5 flex flex-col justify-between shadow-sm">
               <div>
                 <h3 className="font-bold text-xs uppercase text-primary tracking-wider mb-2">Annual Stats Summary</h3>
@@ -534,12 +535,6 @@ function SecondaryResultCompilationPage() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Total records compiled:</span>
                     <span className="font-bold text-foreground">{annualResults?.length || 0}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Published state:</span>
-                    <span className="font-bold text-foreground">
-                      {annualResults && annualResults.length > 0 && annualResults[0].isPublished ? "Yes" : "No"}
-                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Passing GPA:</span>
@@ -738,172 +733,182 @@ function SecondaryResultCompilationPage() {
           </div>
         </div>
       ) : (
-        // Annual results table
+        // Annual results table (Pivot Layout)
         <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
           <div className="p-4 border-b border-border/80 bg-muted/20 flex justify-between items-center">
             <h3 className="font-bold text-xs uppercase text-muted-foreground">Student Combined compilation records ({annualResults?.length || 0})</h3>
             <span className="text-[10px] text-muted-foreground font-medium">Auto-populated based on configured term weightages</span>
           </div>
           <div className="overflow-x-auto">
-            <Table>
+            <Table className="border-collapse whitespace-nowrap">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[5%]" rowSpan={2}>Roll</TableHead>
-                  <TableHead className="w-[14%]" rowSpan={2}>Student Name</TableHead>
-                  <TableHead className="w-[14%]" rowSpan={2}>Subject</TableHead>
-                  <TableHead className="text-center bg-blue-50/60 dark:bg-blue-950/20 border-b-0" colSpan={3}>
-                    <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Theory</span>
-                  </TableHead>
-                  <TableHead className="text-center bg-purple-50/60 dark:bg-purple-950/20 border-b-0" colSpan={3}>
-                    <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">Practical</span>
-                  </TableHead>
-                  <TableHead className="w-[7%] text-center" rowSpan={2}>Total</TableHead>
-                  <TableHead className="w-[7%] text-center" rowSpan={2}>Grade</TableHead>
-                  <TableHead className="w-[5%] text-center" rowSpan={2}>GP</TableHead>
-                  <TableHead className="w-[5%] text-center" rowSpan={2}>C.H.</TableHead>
-                  <TableHead className="w-[8%] text-center" rowSpan={2}>Result</TableHead>
-                  <TableHead className="w-[9%] text-right" rowSpan={2}>Actions</TableHead>
+                  <TableHead className="w-[3%] border" rowSpan={3}>S.N.</TableHead>
+                  <TableHead className="w-[12%] border" rowSpan={3}>Name</TableHead>
+                  <TableHead className="w-[4%] border text-center" rowSpan={3}>Section</TableHead>
+                  <TableHead className="w-[4%] border text-center" rowSpan={3}>Roll</TableHead>
+                  {pivotSubjects.map(s => (
+                    <TableHead key={`h1-${s.code}`} colSpan={9} className="border text-center bg-blue-50/40 dark:bg-blue-950/20 font-bold text-xs uppercase tracking-wider">
+                      {s.name}
+                    </TableHead>
+                  ))}
+                  <TableHead className="w-[5%] border text-center" rowSpan={3}>Fin_Max</TableHead>
+                  <TableHead className="w-[5%] border text-center" rowSpan={3}>Fin_Obt</TableHead>
+                  <TableHead className="w-[5%] border text-center" rowSpan={3}>Per.</TableHead>
+                  <TableHead className="w-[5%] border text-center" rowSpan={3}>GPA</TableHead>
+                  <TableHead className="w-[5%] border text-center" rowSpan={3}>Final Grade</TableHead>
+                  <TableHead className="w-[5%] border text-center" rowSpan={3}>Actions</TableHead>
                 </TableRow>
                 <TableRow>
-                  <TableHead className="text-center text-[9px] bg-blue-50/40 dark:bg-blue-950/10 text-blue-500 font-semibold py-1">Marks</TableHead>
-                  <TableHead className="text-center text-[9px] bg-blue-50/40 dark:bg-blue-950/10 text-blue-500 font-semibold py-1">Grade</TableHead>
-                  <TableHead className="text-center text-[9px] bg-blue-50/40 dark:bg-blue-950/10 text-blue-500 font-semibold py-1">GP</TableHead>
-                  <TableHead className="text-center text-[9px] bg-blue-50/40 dark:bg-blue-950/10 text-blue-500 font-semibold py-1">C.H.</TableHead>
-                  <TableHead className="text-center text-[9px] bg-purple-50/40 dark:bg-purple-950/10 text-purple-500 font-semibold py-1">Marks</TableHead>
-                  <TableHead className="text-center text-[9px] bg-purple-50/40 dark:bg-purple-950/10 text-purple-500 font-semibold py-1">Grade</TableHead>
-                  <TableHead className="text-center text-[9px] bg-purple-50/40 dark:bg-purple-950/10 text-purple-500 font-semibold py-1">GP</TableHead>
-                  <TableHead className="text-center text-[9px] bg-purple-50/40 dark:bg-purple-950/10 text-purple-500 font-semibold py-1">C.H.</TableHead>
+                  {pivotSubjects.map(s => (
+                    <React.Fragment key={`h2-${s.code}`}>
+                      <TableHead colSpan={3} className="border text-center bg-blue-50/20 dark:bg-blue-950/10 text-[10px] font-semibold text-blue-600 dark:text-blue-400">
+                        Th / {Math.round(s.thFull)}
+                      </TableHead>
+                      <TableHead colSpan={3} className="border text-center bg-purple-50/20 dark:bg-purple-950/10 text-[10px] font-semibold text-purple-600 dark:text-purple-400">
+                        Pr / {Math.round(s.prFull)}
+                      </TableHead>
+                      <TableHead colSpan={3} className="border text-center bg-emerald-50/20 dark:bg-emerald-950/10 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                        TOTAL / {Math.round(s.thFull + s.prFull)}
+                      </TableHead>
+                    </React.Fragment>
+                  ))}
+                </TableRow>
+                <TableRow>
+                  {pivotSubjects.map(s => (
+                    <React.Fragment key={`h3-${s.code}`}>
+                      {/* Theory sub-cols */}
+                      <TableHead className="border text-center text-[9px] bg-blue-50/10 text-blue-500 py-1">Marks</TableHead>
+                      <TableHead className="border text-center text-[9px] bg-blue-50/10 text-blue-500 py-1">Grade</TableHead>
+                      <TableHead className="border text-center text-[9px] bg-blue-50/10 text-blue-500 py-1">GP</TableHead>
+                      {/* Practical sub-cols */}
+                      <TableHead className="border text-center text-[9px] bg-purple-50/10 text-purple-500 py-1">Marks</TableHead>
+                      <TableHead className="border text-center text-[9px] bg-purple-50/10 text-purple-500 py-1">Grade</TableHead>
+                      <TableHead className="border text-center text-[9px] bg-purple-50/10 text-purple-500 py-1">GP</TableHead>
+                      {/* Total sub-cols */}
+                      <TableHead className="border text-center text-[9px] bg-emerald-50/10 text-emerald-500 py-1">Marks</TableHead>
+                      <TableHead className="border text-center text-[9px] bg-emerald-50/10 text-emerald-500 py-1">Grade</TableHead>
+                      <TableHead className="border text-center text-[9px] bg-emerald-50/10 text-emerald-500 py-1">GP</TableHead>
+                    </React.Fragment>
+                  ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {annualFlatRows.length > 0 ? (
-                  annualFlatRows.map(({ result, subject, isFirstSubject, rowSpan, isSummaryRow }, rowIdx) => {
-                    const { grade, gp, ch, isNG, thObtained, prObtained, totalObtained, totalFull, thFull, prFull, thCH, prCH, thGrade, prGrade } = renderSubjectRow(subject);
-                    const subjectName = subject?.subjectConfig?.syncedSubject?.name || 'Unknown';
-                    const rowKey = subject?.id ? `ar-${subject.id}` : `annual-${result.id}-${rowIdx}`;
+                {annualResults && annualResults.length > 0 ? (
+                  annualResults.map((result, idx) => {
+                    let totalMax = 0;
+                    let totalObt = 0;
+
                     return (
-                      <TableRow key={rowKey} className="hover:bg-muted/10">
-                        {isFirstSubject && (
-                          <>
-                            <TableCell rowSpan={rowSpan} className="font-mono text-xs align-top">
-                              {result.syncedStudent?.rollNumber}
-                            </TableCell>
-                            <TableCell rowSpan={rowSpan} className="font-medium text-foreground align-top">
-                              {result.syncedStudent?.name}
-                              <span className="text-[10px] text-muted-foreground block font-normal">
-                                Section: {result.syncedStudent?.section}
-                              </span>
-                            </TableCell>
-                          </>
-                        )}
-                        {isSummaryRow ? (
-                          <>
-                            <TableCell className="text-xs font-semibold" colSpan={5}>
-                              <span className="text-muted-foreground">Overall — </span>
-                              <span className="text-primary font-bold">GPA: {formatNum(Number(result.gpa), 2)}</span>
-                              <span className="text-muted-foreground mx-1">|</span>
-                              <span className={result.ngSubjects > 0 ? 'text-red-500 font-semibold' : 'text-emerald-500 font-semibold'}>
-                                {result.ngSubjects > 0 ? `${result.ngSubjects} NG` : 'No NG'}
-                              </span>
-                            </TableCell>
-                          </>
-                        ) : (
-                          <>
-                            <TableCell className="text-xs font-medium">{subjectName}</TableCell>
-                            <TableCell className="text-center text-xs font-mono bg-blue-50/30 dark:bg-blue-950/10">
-                              {thObtained !== null && thFull != null
-                                ? <span className={thGrade?.grade === 'NG' ? 'text-red-600 font-bold' : ''}>{thObtained}/{thFull}</span>
-                                : <span className="text-muted-foreground">—</span>}
-                            </TableCell>
-                            <TableCell className="text-center text-xs font-bold bg-blue-50/30 dark:bg-blue-950/10">
-                              {thGrade ? <span className={thGrade.grade === 'NG' ? 'text-red-600' : 'text-blue-700 dark:text-blue-300'}>{thGrade.grade}</span> : <span className="text-muted-foreground">—</span>}
-                            </TableCell>
-                            <TableCell className="text-center text-xs bg-blue-50/30 dark:bg-blue-950/10">
-                              {thGrade ? thGrade.gp : '—'}
-                            </TableCell>
-                            <TableCell className="text-center text-xs bg-blue-50/30 dark:bg-blue-950/10">
-                              {thCH ?? '—'}
-                            </TableCell>
-                            <TableCell className="text-center text-xs font-mono bg-purple-50/30 dark:bg-purple-950/10">
-                              {prObtained !== null && prFull != null
-                                ? <span className={prGrade?.grade === 'NG' ? 'text-red-600 font-bold' : ''}>{prObtained}/{prFull}</span>
-                                : <span className="text-muted-foreground">—</span>}
-                            </TableCell>
-                            <TableCell className="text-center text-xs font-bold bg-purple-50/30 dark:bg-purple-950/10">
-                              {prGrade ? <span className={prGrade.grade === 'NG' ? 'text-red-600' : 'text-purple-700 dark:text-purple-300'}>{prGrade.grade}</span> : <span className="text-muted-foreground">—</span>}
-                            </TableCell>
-                            <TableCell className="text-center text-xs bg-purple-50/30 dark:bg-purple-950/10">
-                              {prGrade ? prGrade.gp : '—'}
-                            </TableCell>
-                            <TableCell className="text-center text-xs bg-purple-50/30 dark:bg-purple-950/10">
-                              {prCH ?? '—'}
-                            </TableCell>
-                            <TableCell className="text-center text-xs font-mono font-bold">
-                              {totalObtained !== null ? `${totalObtained}${totalFull != null ? `/${totalFull}` : ''}` : '—'}
-                            </TableCell>
-                            <TableCell className="text-center font-bold text-xs">
-                              <span className={isNG ? 'text-red-600' : 'text-emerald-600'}>{grade}</span>
-                            </TableCell>
-                            <TableCell className="text-center text-xs">{gp}</TableCell>
-                            <TableCell className="text-center text-xs">{ch}</TableCell>
-                          </>
-                        )}
-                        {isFirstSubject && (
-                          <TableCell rowSpan={rowSpan} className="text-center align-middle">
-                            <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold ${result.resultStatus === "PROMOTED" ? "bg-emerald-105/10 text-emerald-600 dark:text-emerald-400" : "bg-red-105/10 text-red-600 dark:text-red-405"}`}>
-                              {result.resultStatus}
-                            </span>
-                          </TableCell>
-                        )}
-                        {isFirstSubject && (
-                          <TableCell rowSpan={rowSpan} className="text-right align-middle">
-                            <div className="flex justify-end gap-1.5">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-7 text-xs font-semibold text-primary"
-                                onClick={() => {
-                                  setViewGradeSheetResult(result);
-                                  setViewGradeSheetType("annual");
-                                }}
-                              >
-                                <Eye className="w-3.5 h-3.5 mr-1" />
-                                View
-                              </Button>
-                              {result.marksheet ? (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-7 text-xs font-semibold text-purple-600 border-purple-200"
-                                  onClick={() => {
-                                    setSelectedMarksheetId(result.marksheet.id);
-                                    setMarksheetModalOpen(true);
-                                  }}
-                                >
-                                  <FileDown className="w-3.5 h-3.5 mr-1" />
-                                  Download
-                                </Button>
-                              ) : (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-7 text-xs font-semibold text-primary"
-                                  onClick={() => handleGenerateMarksheet(result.syncedStudentId, result.id)}
-                                  disabled={!result.isPublished || generateMarksheetMutation.isPending}
-                                >
-                                  <Printer className="w-3.5 h-3.5 mr-1" />
-                                  Generate
-                                </Button>
-                              )}
-                            </div>
-                          </TableCell>
-                        )}
+                      <TableRow key={result.id} className="hover:bg-muted/5">
+                        <TableCell className="border text-center font-mono text-xs text-muted-foreground">{idx + 1}</TableCell>
+                        <TableCell className="border text-xs font-medium">{result.syncedStudent?.name}</TableCell>
+                        <TableCell className="border text-center text-xs">{result.syncedStudent?.section}</TableCell>
+                        <TableCell className="border text-center font-mono text-xs">{result.syncedStudent?.rollNumber}</TableCell>
+
+                        {pivotSubjects.map(subDef => {
+                          const subResult = result.subjectResults?.find((s: any) =>
+                            (s.subjectConfig?.syncedSubject?.code || s.subjectConfig?.syncedSubject?.name) === subDef.code
+                          );
+
+                          if (!subResult) {
+                            return (
+                              <React.Fragment key={`no-${subDef.code}`}>
+                                <TableCell className="border text-center text-muted-foreground" colSpan={9}>—</TableCell>
+                              </React.Fragment>
+                            );
+                          }
+
+                          const components = subResult.componentDetails || [];
+                          let thObt = 0;
+                          let thGrade = '-';
+                          let thGP = '-';
+                          let prObt = 0;
+                          let prGrade = '-';
+                          let prGP = '-';
+                          let hasTh = false;
+                          let hasPr = false;
+
+                          if (components.length > 0) {
+                            const thComp = components.find((c: any) => c.type === 'THEORY' || c.type === 'INTERNAL');
+                            const prComp = components.find((c: any) => c.type === 'PRACTICAL');
+
+                            if (thComp) {
+                              hasTh = true;
+                              thObt = Number(thComp.obtainedMarks);
+                              thGrade = thComp.grade;
+                              thGP = thComp.grade !== 'NG' ? Number(thComp.gradePoint).toFixed(2) : '-';
+                            }
+                            if (prComp) {
+                              hasPr = true;
+                              prObt = Number(prComp.obtainedMarks);
+                              prGrade = prComp.grade;
+                              prGP = prComp.grade !== 'NG' ? Number(prComp.gradePoint).toFixed(2) : '-';
+                            }
+                          } else {
+                            // Fallback
+                            thObt = Number(subResult.theoryMarks || 0);
+                            prObt = Number(subResult.practicalMarks || 0);
+                          }
+
+                          const subTotalObt = Number(subResult.weightedTotalObtained);
+                          const subTotalGrade = subResult.isNG ? 'NG' : subResult.grade;
+                          const subTotalGP = subResult.isNG ? '-' : Number(subResult.gradePoint).toFixed(2);
+
+                          totalObt += subTotalObt;
+                          totalMax += Number(subResult.weightedTotalFull);
+
+                          const formatMarks = (val: number, grade: string, hasComp: boolean) => {
+                            if (!hasComp) return '-';
+                            return grade === 'NG' ? `${val.toFixed(1)} * NG` : val.toFixed(1);
+                          };
+
+                          return (
+                            <React.Fragment key={`data-${subDef.code}`}>
+                              <TableCell className="border text-center font-mono text-[11px] bg-blue-50/5">{formatMarks(thObt, thGrade, hasTh)}</TableCell>
+                              <TableCell className="border text-center font-bold text-[11px] bg-blue-50/5 text-blue-700">{hasTh ? thGrade : '-'}</TableCell>
+                              <TableCell className="border text-center font-mono text-[11px] bg-blue-50/5">{hasTh ? thGP : '-'}</TableCell>
+
+                              <TableCell className="border text-center font-mono text-[11px] bg-purple-50/5">{formatMarks(prObt, prGrade, hasPr)}</TableCell>
+                              <TableCell className="border text-center font-bold text-[11px] bg-purple-50/5 text-purple-700">{hasPr ? prGrade : '-'}</TableCell>
+                              <TableCell className="border text-center font-mono text-[11px] bg-purple-50/5">{hasPr ? prGP : '-'}</TableCell>
+
+                              <TableCell className="border text-center font-mono text-[11px] font-bold bg-emerald-50/5">{subTotalObt.toFixed(1)}</TableCell>
+                              <TableCell className={`border text-center font-bold text-[11px] bg-emerald-50/5 ${subTotalGrade === 'NG' ? 'text-red-600' : 'text-emerald-700'}`}>{subTotalGrade}</TableCell>
+                              <TableCell className="border text-center font-mono text-[11px] bg-emerald-50/5">{subTotalGP}</TableCell>
+                            </React.Fragment>
+                          );
+                        })}
+
+                        <TableCell className="border text-center font-mono font-bold text-xs">{Number(totalMax).toFixed(1)}</TableCell>
+                        <TableCell className="border text-center font-mono font-bold text-xs">{totalObt.toFixed(1)}</TableCell>
+                        <TableCell className="border text-center font-bold text-xs">{(totalMax > 0 ? (totalObt / totalMax) * 100 : 0).toFixed(2)}%</TableCell>
+                        <TableCell className="border text-center font-bold text-xs">{Number(result.gpa).toFixed(2)}</TableCell>
+                        <TableCell className={`border text-center font-bold text-sm ${result.ngSubjects > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                          {result.ngSubjects > 0 ? 'NG' : (totalMax > 0 ? getGradeFromPct(totalObt, totalMax).grade : '-')}
+                        </TableCell>
+
+                        <TableCell className="border text-center">
+                          <div className="flex justify-center gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => {
+                                setViewGradeSheetResult(result);
+                                setViewGradeSheetType("annual");
+                              }}
+                            >
+                              <Eye className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </TableCell>
                       </TableRow>
                     );
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
+                    <TableCell colSpan={10 + (pivotSubjects.length * 9)} className="py-8 text-center text-muted-foreground">
                       {!selectedGrade ? "Select a grade level to display compiled results." : "No compiled results for this academic year & grade level. Click Compile Above."}
                     </TableCell>
                   </TableRow>

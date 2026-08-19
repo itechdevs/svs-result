@@ -189,10 +189,7 @@ export function calculateSubject(input: SubjectInput): SubjectResult {
 
   const calculatedGpa = totalCreditHours > 0 ? round2(weightedNumerator / totalCreditHours) : null;
 
-  // NEB Rule: If any component is NG, subject GPA is 0 and Grade is NG.
-  const subjectGpa = isNG ? 0 : calculatedGpa;
-  const subjectGrade = isNG ? "NG" : (calculatedGpa !== null ? getGradeFromGP(calculatedGpa) : null);
-
+  // Compute subject totals first so we can derive grade from percentage
   const totalObtained = componentResults.reduce(
     (sum, c) => sum + (c.obtained ?? 0),
     0
@@ -203,6 +200,16 @@ export function calculateSubject(input: SubjectInput): SubjectResult {
   );
   const subjectPercentage =
     totalFullMarks > 0 ? round2((totalObtained / totalFullMarks) * 100) : null;
+
+  // NEB Rule: subject grade is derived from the subject's overall percentage
+  // (total obtained / total full marks × 100), matching the official NEB table.
+  // If any component is NG, the subject GPA is 0 and grade is NG.
+  const subjectGpa = isNG ? 0 : calculatedGpa;
+  const subjectGrade = isNG
+    ? "NG"
+    : subjectPercentage !== null
+    ? getSecondaryGrade(subjectPercentage).grade
+    : null;
 
   return {
     subjectConfigId: input.subjectConfigId,
@@ -256,7 +263,7 @@ export function calculateExam(subjects: SubjectInput[]): ExamResult {
 
   let finalOverallGpa = overallGpa;
   let finalOverallGrade = overallGrade;
-  
+
   // Rule: If 1 or more subjects fail, force overall GPA to 0 and grade to NG.
   if (ngSubjects > 0) {
     finalOverallGpa = 0;
@@ -293,13 +300,19 @@ function round2(n: number): number {
  *   percentage-derived grade or the GPA-derived grade.
  */
 function getGradeFromGP(gp: number): string {
-  if (gp >= 4.0) return "A+";
-  if (gp >= 3.6) return "A";
-  if (gp >= 3.2) return "B+";
-  if (gp >= 2.8) return "B";
-  if (gp >= 2.4) return "C+";
-  if (gp >= 2.0) return "C";
-  if (gp >= 1.6) return "D";
+  // Round to 2 decimal places to avoid floating point issues
+  const roundedGp = Math.round(gp * 100) / 100;
+  
+  // Per NEB v2 Guidelines: GP thresholds are upper bounds for lower grades.
+  // Example: GPA 3.2 is B+, but GPA 3.21 is A.
+  if (roundedGp > 3.6) return "A+"; // 3.61 - 4.00
+  if (roundedGp > 3.2) return "A";  // 3.21 - 3.60
+  if (roundedGp > 2.8) return "B+"; // 2.81 - 3.20
+  if (roundedGp > 2.4) return "B";  // 2.41 - 2.80
+  if (roundedGp > 2.0) return "C+"; // 2.01 - 2.40
+  if (roundedGp > 1.6) return "C";  // 1.61 - 2.00
+  if (roundedGp >= 1.6) return "D"; // Exactly 1.60
+  
   return "NG";
 }
 

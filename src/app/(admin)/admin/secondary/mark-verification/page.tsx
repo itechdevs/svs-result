@@ -226,8 +226,8 @@ function SecondaryMarkVerificationPage() {
 
   interface SubjectRow {
     subjectName: string;
-    theory: { marksObtained: number; fullMarks: number; passMarks: number } | null;
-    practical: { marksObtained: number; fullMarks: number; passMarks: number } | null;
+    theory: { marksObtained: number; fullMarks: number; passMarks: number; isAbsent: boolean } | null;
+    practical: { marksObtained: number; fullMarks: number; passMarks: number; isAbsent: boolean } | null;
     isAbsent: boolean;
     enteredBy: string;
     statuses: string[];
@@ -273,9 +273,9 @@ function SecondaryMarkVerificationPage() {
       const row = subjectMap.get(key)!;
       const componentType = mark.component.type.toUpperCase();
       if (componentType === 'THEORY' || componentType === 'TH') {
-        row.theory = { marksObtained: Number(mark.marksObtained), fullMarks: Number(mark.component.fullMarks), passMarks: Number(mark.component.passMarks) };
+        row.theory = { marksObtained: Number(mark.marksObtained), fullMarks: Number(mark.component.fullMarks), passMarks: Number(mark.component.passMarks), isAbsent: mark.isAbsent };
       } else if (componentType === 'PRACTICAL' || componentType === 'PR') {
-        row.practical = { marksObtained: Number(mark.marksObtained), fullMarks: Number(mark.component.fullMarks), passMarks: Number(mark.component.passMarks) };
+        row.practical = { marksObtained: Number(mark.marksObtained), fullMarks: Number(mark.component.fullMarks), passMarks: Number(mark.component.passMarks), isAbsent: mark.isAbsent };
       }
       row.statuses.push(mark.status);
       row.markIds.push({ id: mark.id, status: mark.status, componentType });
@@ -372,7 +372,7 @@ function SecondaryMarkVerificationPage() {
         marksObtained: subject.theory.marksObtained,
         fullMarks: subject.theory.fullMarks,
         passMarks: subject.theory.passMarks,
-        isAbsent: subject.isAbsent,
+        isAbsent: subject.theory.isAbsent,
       } : null,
       practical: practicalMark && subject.practical ? {
         markId: practicalMark.id,
@@ -380,7 +380,7 @@ function SecondaryMarkVerificationPage() {
         marksObtained: subject.practical.marksObtained,
         fullMarks: subject.practical.fullMarks,
         passMarks: subject.practical.passMarks,
-        isAbsent: subject.isAbsent,
+        isAbsent: subject.practical.isAbsent,
       } : null,
     });
   };
@@ -626,7 +626,7 @@ function SecondaryMarkVerificationPage() {
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-1">
-                          {subject.isAbsent ? (
+                          {subject.theory?.isAbsent ? (
                             <span className="text-xs text-red-600 font-semibold">ABS</span>
                           ) : subject.theory ? (
                             <span className="font-mono text-sm font-bold text-foreground">
@@ -648,7 +648,7 @@ function SecondaryMarkVerificationPage() {
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-1">
-                          {subject.isAbsent ? (
+                          {subject.practical?.isAbsent ? (
                             <span className="text-xs text-red-600 font-semibold">ABS</span>
                           ) : subject.practical ? (
                             <span className="font-mono text-sm font-bold text-foreground">
@@ -669,12 +669,12 @@ function SecondaryMarkVerificationPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-center">
-                        {subject.isAbsent ? (
-                          <span className="text-xs text-red-600 font-semibold">ABSENT</span>
-                        ) : (
+                        {(subject.theory && !subject.theory.isAbsent) || (subject.practical && !subject.practical.isAbsent) ? (
                           <span className="font-mono text-sm font-bold text-primary">
                             {totalObtained}/{totalFull}
                           </span>
+                        ) : (
+                          <span className="text-xs text-red-600 font-semibold">ABSENT</span>
                         )}
                       </TableCell>
                       <TableCell className="text-xs">

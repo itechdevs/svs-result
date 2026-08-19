@@ -79,6 +79,35 @@ export function SecondaryMarksheetModal({ marksheetId, open, onClose }: Secondar
   const prepareMarksheetData = () => {
     if (!marksheet) return null;
 
+    // Prefer metadata if it exists because we enrich it (e.g. with componentDetails) in the POST route
+    if (marksheet.metadata && typeof marksheet.metadata === 'object') {
+      const metadata: any = marksheet.metadata;
+
+      if (marksheet.termResultId) {
+        return prepareTermMarksheetData(
+          {
+            ...metadata,
+            syncedStudent: metadata.syncedStudent || marksheet.syncedStudent || marksheet.termResult?.syncedStudent,
+            exam: metadata.exam || marksheet.termResult?.exam || { name: 'Unknown Exam', gradeLevel: 'Unknown' },
+            academicYear: metadata.academicYear || marksheet.termResult?.academicYear || { name: 'Unknown Year' },
+            subjectResults: metadata.subjectResults || marksheet.termResult?.subjectResults || []
+          },
+          metadata.subjectResults || marksheet.termResult?.subjectResults || []
+        );
+      } else if (marksheet.annualResultId) {
+        return prepareAnnualMarksheetData(
+          {
+            ...metadata,
+            syncedStudent: metadata.syncedStudent || marksheet.syncedStudent || marksheet.annualResult?.syncedStudent,
+            academicYear: metadata.academicYear || marksheet.annualResult?.academicYear || { name: 'Unknown Year' },
+            subjectResults: metadata.subjectResults || marksheet.annualResult?.subjectResults || []
+          },
+          metadata.subjectResults || marksheet.annualResult?.subjectResults || []
+        );
+      }
+    }
+
+    // Fallback to relational data
     if (marksheet.termResult && marksheet.termResult.syncedStudent) {
       return prepareTermMarksheetData(
         marksheet.termResult,
@@ -89,31 +118,6 @@ export function SecondaryMarksheetModal({ marksheetId, open, onClose }: Secondar
         marksheet.annualResult,
         marksheet.annualResult.subjectResults || []
       );
-    } else if (marksheet.metadata && typeof marksheet.metadata === 'object') {
-      const metadata: any = marksheet.metadata;
-
-      if (marksheet.termResultId) {
-        return prepareTermMarksheetData(
-          {
-            ...metadata,
-            syncedStudent: metadata.syncedStudent || marksheet.syncedStudent,
-            exam: metadata.exam || { name: 'Unknown Exam', gradeLevel: 'Unknown' },
-            academicYear: metadata.academicYear || { name: 'Unknown Year' },
-            subjectResults: metadata.subjectResults || []
-          },
-          metadata.subjectResults || []
-        );
-      } else if (marksheet.annualResultId) {
-        return prepareAnnualMarksheetData(
-          {
-            ...metadata,
-            syncedStudent: metadata.syncedStudent || marksheet.syncedStudent,
-            academicYear: metadata.academicYear || { name: 'Unknown Year' },
-            subjectResults: metadata.subjectResults || []
-          },
-          metadata.subjectResults || []
-        );
-      }
     }
 
     return null;
