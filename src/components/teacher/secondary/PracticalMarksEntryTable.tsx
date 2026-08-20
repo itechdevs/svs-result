@@ -5,7 +5,7 @@ import { formatNum } from "@/lib/format-num";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Save, Send, AlertCircle, Loader2, Info } from "lucide-react";
+import { Save, Send, AlertCircle, Loader2, Info, Star } from "lucide-react";
 import { MarkStatusBadge } from "./MarkStatusBadge";
 import { cn } from "@/lib/utils";
 import {
@@ -29,6 +29,7 @@ interface PracticalMarkEntry {
   status: "DRAFT" | "SUBMITTED" | "VERIFIED" | "LOCKED";
   hasUnsavedChanges: boolean;
   validationError: string | null;
+  isEditedByAdmin?: boolean;
 }
 
 interface PracticalMarksEntryTableProps {
@@ -223,8 +224,15 @@ export function PracticalMarksEntryTable({
                     </TableCell>
 
                     {/* Student Name */}
-                    <TableCell className="font-medium sticky left-[70px] bg-inherit">
-                      {row.studentName}
+                    <TableCell className="font-medium sticky left-[70px] bg-inherit z-10">
+                      <div className="flex items-center gap-2">
+                        {row.studentName}
+                        {row.isEditedByAdmin && (
+                          <span title="Edited by Admin" className="flex-shrink-0 flex items-center">
+                            <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
 
                     {/* Section */}

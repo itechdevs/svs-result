@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Save, Send, AlertCircle, Loader2 } from "lucide-react";
+import { Save, Send, AlertCircle, Loader2, Star } from "lucide-react";
 import { MarkStatusBadge } from "./MarkStatusBadge";
 import { cn } from "@/lib/utils";
 import {
@@ -193,7 +193,16 @@ export function DirectMarksEntryTable({
                     </TableCell>
 
                     {/* Student Name */}
-                    <TableCell className="font-medium">{row.studentName}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {row.studentName}
+                        {row.isEditedByAdmin && (
+                          <span title="Edited by Admin" className="flex-shrink-0 flex items-center">
+                            <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
 
                     {/* Section */}
                     <TableCell className="text-muted-foreground">{row.section}</TableCell>

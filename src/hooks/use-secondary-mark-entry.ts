@@ -62,6 +62,10 @@ export function useSecondaryMarkEntry({
       const existingMark = existingMarksMap[student.id];
       const localChange = localChanges[student.id];
       const validationError = validationErrors[student.id];
+      
+      const rawRemarks = localChange?.remarks ?? existingMark?.remarks ?? "";
+      const isEditedByAdmin = rawRemarks.includes("[Edited by Admin]");
+      const displayRemarks = rawRemarks.replace("[Edited by Admin]", "").trim();
 
       return {
         studentId: student.id,
@@ -71,9 +75,10 @@ export function useSecondaryMarkEntry({
         marksObtained: localChange?.marksObtained ?? existingMark?.marksObtained ?? null,
         isAbsent: localChange?.isAbsent ?? existingMark?.isAbsent ?? false,
         status: existingMark?.status ?? "DRAFT",
-        remarks: localChange?.remarks ?? existingMark?.remarks ?? null,
+        remarks: displayRemarks || null,
         hasUnsavedChanges: !!localChange,
         validationError: validationError || null,
+        isEditedByAdmin: !!isEditedByAdmin,
       };
     });
   }, [students, existingMarksMap, localChanges, validationErrors]);
