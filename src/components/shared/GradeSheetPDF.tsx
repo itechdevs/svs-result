@@ -50,20 +50,27 @@ export function GradeSheetPDF({
   mergedScoresList,
   gpa,
   rank,
+  schoolInfo,
 }: {
   student: Student;
   mergedScoresList: MergedScore[];
   gpa: string;
   rank: number | string;
+  schoolInfo?: any;
 }) {
+  const schoolName = schoolInfo?.shortName || schoolInfo?.schoolName || SCHOOL_CONFIG.nameShort;
+  const address = schoolInfo?.address || SCHOOL_CONFIG.address;
+  const phone = schoolInfo?.phone || SCHOOL_CONFIG.phone;
+  const email = schoolInfo?.emailAlt || schoolInfo?.email || SCHOOL_CONFIG.emailAlt;
+
   return (
     <Document>
       <Page size="A4" style={pdfStyles.page}>
         <View style={pdfStyles.outerBorder}>
           <View style={pdfStyles.headerRow}>
-            <Text style={pdfStyles.schoolName}>{SCHOOL_CONFIG.nameShort}</Text>
-            <Text style={pdfStyles.subHeader}>{SCHOOL_CONFIG.address}</Text>
-            <Text style={pdfStyles.subHeader}>Phone: {SCHOOL_CONFIG.phone} | Email: {SCHOOL_CONFIG.emailAlt}</Text>
+            <Text style={pdfStyles.schoolName}>{schoolName}</Text>
+            <Text style={pdfStyles.subHeader}>{address}</Text>
+            <Text style={pdfStyles.subHeader}>Phone: {phone} | Email: {email}</Text>
           </View>
           <View style={pdfStyles.examTitle}>
             <Text style={pdfStyles.examLabel}>Final Examination</Text>

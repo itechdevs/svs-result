@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { SCHOOL_CONFIG } from "@/lib/constants";
+import { useSchoolInformation } from "@/hooks/use-school-information";
 import { cn } from "@/lib/utils";
 import {
   LayoutGrid,
@@ -67,6 +68,17 @@ type NavItem = NavItemLink | NavSubSection;
 
 function isSubSection(item: NavItem): item is NavSubSection {
   return "section" in item && item.section === true;
+}
+
+/** Dynamic school abbreviation label shown in the sidebar header */
+function SidebarAbbrevLabel() {
+  const { school } = useSchoolInformation();
+  const abbrev = school?.abbrev || school?.shortName || SCHOOL_CONFIG.abbrev;
+  return (
+    <p className="text-[11px] font-semibold text-sidebar-foreground/60 whitespace-nowrap mt-0.5">
+      {abbrev} Results
+    </p>
+  );
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -519,9 +531,7 @@ export function AdminSidebar() {
               <p className="text-[10px] font-bold text-sidebar-foreground/35 uppercase tracking-[0.14em] whitespace-nowrap">
                 Admin Portal
               </p>
-              <p className="text-[11px] font-semibold text-sidebar-foreground/60 whitespace-nowrap mt-0.5">
-                {SCHOOL_CONFIG.abbrev} Results
-              </p>
+              <SidebarAbbrevLabel />
             </div>
           )}
           {isCollapsed && (

@@ -96,17 +96,21 @@ interface SecondaryMarksheetDownloadProps {
   variant?: 'button' | 'icon';
 }
 
+import { useSchoolInformation } from '@/hooks/use-school-information';
+
 export function SecondaryMarksheetDownload({
   data,
   variant = 'button'
 }: SecondaryMarksheetDownloadProps) {
+  const { school } = useSchoolInformation();
+
   const fileName = data.type === 'term'
     ? `Term_Marksheet_${data.student.name}_${data.student.rollNumber}.pdf`
     : `Annual_Transcript_${data.student.name}_${data.student.rollNumber}.pdf`;
 
   const document = data.type === 'term'
-    ? <SecondaryTermMarksheetPDF data={data} />
-    : <SecondaryAnnualMarksheetPDF data={data} />;
+    ? <SecondaryTermMarksheetPDF data={data} schoolInfo={school} />
+    : <SecondaryAnnualMarksheetPDF data={data} schoolInfo={school} />;
 
   return (
     <PDFDownloadLink

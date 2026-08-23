@@ -8,16 +8,18 @@ import { DEFAULT_GRADE_INTERVALS } from '@/components/grade-sheet/types';
 import { X, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-const SCHOOL_INFO = {
-  schoolName: SCHOOL_CONFIG.name,
-  schoolAddress: SCHOOL_CONFIG.address,
-  schoolPhone: SCHOOL_CONFIG.phone,
-  schoolEmail: SCHOOL_CONFIG.emailAlt,
-  schoolWebsite: SCHOOL_CONFIG.website,
-  logo: SCHOOL_CONFIG.logo,
-  nepaliYear: '2082',
-  englishYear: '2026',
-};
+function getSchoolInfo(schoolInfo?: any) {
+  return {
+    schoolName: schoolInfo?.schoolName || SCHOOL_CONFIG.name,
+    schoolAddress: schoolInfo?.address || SCHOOL_CONFIG.address,
+    schoolPhone: schoolInfo?.phone || SCHOOL_CONFIG.phone,
+    schoolEmail: schoolInfo?.emailAlt || schoolInfo?.email || SCHOOL_CONFIG.emailAlt,
+    schoolWebsite: schoolInfo?.website || SCHOOL_CONFIG.website,
+    logo: schoolInfo?.logoUrl || SCHOOL_CONFIG.logo,
+    nepaliYear: '2082',
+    englishYear: '2026',
+  };
+}
 
 import { getSecondaryGrade } from '@/lib/secondary-grades';
 
@@ -27,7 +29,7 @@ function getGradeDescription(grade: string, isNG?: boolean) {
   return match ? match.description : '\u2013';
 }
 
-function mapTermResultToStudentResult(termResult: any): StudentResult {
+function mapTermResultToStudentResult(termResult: any, schoolInfo?: any): StudentResult {
   const student = termResult.syncedStudent || {};
   // exam can be a direct relation on the result object
   const exam = termResult.exam || {};
@@ -80,7 +82,7 @@ function mapTermResultToStudentResult(termResult: any): StudentResult {
   const gpa = Number(termResult?.gpa || 0);
 
   return {
-    ...SCHOOL_INFO,
+    ...getSchoolInfo(schoolInfo),
     studentName: student?.name || 'Unknown Student',
     rollNo: student?.rollNumber || 'N/A',
     grade: exam?.gradeLevel || student?.class || 'N/A',
@@ -93,7 +95,7 @@ function mapTermResultToStudentResult(termResult: any): StudentResult {
   };
 }
 
-function mapAnnualResultToStudentResult(annualResult: any): StudentResult {
+function mapAnnualResultToStudentResult(annualResult: any, schoolInfo?: any): StudentResult {
   const student = annualResult.syncedStudent || {};
   const subjectResults = annualResult.subjectResults || [];
 
@@ -158,7 +160,7 @@ function mapAnnualResultToStudentResult(annualResult: any): StudentResult {
   const gpa = Number(annualResult?.gpa || 0);
 
   return {
-    ...SCHOOL_INFO,
+    ...getSchoolInfo(schoolInfo),
     studentName: student?.name || 'Unknown Student',
     rollNo: student?.rollNumber || 'N/A',
     grade: student?.class || 'N/A',
@@ -177,12 +179,15 @@ interface SecondaryGradeSheetModalProps {
   onClose: () => void;
 }
 
+import { useSchoolInformation } from '@/hooks/use-school-information';
+
 export function SecondaryGradeSheetModal({
   result,
   type,
   open,
   onClose,
 }: SecondaryGradeSheetModalProps) {
+  const { school } = useSchoolInformation();
   // Don't render if not open or no result
   if (!open || !result) return null;
 
@@ -208,8 +213,8 @@ export function SecondaryGradeSheetModal({
 
   const studentResult: StudentResult =
     type === 'term'
-      ? mapTermResultToStudentResult(result)
-      : mapAnnualResultToStudentResult(result);
+      ? mapTermResultToStudentResult(result, school)
+      : mapAnnualResultToStudentResult(result, school);
 
   const handlePrint = () => {
     // Find the grade sheet root inside this modal
@@ -327,7 +332,7 @@ export function SecondaryGradeSheetModal({
               fontFamily: 'Arial, sans-serif',
             }}
           >
-            Sanskar Vidhyapith School — {type === 'term' ? 'Term' : 'Annual'} Grade Sheet
+            {school?.shortName || school?.schoolName || SCHOOL_CONFIG.nameShort} — {type === 'term' ? 'Term' : 'Annual'} Grade Sheet
           </span>
           <div className="flex items-center gap-2">
             <Button

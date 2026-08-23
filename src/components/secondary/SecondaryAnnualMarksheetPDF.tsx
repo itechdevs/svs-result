@@ -432,9 +432,18 @@ function GradeIntervalTable() {
 
 export function SecondaryAnnualMarksheetPDF({
   data,
+  schoolInfo,
 }: {
   data: SecondaryAnnualMarksheetData;
+  schoolInfo?: any;
 }) {
+  const schoolName = schoolInfo?.shortName || schoolInfo?.schoolName || SCHOOL_CONFIG.nameShort;
+  const schoolNameLong = schoolInfo?.schoolName || SCHOOL_CONFIG.name;
+  const address = schoolInfo?.address || SCHOOL_CONFIG.address;
+  const phone = schoolInfo?.phone || SCHOOL_CONFIG.phone;
+  const email = schoolInfo?.emailAlt || schoolInfo?.email || SCHOOL_CONFIG.emailAlt;
+  const logo = schoolInfo?.logoUrl || SCHOOL_CONFIG.logo;
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
@@ -465,7 +474,7 @@ export function SecondaryAnnualMarksheetPDF({
                     marginBottom: 28,
                   }}
                 >
-                  {`${`${SCHOOL_CONFIG.name}    `.repeat(10)}`}
+                  {`${`${schoolNameLong}    `.repeat(10)}`}
                 </Text>
               ))}
             </View>
@@ -484,7 +493,7 @@ export function SecondaryAnnualMarksheetPDF({
               }}
             >
               <Image
-                src={SCHOOL_CONFIG.logo}
+                src={logo}
                 style={{ width: 500, height: 500, opacity: 0.1 }}
               />
             </View>
@@ -492,15 +501,15 @@ export function SecondaryAnnualMarksheetPDF({
             {/* School Header */}
             <View style={styles.headerSection}>
               <View style={styles.headerLeft}>
-                <Image src={SCHOOL_CONFIG.logo} style={styles.logo} />
+                <Image src={logo} style={styles.logo} />
               </View>
               <View style={styles.headerCenter}>
-                <Text style={styles.schoolName}>{SCHOOL_CONFIG.nameShort}</Text>
+                <Text style={styles.schoolName}>{schoolName}</Text>
                 <Text style={styles.schoolAddress}>
-                  {SCHOOL_CONFIG.address}
+                  {address}
                 </Text>
                 <Text style={styles.schoolContact}>
-                  Phone: {SCHOOL_CONFIG.phone} | Email: {SCHOOL_CONFIG.emailAlt}
+                  Phone: {phone} | Email: {email}
                 </Text>
               </View>
               <View style={styles.headerRight} />

@@ -20,6 +20,8 @@ interface SanskarLoaderProps {
   overlay?: boolean;
 }
 
+import { useSchoolInformation } from "@/hooks/use-school-information";
+
 // ─── Keyframe styles (injected once) ─────────────────────────────────────────
 
 const STYLE_ID = "sanskar-loader-styles";
@@ -154,6 +156,9 @@ const FullpageLoader = ({
   message?: string;
   overlay?: boolean;
 }) => {
+  const { school } = useSchoolInformation();
+  const schoolName = school?.shortName || school?.schoolName || SCHOOL_CONFIG.nameShort;
+
   const wrapStyle: React.CSSProperties = overlay
     ? {
       position: "fixed",
@@ -226,7 +231,11 @@ const FullpageLoader = ({
               zIndex: 1,
             }}
           >
-            <LogoSVG />
+            {school?.logoUrl ? (
+              <img src={school.logoUrl} alt="Logo" width={82} height={82} style={{ objectFit: 'contain' }} />
+            ) : (
+              <LogoSVG />
+            )}
           </div>
         </div>
 
@@ -242,7 +251,7 @@ const FullpageLoader = ({
             color: "#2B6CB0",
           }}
         >
-          {SCHOOL_CONFIG.nameShort}
+          {schoolName}
         </p>
 
         {/* Progress bar */}

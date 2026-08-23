@@ -1194,3 +1194,48 @@ model SecondaryMarksheet {
 
   @@map("secondary_marksheets")
 }
+
+// =============================================================================
+// SCHOOL INFORMATION (single-row configuration)
+// id is always 'school-config' to enforce one row.
+// To add multi-school support: remove the default id and adjust the API.
+// =============================================================================
+
+model SchoolInformation {
+  id                    String   @id @default("school-config")
+  schoolName            String
+  shortName             String?
+  schoolCode            String?
+  registrationNumber    String?
+  address               String?
+  addressFull           String?
+  municipality          String?
+  district              String?
+  province              String?
+  country               String   @default("Nepal")
+  phone                 String?
+  alternativePhone      String?
+  email                 String?
+  emailAlt              String?
+  website               String?
+  logoUrl               String?
+  faviconUrl            String?
+  principalName         String?
+  principalContact      String?
+  principalSignatureUrl String?
+  schoolStampUrl        String?
+  headerText            String?
+  footerText            String?
+  reportCardHeader      String?
+  marksheetHeader       String?
+  certificateHeader     String?
+  establishedYear       Int?
+  schoolType            String?
+  managementType        String?
+  abbrev                String?
+  updatedBy             String? // User.id of the ADMIN who last updated
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("school_information")
+}
