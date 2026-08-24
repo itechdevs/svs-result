@@ -8,16 +8,20 @@ import { DEFAULT_GRADE_INTERVALS } from '@/components/grade-sheet/types';
 import { X, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-const SCHOOL_INFO = {
-  schoolName: SCHOOL_CONFIG.name,
-  schoolAddress: SCHOOL_CONFIG.address,
-  schoolPhone: SCHOOL_CONFIG.phone,
-  schoolEmail: SCHOOL_CONFIG.emailAlt,
-  schoolWebsite: SCHOOL_CONFIG.website,
-  logo: SCHOOL_CONFIG.logo,
-  nepaliYear: '2082',
-  englishYear: '2026',
-};
+function getSchoolInfo(schoolInfo?: any) {
+  return {
+    schoolName: schoolInfo?.schoolName || SCHOOL_CONFIG.name,
+    schoolAddress: schoolInfo?.address || SCHOOL_CONFIG.address,
+    schoolPhone: schoolInfo?.phone || SCHOOL_CONFIG.phone,
+    schoolEmail: schoolInfo?.emailAlt || schoolInfo?.email || SCHOOL_CONFIG.emailAlt,
+    schoolWebsite: schoolInfo?.website || SCHOOL_CONFIG.website,
+    logo: schoolInfo?.logoUrl || SCHOOL_CONFIG.logo,
+    nepaliYear: '2082',
+    englishYear: '2026',
+  };
+}
+
+import { getSecondaryGrade } from '@/lib/secondary-grades';
 
 function getGradeDescription(grade: string, isNG?: boolean) {
   if (isNG || grade === 'NG') return 'Not Graded';
@@ -25,67 +29,138 @@ function getGradeDescription(grade: string, isNG?: boolean) {
   return match ? match.description : '\u2013';
 }
 
-function mapTermResultToStudentResult(termResult: any): StudentResult {
+function mapTermResultToStudentResult(termResult: any, schoolInfo?: any): StudentResult {
   const student = termResult.syncedStudent || {};
+  // exam can be a direct relation on the result object
   const exam = termResult.exam || {};
   const subjectResults = termResult.subjectResults || [];
 
   const subjects: Subject[] = subjectResults.map((sr: any) => {
     const subjectName = sr?.subjectConfig?.syncedSubject?.name || 'Unknown Subject';
-    const grade = sr?.grade || 'NG';
-    const gp = Number(sr?.gradePoint || 0);
+    const finalGrade = sr?.grade || 'NG';
+    const components = sr?.subjectConfig?.components || [];
+    const thComp = components.find((c: any) => c.type === 'THEORY');
+    const prComp = components.find((c: any) => c.type === 'PRACTICAL');
+
+    const thObtained = sr?.theoryMarks != null ? Number(sr.theoryMarks) : null;
+    const prObtained = sr?.practicalMarks != null ? Number(sr.practicalMarks) : null;
+    const thFull = thComp ? Number(thComp.fullMarks) : null;
+    const prFull = prComp ? Number(prComp.fullMarks) : null;
+    const thCH = thComp ? Number(thComp.creditHour) : (sr?.creditHours || 0);
+    const prCH = prComp ? Number(prComp.creditHour) : 0;
+
+    let thGradeStr = '—', thGPNum = 0, prGradeStr = '—', prGPNum = 0;
+
+    if (thObtained !== null && thFull) {
+      const scale = getSecondaryGrade((thObtained / thFull) * 100);
+      thGradeStr = scale.grade;
+      thGPNum = scale.gradePoint;
+    }
+    if (prObtained !== null && prFull) {
+      const scale = getSecondaryGrade((prObtained / prFull) * 100);
+      prGradeStr = scale.grade;
+      prGPNum = scale.gradePoint;
+    }
+
+    // If either component is NG, the overall final grade must be NG
+    const effectiveFinalGrade =
+      thGradeStr === 'NG' || prGradeStr === 'NG' ? 'NG' : finalGrade;
+
     return {
       name: subjectName,
-      creditHourTheory: sr?.creditHoursTheory || sr?.creditHours || 0,
-      creditHourInternal: sr?.creditHoursInternal || 0,
-      gpTheory: gp,
-      gradeTheory: grade,
-      gpInternal: 0,
-      gradeInternal: '\u2013',
-      finalGrade: grade,
-      remarks: getGradeDescription(grade, sr?.isNG),
+      creditHourTheory: thCH,
+      creditHourInternal: prCH,
+      gpTheory: thGPNum || Number(sr?.gradePoint || 0), // fallback to total GP if no components
+      gradeTheory: thGradeStr !== '—' ? thGradeStr : finalGrade,
+      gpInternal: prGPNum,
+      gradeInternal: prGradeStr,
+      finalGrade: effectiveFinalGrade,
+      remarks: getGradeDescription(effectiveFinalGrade, effectiveFinalGrade === 'NG'),
     };
   });
 
   const gpa = Number(termResult?.gpa || 0);
 
   return {
-    ...SCHOOL_INFO,
+    ...getSchoolInfo(schoolInfo),
     studentName: student?.name || 'Unknown Student',
     rollNo: student?.rollNumber || 'N/A',
     grade: exam?.gradeLevel || student?.class || 'N/A',
+    examName: exam?.name || '',
     issueDate: new Date().toLocaleDateString('en-GB').replace(/\//g, '-'),
     issueDateAD: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
     gpa,
-    rank: 1,
+    rank: termResult?.classRank || 1,
     subjects,
   };
 }
 
-function mapAnnualResultToStudentResult(annualResult: any): StudentResult {
+function mapAnnualResultToStudentResult(annualResult: any, schoolInfo?: any): StudentResult {
   const student = annualResult.syncedStudent || {};
   const subjectResults = annualResult.subjectResults || [];
 
   const subjects: Subject[] = subjectResults.map((sr: any) => {
     const subjectName = sr?.subjectConfig?.syncedSubject?.name || 'Unknown Subject';
-    const grade = sr?.grade || 'NG';
+    const finalGrade = sr?.grade || 'NG';
+
+    // Attempt to extract components and marks (may not exist in old annual logic, but good for future-proofing)
+    const components = sr?.subjectConfig?.components || [];
+    const thComp = components.find((c: any) => c.type === 'THEORY');
+    const prComp = components.find((c: any) => c.type === 'PRACTICAL');
+
+    const thObtained = sr?.theoryMarks != null ? Number(sr.theoryMarks) : null;
+    const prObtained = sr?.practicalMarks != null ? Number(sr.practicalMarks) : null;
+    const thFull = thComp ? Number(thComp.fullMarks) : null;
+    const prFull = prComp ? Number(prComp.fullMarks) : null;
+    const thCH = thComp ? Number(thComp.creditHour) : (sr?.creditHours || 0);
+    const prCH = prComp ? Number(prComp.creditHour) : 0;
+
+    // Check for componentDetails first (Annual route enriches this)
+    const compDetails = sr?.componentDetails || [];
+    const thComponentData = compDetails.find((c: any) => c.type === 'THEORY');
+    const prComponentData = compDetails.find((c: any) => c.type === 'PRACTICAL');
+
+    let thGradeStr = '—', thGPNum = 0, prGradeStr = '—', prGPNum = 0;
+
+    if (thComponentData) {
+      thGradeStr = thComponentData.grade;
+      thGPNum = thComponentData.gradePoint;
+    } else if (thObtained !== null && thFull) {
+      const scale = getSecondaryGrade((thObtained / thFull) * 100);
+      thGradeStr = scale.grade;
+      thGPNum = scale.gradePoint;
+    }
+
+    if (prComponentData) {
+      prGradeStr = prComponentData.grade;
+      prGPNum = prComponentData.gradePoint;
+    } else if (prObtained !== null && prFull) {
+      const scale = getSecondaryGrade((prObtained / prFull) * 100);
+      prGradeStr = scale.grade;
+      prGPNum = scale.gradePoint;
+    }
+
+    // If either component is NG, the overall final grade must be NG
+    const effectiveFinalGrade =
+      thGradeStr === 'NG' || prGradeStr === 'NG' ? 'NG' : finalGrade;
+
     return {
       name: subjectName,
-      creditHourTheory: sr?.creditHours || 0,
-      creditHourInternal: 0,
-      gpTheory: Number(sr?.gradePoint || 0),
-      gradeTheory: grade,
-      gpInternal: 0,
-      gradeInternal: '\u2013',
-      finalGrade: grade,
-      remarks: getGradeDescription(grade, sr?.isNG),
+      creditHourTheory: thCH,
+      creditHourInternal: prCH,
+      gpTheory: thGPNum || Number(sr?.gradePoint || 0),
+      gradeTheory: thGradeStr !== '—' ? thGradeStr : finalGrade,
+      gpInternal: prGPNum,
+      gradeInternal: prGradeStr,
+      finalGrade: effectiveFinalGrade,
+      remarks: getGradeDescription(effectiveFinalGrade, effectiveFinalGrade === 'NG'),
     };
   });
 
   const gpa = Number(annualResult?.gpa || 0);
 
   return {
-    ...SCHOOL_INFO,
+    ...getSchoolInfo(schoolInfo),
     studentName: student?.name || 'Unknown Student',
     rollNo: student?.rollNumber || 'N/A',
     grade: student?.class || 'N/A',
@@ -104,18 +179,42 @@ interface SecondaryGradeSheetModalProps {
   onClose: () => void;
 }
 
+import { useSchoolInformation } from '@/hooks/use-school-information';
+
 export function SecondaryGradeSheetModal({
   result,
   type,
   open,
   onClose,
 }: SecondaryGradeSheetModalProps) {
+  const { school } = useSchoolInformation();
+  // Don't render if not open or no result
   if (!open || !result) return null;
+
+  // Guard: if subjectResults is missing or empty, show a message instead of crashing
+  const hasData = (result.subjectResults && result.subjectResults.length > 0) || result.syncedStudent;
+  if (!hasData) {
+    return (
+      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+        <div style={{ background: 'white', borderRadius: '16px', padding: '32px', maxWidth: '480px', textAlign: 'center' }}>
+          <p style={{ fontFamily: 'Arial, sans-serif', color: '#64748b', marginBottom: '16px' }}>
+            No grade data available for this student yet. Ensure the result has been compiled.
+          </p>
+          <button
+            onClick={onClose}
+            style={{ padding: '8px 20px', background: '#1f5e9d', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontFamily: 'Arial, sans-serif' }}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const studentResult: StudentResult =
     type === 'term'
-      ? mapTermResultToStudentResult(result)
-      : mapAnnualResultToStudentResult(result);
+      ? mapTermResultToStudentResult(result, school)
+      : mapAnnualResultToStudentResult(result, school);
 
   const handlePrint = () => {
     // Find the grade sheet root inside this modal
@@ -233,7 +332,7 @@ export function SecondaryGradeSheetModal({
               fontFamily: 'Arial, sans-serif',
             }}
           >
-            Sanskar Vidhyapith School — {type === 'term' ? 'Term' : 'Annual'} Grade Sheet
+            {school?.shortName || school?.schoolName || SCHOOL_CONFIG.nameShort} — {type === 'term' ? 'Term' : 'Annual'} Grade Sheet
           </span>
           <div className="flex items-center gap-2">
             <Button

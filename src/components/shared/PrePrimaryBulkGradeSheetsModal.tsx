@@ -9,6 +9,7 @@
  */
 
 import React from 'react';
+import { useSchoolInformation } from '@/hooks/use-school-information';
 import PrePrimaryGradeSheet, {
     buildPrePrimaryData,
 } from '@/components/shared/pre-primarygrade';
@@ -20,6 +21,8 @@ interface Props {
 }
 
 export default function PrePrimaryBulkGradeSheetsModal({ students, onClose }: Props) {
+    const { school } = useSchoolInformation();
+    
     if (!students.length) return null;
 
     const handlePrintAll = () => {
@@ -133,6 +136,7 @@ export default function PrePrimaryBulkGradeSheetsModal({ students, onClose }: Pr
                             attendance: student.attendance,
                             observationResults: student.observationResults,
                             customRemark: student.customRemark,
+                            schoolInfo: school,
                         });
 
                         return (

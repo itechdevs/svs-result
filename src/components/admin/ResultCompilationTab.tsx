@@ -19,6 +19,7 @@ import { apiClient } from '@/lib/api-client';
 import { toast } from 'sonner';
 import dynamic from 'next/dynamic';
 import { buildMergedScores, computeGpa } from '@/lib/transcript-utils';
+import { useSchoolInformation } from '@/hooks/use-school-information';
 
 const TranscriptModal = dynamic(() => import('@/components/shared/TranscriptModal'), { ssr: false });
 
@@ -79,6 +80,8 @@ export default function ResultCompilationTab() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
 
+  const { school, isLoading: isSchoolInfoLoading } = useSchoolInformation();
+
   const { data: academicYears = [], isLoading: academicYearsLoading } = useAcademicYears();
   const { data: exams = [], isLoading: examsLoading } = useExams(selectedAcademicYear ? { academicYearId: selectedAcademicYear } : undefined);
   const { data: templatesData = [], isLoading: templatesLoading } = useEvaluationTemplates(selectedAcademicYear ? { academicYearId: selectedAcademicYear } : {});
@@ -90,7 +93,7 @@ export default function ResultCompilationTab() {
     gradeLevel: selectedClass !== 'all' ? selectedClass : undefined,
   });
 
-  const isLoading = academicYearsLoading || examsLoading || templatesLoading || studentsLoading || resultsLoading || compilationsLoading;
+  const isLoading = academicYearsLoading || examsLoading || templatesLoading || studentsLoading || resultsLoading || compilationsLoading || isSchoolInfoLoading;
 
   if (isLoading) {
     return <ResultCompilationSkeleton />;
@@ -298,7 +301,7 @@ export default function ResultCompilationTab() {
         const studentObj = toStudentObj(result, selectedClass, students, selectedExamName);
         const scores = buildMergedScores(studentObj.scores);
         const gpa = computeGpa(scores);
-        const blob = await pdf(<GradeSheetPDF student={studentObj} mergedScoresList={scores} gpa={gpa} rank={studentObj.rank ?? 1} />).toBlob();
+        const blob = await pdf(<GradeSheetPDF student={studentObj} mergedScoresList={scores} gpa={gpa} rank={studentObj.rank ?? 1} schoolInfo={school} />).toBlob();
         zip.file(`GradeSheet_${result.studentName}_${result.rollNo}.pdf`, blob);
       }));
       const zipBlob = await zip.generateAsync({ type: 'blob' });

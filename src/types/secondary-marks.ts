@@ -129,6 +129,7 @@ export interface MarkEntryRow {
   remarks: string | null;
   hasUnsavedChanges: boolean;
   validationError: string | null;
+  isEditedByAdmin?: boolean;
 }
 
 export interface PracticalMarkEntryRow {
@@ -142,6 +143,7 @@ export interface PracticalMarkEntryRow {
   status: MarksStatus;
   hasUnsavedChanges: boolean;
   validationError: string | null;
+  isEditedByAdmin?: boolean;
 }
 
 // ============================================================================

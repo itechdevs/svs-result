@@ -49,13 +49,15 @@ export function EditMarksModal({
 }: EditMarksModalProps) {
   const [theoryMarks, setTheoryMarks] = useState<string>("");
   const [practicalMarks, setPracticalMarks] = useState<string>("");
-  const [isAbsent, setIsAbsent] = useState(false);
+  const [isTheoryAbsent, setIsTheoryAbsent] = useState(false);
+  const [isPracticalAbsent, setIsPracticalAbsent] = useState(false);
 
   useEffect(() => {
     if (open) {
       setTheoryMarks(theory?.marksObtained != null ? String(theory.marksObtained) : "");
       setPracticalMarks(practical?.marksObtained != null ? String(practical.marksObtained) : "");
-      setIsAbsent(theory?.isAbsent || practical?.isAbsent || false);
+      setIsTheoryAbsent(theory?.isAbsent || false);
+      setIsPracticalAbsent(practical?.isAbsent || false);
     }
   }, [open, theory, practical]);
 
@@ -64,21 +66,21 @@ export function EditMarksModal({
       const updates: Promise<any>[] = [];
 
       if (theory) {
-        const value = isAbsent ? null : Number(theoryMarks);
+        const value = isTheoryAbsent ? null : Number(theoryMarks);
         updates.push(
           apiClient.put(`/admin/secondary/marks/${theory.markId}`, {
             marksObtained: value,
-            isAbsent,
+            isAbsent: isTheoryAbsent,
           })
         );
       }
 
       if (practical) {
-        const value = isAbsent ? null : Number(practicalMarks);
+        const value = isPracticalAbsent ? null : Number(practicalMarks);
         updates.push(
           apiClient.put(`/admin/secondary/marks/${practical.markId}`, {
             marksObtained: value,
-            isAbsent,
+            isAbsent: isPracticalAbsent,
           })
         );
       }
@@ -96,29 +98,27 @@ export function EditMarksModal({
   });
 
   const handleSave = () => {
-    if (!isAbsent) {
-      if (theory && (theoryMarks === "" || isNaN(Number(theoryMarks)))) {
+    if (theory && !isTheoryAbsent) {
+      if (theoryMarks === "" || isNaN(Number(theoryMarks))) {
         toast.warning("Please enter valid theory marks");
         return;
       }
-      if (practical && (practicalMarks === "" || isNaN(Number(practicalMarks)))) {
+      const val = Number(theoryMarks);
+      if (val < 0 || val > theory.fullMarks) {
+        toast.warning(`Theory marks must be between 0 and ${theory.fullMarks}`);
+        return;
+      }
+    }
+
+    if (practical && !isPracticalAbsent) {
+      if (practicalMarks === "" || isNaN(Number(practicalMarks))) {
         toast.warning("Please enter valid practical marks");
         return;
       }
-
-      if (theory && !isAbsent) {
-        const val = Number(theoryMarks);
-        if (val < 0 || val > theory.fullMarks) {
-          toast.warning(`Theory marks must be between 0 and ${theory.fullMarks}`);
-          return;
-        }
-      }
-      if (practical && !isAbsent) {
-        const val = Number(practicalMarks);
-        if (val < 0 || val > practical.fullMarks) {
-          toast.warning(`Practical marks must be between 0 and ${practical.fullMarks}`);
-          return;
-        }
+      const val = Number(practicalMarks);
+      if (val < 0 || val > practical.fullMarks) {
+        toast.warning(`Practical marks must be between 0 and ${practical.fullMarks}`);
+        return;
       }
     }
 
@@ -136,44 +136,54 @@ export function EditMarksModal({
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          <label className="flex items-center gap-2 text-sm">
-            <Checkbox
-              checked={isAbsent}
-              onCheckedChange={(checked) => setIsAbsent(!!checked)}
-            />
-            <span className="font-medium">Absent</span>
-          </label>
-
           {theory && (
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase">
-                Theory Marks (Full: {theory.fullMarks}, Pass: {theory.passMarks})
-              </label>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-muted-foreground uppercase">
+                  Theory Marks (Full: {theory.fullMarks}, Pass: {theory.passMarks})
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={isTheoryAbsent}
+                    onCheckedChange={(checked) => setIsTheoryAbsent(!!checked)}
+                  />
+                  <span className="font-medium text-xs">Absent in Theory</span>
+                </label>
+              </div>
               <Input
                 type="number"
                 min={0}
                 max={theory.fullMarks}
-                value={isAbsent ? "" : theoryMarks}
+                value={isTheoryAbsent ? "" : theoryMarks}
                 onChange={(e) => setTheoryMarks(e.target.value)}
-                disabled={isAbsent}
-                placeholder={isAbsent ? "Absent" : `Enter marks (0-${theory.fullMarks})`}
+                disabled={isTheoryAbsent}
+                placeholder={isTheoryAbsent ? "Absent" : `Enter marks (0-${theory.fullMarks})`}
               />
             </div>
           )}
 
           {practical && (
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase">
-                Practical Marks (Full: {practical.fullMarks}, Pass: {practical.passMarks})
-              </label>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-muted-foreground uppercase">
+                  Practical Marks (Full: {practical.fullMarks}, Pass: {practical.passMarks})
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={isPracticalAbsent}
+                    onCheckedChange={(checked) => setIsPracticalAbsent(!!checked)}
+                  />
+                  <span className="font-medium text-xs">Absent in Practical</span>
+                </label>
+              </div>
               <Input
                 type="number"
                 min={0}
                 max={practical.fullMarks}
-                value={isAbsent ? "" : practicalMarks}
+                value={isPracticalAbsent ? "" : practicalMarks}
                 onChange={(e) => setPracticalMarks(e.target.value)}
-                disabled={isAbsent}
-                placeholder={isAbsent ? "Absent" : `Enter marks (0-${practical.fullMarks})`}
+                disabled={isPracticalAbsent}
+                placeholder={isPracticalAbsent ? "Absent" : `Enter marks (0-${practical.fullMarks})`}
               />
             </div>
           )}

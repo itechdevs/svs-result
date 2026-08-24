@@ -6,6 +6,7 @@ import { formatNum } from "@/lib/format-num";
 interface GPASummaryProps {
   gpa: number;
   rank: number;
+  hasNG?: boolean;
 }
 
 const underlineBase: React.CSSProperties = {
@@ -19,7 +20,7 @@ const underlineBase: React.CSSProperties = {
   lineHeight: 1.4,
 };
 
-export default function GPASummary({ gpa, rank }: GPASummaryProps) {
+export default function GPASummary({ gpa, rank, hasNG }: GPASummaryProps) {
   return (
     <table
       style={{
@@ -43,12 +44,41 @@ export default function GPASummary({ gpa, rank }: GPASummaryProps) {
               textAlign: "center",
             }}
           >
-            Grade Point Average (GPA) ={" "}
-            <strong style={{ ...underlineBase, fontSize: "13px" }}>
-              {formatNum(gpa, 2)}
-            </strong>
+            {hasNG ? (
+              <>
+                Grade Point Average (GPA) ={" "}
+                <strong
+                  style={{
+                    ...underlineBase,
+                    fontSize: "13px",
+                    color: "#c0392b",
+                    borderBottom: "1px solid #c0392b",
+                  }}
+                >
+                  NG
+                </strong>
+                <span
+                  style={{
+                    marginLeft: "10px",
+                    fontSize: "10px",
+                    fontWeight: 600,
+                    color: "#c0392b",
+                    fontStyle: "italic",
+                  }}
+                >
+
+                </span>
+              </>
+            ) : (
+              <>
+                Grade Point Average (GPA) ={" "}
+                <strong style={{ ...underlineBase, fontSize: "13px" }}>
+                  {formatNum(gpa, 2)}
+                </strong>
+              </>
+            )}
           </td>
-          <td
+          {/* <td
             style={{
               width: "20%",
               borderRight: "0.5px solid #1f5e9d",
@@ -62,9 +92,9 @@ export default function GPASummary({ gpa, rank }: GPASummaryProps) {
           >
             Rank:{" "}
             <strong style={{ ...underlineBase, fontSize: "13px" }}>
-              {rank}
+              {hasNG ? "—" : rank}
             </strong>
-          </td>
+          </td> */}
         </tr>
       </tbody>
     </table>

@@ -58,9 +58,6 @@ export const POST = withHandler(
       return notFound("Component not found");
     }
 
-    if (component.type === "PRACTICAL") {
-      return badRequest("Practical component marks must be entered via /api/teacher/secondary/practical-marks");
-    }
 
     // Validate marks do not exceed component full marks
     const invalidMarks = body.marks.filter(m => !m.isAbsent && m.marksObtained !== undefined && m.marksObtained !== null && m.marksObtained > Number(component.fullMarks));

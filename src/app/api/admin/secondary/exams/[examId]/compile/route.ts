@@ -2,20 +2,29 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { badRequest, notFound, ok } from "@/lib/response";
 import { withHandler } from "@/lib/handlers";
-import { getSecondaryGrade } from "@/lib/secondary-grades";
-// Removes the Decimal import
+import { calculateExam } from "@/lib/secondary-calculator";
+import type { SubjectInput, ComponentInput } from "@/lib/secondary-calculator";
 
-// POST /api/admin/secondary/exams/[examId]/compile
+/**
+ * POST /api/admin/secondary/exams/[examId]/compile
+ *
+ * NEB v2 Credit-Hour-Based Calculation:
+ *   Component % = (obtained / fullMarks) × 100
+ *   Component GP = lookup(%, NEB_v2_scale)
+ *   Subject GPA  = Σ(comp.GP × comp.creditHour) / Σ(comp.creditHour)
+ *   Overall GPA  = Σ(all comp.GP × comp.creditHour) / Σ(all comp.creditHour)
+ *
+ * Term-to-term blending via weightage is NOT applied here.
+ * Each exam is a fully self-contained calculation.
+ */
 export const POST = withHandler(
   async (_req: NextRequest, { params }) => {
     const { examId } = await params;
 
-    const exam = await prisma.exam.findUnique({
-      where: { id: examId },
-    });
+    const exam = await prisma.exam.findUnique({ where: { id: examId } });
     if (!exam) return notFound("Exam not found");
 
-    // Fetch Subject Configs for this exam's grade & year
+    // Fetch subject configs with per-component creditHour
     const subjectConfigs = await prisma.secondarySubjectConfig.findMany({
       where: {
         academicYearId: exam.academicYearId,
@@ -37,128 +46,116 @@ export const POST = withHandler(
     const componentMarks = await prisma.secondaryComponentMark.findMany({
       where: {
         examId: examId,
-        component: {
-          subjectConfigId: { in: configIds },
-        },
+        component: { subjectConfigId: { in: configIds } },
       },
       include: { component: true },
     });
 
-    const unverifiedMarks = componentMarks.filter(
-      (m) => m.status !== "VERIFIED",
-    );
-    if (unverifiedMarks.length > 0) {
-      // For strict compliance, all marks should be verified before compilation.
-      // But we can allow partials. Let's enforce it.
-      return badRequest(
-        `There are ${unverifiedMarks.length} unverified marks. Please verify all marks before compilation.`,
-      );
-    }
+    // Separate verified vs unverified
+    const verifiedMarks = componentMarks.filter((m) => m.status === "VERIFIED");
+    const unverifiedMarks = componentMarks.filter((m) => m.status !== "VERIFIED");
 
-    // Group marks by student
-    const studentMarksMap = new Map<string, typeof componentMarks>();
+    // Skip students who have ANY unverified marks (compile only clean students)
+    const unverifiedStudentIds = new Set(unverifiedMarks.map(m => m.syncedStudentId));
 
-    // Some students might have missing marks. We'll group what we have.
-    for (const mark of componentMarks) {
+    // Group verified marks by student — only students with at least 1 verified mark
+    const studentMarksMap = new Map<string, typeof verifiedMarks>();
+    for (const mark of verifiedMarks) {
+      if (unverifiedStudentIds.has(mark.syncedStudentId)) continue;
       if (!studentMarksMap.has(mark.syncedStudentId)) {
         studentMarksMap.set(mark.syncedStudentId, []);
       }
       studentMarksMap.get(mark.syncedStudentId)!.push(mark);
     }
 
-    // Process compilation per student
+    if (studentMarksMap.size === 0) {
+      return badRequest("No students with fully verified marks found. Please verify all marks before compilation.");
+    }
+
     const termResultsData: any[] = [];
     const subjectResultsData: any[] = [];
 
     for (const [studentId, marks] of studentMarksMap.entries()) {
-      let totalPassed = 0;
-      let totalNg = 0;
-      let totalCreditHours = 0;
-      let totalWeightedPoints = 0;
+      // Build SubjectInput[] for the NEB v2 calculator
+      const subjectInputs: SubjectInput[] = subjectConfigs.map((config) => {
+        const components: ComponentInput[] = config.components.map((comp) => {
+          const markRow = marks.find((m) => m.componentId === comp.id);
+          const obtained = markRow
+            ? markRow.isAbsent
+              ? null
+              : Number(markRow.marksObtained ?? 0)
+            : null; // no mark entered = treat as absent
 
-      for (const config of subjectConfigs) {
-        let theoryMarks = 0;
-        let practicalMarks = 0;
-        let totalFullMarks = 0;
+          return {
+            componentId: comp.id,
+            type: comp.type as "THEORY" | "PRACTICAL" | "INTERNAL",
+            fullMarks: Number(comp.fullMarks),
+            passMarks: Number(comp.passMarks),
+            // NEB v2: use the per-component credit hour
+            creditHour: Number(comp.creditHour ?? 1),
+            obtained,
+          };
+        });
 
-        for (const comp of config.components) {
-          totalFullMarks += Number(comp.fullMarks);
-          const studentMarkList = marks.filter(
-            (m) => m.componentId === comp.id,
-          );
-          const studentMarkObj =
-            studentMarkList.length > 0
-              ? Number(studentMarkList[0].marksObtained || 0)
-              : 0;
+        return {
+          subjectConfigId: config.id,
+          subjectName: config.id, // name resolved later from syncedSubject
+          components,
+        };
+      });
 
-          if (comp.type === "THEORY") theoryMarks += studentMarkObj;
-          if (comp.type === "PRACTICAL") practicalMarks += studentMarkObj;
-        }
+      // Run NEB v2 calculation (all within this exam only)
+      const examResult = calculateExam(subjectInputs);
 
-        const totalObtained = theoryMarks + practicalMarks;
-
-        let percentage = 0;
-        if (totalFullMarks > 0) {
-          percentage = (totalObtained / totalFullMarks) * 100;
-        }
-
-        const gradeInfo = getSecondaryGrade(percentage);
-        const weightedPoint = gradeInfo.gradePoint * config.creditHours;
-
-        totalCreditHours += config.creditHours;
-        totalWeightedPoints += weightedPoint;
-
-        if (gradeInfo.isNG) {
-          totalNg++;
-        } else {
-          totalPassed++;
-        }
+      // Collect subject results
+      for (const subResult of examResult.subjects) {
+        const theoryMarks = subResult.components
+          .filter((c) => c.type === "THEORY")
+          .reduce((s, c) => s + (c.obtained ?? 0), 0);
+        const practicalMarks = subResult.components
+          .filter((c) => c.type === "PRACTICAL")
+          .reduce((s, c) => s + (c.obtained ?? 0), 0);
 
         subjectResultsData.push({
           syncedStudentId: studentId,
-          subjectConfigId: config.id,
+          subjectConfigId: subResult.subjectConfigId,
           examId: exam.id,
           theoryMarks,
           practicalMarks,
-          totalObtained,
-          totalFullMarks,
-          percentage,
-          grade: gradeInfo.grade,
-          gradePoint: gradeInfo.gradePoint,
-          isNG: gradeInfo.isNG,
-          creditHours: config.creditHours,
-          weightedPoint,
+          totalObtained: subResult.totalObtained,
+          totalFullMarks: subResult.totalFullMarks,
+          percentage: subResult.subjectPercentage ?? 0,
+          grade: subResult.subjectGrade ?? "NG",
+          gradePoint: subResult.subjectGpa ?? 0,
+          isNG: subResult.isNG,
+          // snapshot: total credit hours for this subject
+          creditHours: subResult.totalCreditHours,
+          weightedPoint: (subResult.subjectGpa ?? 0) * subResult.totalCreditHours,
         });
-      } // end subject iteration
+      }
 
-      const gpa =
-        totalCreditHours > 0 ? totalWeightedPoints / totalCreditHours : 0;
-      const resultStatus = totalNg > 0 ? "NG_BLOCKED" : "PROMOTED";
+      const resultStatus = examResult.hasNG ? "NG_BLOCKED" : "PROMOTED";
 
       termResultsData.push({
         syncedStudentId: studentId,
         examId: exam.id,
         academicYearId: exam.academicYearId,
-        totalSubjects: subjectConfigs.length,
-        passedSubjects: totalPassed,
-        ngSubjects: totalNg,
-        totalCreditHours,
-        totalWeightedPoints,
-        gpa: Number(gpa.toFixed(2)),
-        hasNG: totalNg > 0,
+        totalSubjects: examResult.totalSubjects,
+        passedSubjects: examResult.passedSubjects,
+        ngSubjects: examResult.ngSubjects,
+        totalCreditHours: examResult.totalCreditHours,
+        totalWeightedPoints: examResult.totalWeightedPoints,
+        gpa: examResult.overallGpa ?? 0,
+        hasNG: examResult.hasNG,
         resultStatus,
       });
     }
 
-    // Save outputs using a transaction
+    // Persist in a transaction
     await prisma.$transaction(async (tx) => {
-      // Clean up previous compilation if any
-      await tx.secondarySubjectResult.deleteMany({
-        where: { examId: exam.id },
-      });
+      await tx.secondarySubjectResult.deleteMany({ where: { examId: exam.id } });
       await tx.secondaryTermResult.deleteMany({ where: { examId: exam.id } });
 
-      // Create term results and build a map: studentId -> termResultId
       const termResultIdMap = new Map<string, string>();
       for (const res of termResultsData) {
         const created = await tx.secondaryTermResult.create({
@@ -179,7 +176,6 @@ export const POST = withHandler(
         termResultIdMap.set(res.syncedStudentId, created.id);
       }
 
-      // Create subject results linked to their term result
       for (const subRes of subjectResultsData) {
         const finalResultId = termResultIdMap.get(subRes.syncedStudentId);
         await tx.secondarySubjectResult.create({
@@ -210,3 +206,4 @@ export const POST = withHandler(
   },
   ["ADMIN"],
 );
+

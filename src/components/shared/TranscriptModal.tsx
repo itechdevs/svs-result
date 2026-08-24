@@ -11,6 +11,8 @@ import {
 } from "@/components/grade-sheet/types";
 import { toBSDate, formatToBSDateString } from "@/lib/bs-calendar";
 
+import { useSchoolInformation } from "@/hooks/use-school-information";
+
 interface TranscriptModalProps {
   showTranscriptModal: Student | null;
   setShowTranscriptModal: (student: Student | null) => void;
@@ -34,7 +36,7 @@ function getGradeDetails(pct: number) {
   return { grade: "NG", gp: 0, description: "Not Graded" };
 }
 
-function toStudentResult(student: Student): StudentResult {
+function toStudentResult(student: Student, schoolInfo?: any): StudentResult {
   const groups: Record<string, { totalObtained: number; totalMax: number }> =
     {};
 
@@ -73,12 +75,13 @@ function toStudentResult(student: Student): StudentResult {
   const issueDate = formatToBSDateString(now);
 
   return {
-    schoolName: SCHOOL_CONFIG.name,
-    schoolAddress: SCHOOL_CONFIG.address,
-    schoolPhone: SCHOOL_CONFIG.phone,
-    schoolEmail: SCHOOL_CONFIG.emailAlt,
-    schoolWebsite: SCHOOL_CONFIG.website,
-    logo: SCHOOL_CONFIG.logo,
+    schoolName: schoolInfo?.schoolName || SCHOOL_CONFIG.name,
+    schoolAddress: schoolInfo?.address || SCHOOL_CONFIG.address,
+    schoolPhone: schoolInfo?.phone || SCHOOL_CONFIG.phone,
+    schoolEmail:
+      schoolInfo?.emailAlt || schoolInfo?.email || SCHOOL_CONFIG.emailAlt,
+    schoolWebsite: schoolInfo?.website || SCHOOL_CONFIG.website,
+    logo: schoolInfo?.logoUrl || SCHOOL_CONFIG.logo,
     studentName: student.name,
     rollNo: student.rollNo,
     grade: student.class,
@@ -99,9 +102,13 @@ export default function TranscriptModal({
   showTranscriptModal,
   setShowTranscriptModal,
 }: TranscriptModalProps) {
+  const { school } = useSchoolInformation();
+
   if (!showTranscriptModal) return null;
 
-  const result = toStudentResult(showTranscriptModal);
+  const result = toStudentResult(showTranscriptModal, school);
+  const schoolName =
+    school?.shortName || school?.schoolName || SCHOOL_CONFIG.nameShort;
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
@@ -139,7 +146,7 @@ export default function TranscriptModal({
               fontFamily: "Arial, sans-serif",
             }}
           >
-            {SCHOOL_CONFIG.nameShort} — Grade Sheet
+            {schoolName} — Grade Sheet
           </span>
           <button
             onClick={() => setShowTranscriptModal(null)}

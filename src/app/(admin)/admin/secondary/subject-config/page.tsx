@@ -38,6 +38,8 @@ import SanskarLoader from "@/components/shared/SanskarLoader";
 interface ComponentInput {
   id?: string;
   type: "THEORY" | "PRACTICAL";
+  // NEB v2: credit hour per component (Theory CH ≠ Practical CH)
+  creditHour: number | string;
   fullMarks: number | string;
   passMarks: number | string;
   displayOrder: number;
@@ -96,7 +98,6 @@ export default function SecondarySubjectConfigPage() {
   // Configure Dialog states
   const [configOpen, setConfigOpen] = useState(false);
   const [activeSubject, setActiveSubject] = useState<any>(null);
-  const [creditHours, setCreditHours] = useState<number | string>(4);
   const [components, setComponents] = useState<ComponentInput[]>([]);
 
 
@@ -117,16 +118,14 @@ export default function SecondarySubjectConfigPage() {
 
   const openConfigure = (subject: any) => {
     setActiveSubject(subject);
-
-    // Check if configuration already exists
     const existingConfig = configs?.find((c) => c.syncedSubjectId === subject.id);
 
     if (existingConfig) {
-      setCreditHours(existingConfig.creditHours);
       setComponents(
         existingConfig.components.map((comp: any) => ({
           id: comp.id,
           type: comp.type,
+          creditHour: comp.creditHour ?? 1,
           fullMarks: String(comp.fullMarks),
           passMarks: String(comp.passMarks),
           displayOrder: comp.displayOrder,
@@ -140,10 +139,10 @@ export default function SecondarySubjectConfigPage() {
         }))
       );
     } else {
-      // Default standard CDC setup
-      setCreditHours(4);
+      // NEB v2 default: Theory 75 (CH=3) + Practical 25 (CH=2)
       setComponents([
-        { type: "THEORY", fullMarks: "75", passMarks: "26.25", displayOrder: 1 },
+        { type: "THEORY", creditHour: 3, fullMarks: "75", passMarks: "26.25", displayOrder: 1 },
+        { type: "PRACTICAL", creditHour: 2, fullMarks: "25", passMarks: "8.75", displayOrder: 2, practicalHeadings: [] },
       ]);
     }
     setConfigOpen(true);
@@ -155,7 +154,7 @@ export default function SecondarySubjectConfigPage() {
     const nextOrder = components.length + 1;
     setComponents([
       ...components,
-      { type: "THEORY", fullMarks: "50", passMarks: "17.5", displayOrder: nextOrder },
+      { type: "THEORY", creditHour: 1, fullMarks: "50", passMarks: "17.5", displayOrder: nextOrder },
     ]);
   };
 
@@ -195,19 +194,26 @@ export default function SecondarySubjectConfigPage() {
 
   const handleSaveConfig = () => {
     if (!activeSubject || !selectedYear || !selectedGrade) return;
-
     if (components.length === 0) {
       toast.error("Please add at least one subject component");
       return;
+    }
+    // Validate: each component must have creditHour > 0
+    for (const comp of components) {
+      if (!toNum(comp.creditHour) || toNum(comp.creditHour) <= 0) {
+        toast.error(`Each component must have a positive Credit Hour`);
+        return;
+      }
     }
 
     saveConfigMutation.mutate({
       syncedSubjectId: activeSubject.id,
       academicYearId: selectedYear,
       gradeLevel: selectedGrade,
-      creditHours: toNum(creditHours),
+      // NEB v2: no top-level creditHours — each component carries its own CH
       components: components.map((comp) => ({
         ...comp,
+        creditHour: toNum(comp.creditHour),
         fullMarks: toNum(comp.fullMarks),
         passMarks: toNum(comp.passMarks),
         practicalHeadings: comp.practicalHeadings?.map((h) => ({
@@ -219,50 +225,13 @@ export default function SecondarySubjectConfigPage() {
     });
   };
 
-  const handleAddSubCategory = (compIndex: number) => {
-    const updated = [...components];
-    const comp = updated[compIndex];
-    if (!comp.practicalHeadings) comp.practicalHeadings = [];
-
-    const nextOrder = comp.practicalHeadings.length + 1;
-    comp.practicalHeadings.push({ name: "", fullMarks: "10", passMarks: "4", displayOrder: nextOrder });
-    setComponents(updated);
-  };
-
-  const handleRemoveSubCategory = (compIndex: number, subIndex: number) => {
-    const updated = [...components];
-    if (updated[compIndex].practicalHeadings) {
-      updated[compIndex].practicalHeadings = updated[compIndex].practicalHeadings.filter((_, i) => i !== subIndex);
-    }
-    setComponents(updated);
-  };
-
-  const handleSubCategoryChange = (compIndex: number, subIndex: number, field: keyof HeadingInput, value: any) => {
-    const updated = [...components];
-    if (updated[compIndex].practicalHeadings) {
-      let parsedValue: any = value;
-      if (field === "fullMarks" || field === "passMarks") {
-        if (value === "" || value === "-") {
-          parsedValue = "";
-        } else {
-          const numValue = Number(value);
-          parsedValue = isNaN(numValue) ? "" : Math.max(0, numValue).toString();
-        }
-      }
-      updated[compIndex].practicalHeadings[subIndex] = {
-        ...updated[compIndex].practicalHeadings[subIndex],
-        [field]: parsedValue,
-      };
-    }
-    setComponents(updated);
-  };
-
 
   const handleLoadDefaults = () => {
+    // NEB v2 standard 75/25 split with typical credit hours
     setComponents([
-      { type: "THEORY", fullMarks: "75", passMarks: "26.25", displayOrder: 1 },
+      { type: "THEORY", creditHour: 3, fullMarks: "75", passMarks: "26.25", displayOrder: 1 },
+      { type: "PRACTICAL", creditHour: 2, fullMarks: "25", passMarks: "8.75", displayOrder: 2, practicalHeadings: [] },
     ]);
-    setCreditHours(4);
   };
 
   const isLoading = isLoadingYears || (selectedGrade && isLoadingSubjects) || isLoadingConfigs;
@@ -343,7 +312,7 @@ export default function SecondarySubjectConfigPage() {
                 <TableHead className="w-[12%]">Code</TableHead>
                 <TableHead className="w-[25%]">Subject Name</TableHead>
                 <TableHead className="w-[10%] text-center">Credit Hours</TableHead>
-                <TableHead className="w-[38%]">Evaluations & Component Marks</TableHead>
+                <TableHead className="w-[38%]">Component Marks</TableHead>
                 <TableHead className="w-[15%] text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -353,8 +322,8 @@ export default function SecondarySubjectConfigPage() {
                   const config = configs?.find((c) => c.syncedSubjectId === sub.id && c.isActive);
 
                   return (
-                    <TableRow 
-                      key={sub.id} 
+                    <TableRow
+                      key={sub.id}
                       className="hover:bg-muted/20 cursor-pointer"
                       onClick={() => openConfigure(sub)}
                     >
@@ -365,9 +334,14 @@ export default function SecondarySubjectConfigPage() {
                       </TableCell>
                       <TableCell className="text-center font-semibold">
                         {config ? (
-                          <span className="inline-flex items-center justify-center bg-primary/10 text-primary px-2 py-0.5 rounded text-xs">
-                            {config.creditHours} CH
-                          </span>
+                          <div className="flex flex-col gap-0.5 items-center">
+                            {config.components.map((comp: any) => (
+                              <span key={comp.id} className="inline-flex items-center gap-1 bg-primary/10 text-primary px-2 py-0.5 rounded text-[10px] font-bold">
+                                <span className="text-muted-foreground">{comp.type[0]}</span>
+                                {comp.creditHour ?? 1} CH
+                              </span>
+                            ))}
+                          </div>
                         ) : (
                           <span className="text-muted-foreground text-xs">—</span>
                         )}
@@ -376,8 +350,6 @@ export default function SecondarySubjectConfigPage() {
                         {config && config.components && config.components.length > 0 ? (
                           <div className="flex flex-wrap gap-2 py-1">
                             {config.components.map((comp: any) => {
-                              const hasHeadings = comp.type === "PRACTICAL";
-                              const headingsCount = comp.practicalHeadings?.length || 0;
                               return (
                                 <div
                                   key={comp.id}
@@ -387,29 +359,6 @@ export default function SecondarySubjectConfigPage() {
                                     <span className="font-bold text-[10px] text-primary">{comp.type}</span>
                                     <span className="text-muted-foreground"> ({comp.fullMarks} FM)</span>
                                   </div>
-
-                                  {hasHeadings && (
-                                    <Button
-                                      variant="ghost"
-                                      className={`h-6 px-1.5 text-[10px] font-semibold hover:bg-sky-50 dark:hover:bg-sky-950/20 ${headingsCount > 0
-                                        ? "text-emerald-600 dark:text-emerald-400"
-                                        : "text-sky-600 dark:text-sky-400"
-                                        }`}
-                                      onClick={() => openConfigure(sub)}
-                                    >
-                                      {headingsCount > 0 ? (
-                                        <span className="flex items-center gap-1">
-                                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                                          {headingsCount} Criteria
-                                        </span>
-                                      ) : (
-                                        <span className="flex items-center gap-1">
-                                          <ListPlus className="w-3.5 h-3.5" />
-                                          Add Headings
-                                        </span>
-                                      )}
-                                    </Button>
-                                  )}
                                 </div>
                               );
                             })}
@@ -460,7 +409,7 @@ export default function SecondarySubjectConfigPage() {
       <Dialog open={configOpen} onOpenChange={setConfigOpen}>
         <DialogContent className="max-w-[650px] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Configure Subject evaluation: {activeSubject?.name}</DialogTitle>
+            <DialogTitle>Configure Subject: {activeSubject?.name}</DialogTitle>
             <DialogDescription>
               Grades 6-10 follow the CDC guidelines.
             </DialogDescription>
@@ -482,7 +431,7 @@ export default function SecondarySubjectConfigPage() {
             {components.map((comp, idx) => (
               <div key={idx} className="flex flex-col gap-3 p-4 bg-muted/20 border border-border/80 rounded-xl relative group">
                 <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="w-full sm:w-1/3">
+                  <div className="w-full sm:w-1/4">
                     <label className="text-[10px] font-bold text-muted-foreground block mb-1">TYPE</label>
                     <Select
                       value={comp.type}
@@ -498,7 +447,23 @@ export default function SecondarySubjectConfigPage() {
                     </Select>
                   </div>
 
-                  <div className="w-full sm:w-1/4">
+                  {/* NEB v2: per-component credit hour */}
+                  <div className="w-full sm:w-[80px]">
+                    <label className="text-[10px] font-bold text-primary block mb-1">CREDIT HR</label>
+                    <Input
+                      type="number"
+                      min="0.1"
+                      max="10"
+                      step="0.1"
+                      value={comp.creditHour ?? 1}
+                      className="h-9 bg-background font-bold text-primary"
+                      onKeyDown={(e) => { if (e.key === "-" || e.key === "e" || e.key === "E") e.preventDefault(); }}
+                      onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                      onChange={(e) => handleComponentChange(idx, "creditHour", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="w-full sm:w-1/5">
                     <label className="text-[10px] font-bold text-muted-foreground block mb-1">FULL MARKS</label>
                     <Input
                       type="number"
@@ -534,74 +499,10 @@ export default function SecondarySubjectConfigPage() {
                     </Button>
                   </div>
                 </div>
-
-                {comp.type === "PRACTICAL" && (
-                  <div className="mt-2 border-t border-border/60 pt-3">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Practical Sub Categories</h4>
-                    </div>
-                    <div className="space-y-2">
-                      {comp.practicalHeadings?.map((heading, hIdx) => (
-                        <div key={hIdx} className="flex flex-col sm:flex-row gap-3 p-3 bg-background border border-border/60 rounded-lg items-end">
-                          <div className="flex-1">
-                            <label className="text-[10px] font-bold text-muted-foreground block mb-1">SUB CATEGORY NAME</label>
-                            <Input
-                              placeholder="e.g. Experiment, Viva"
-                              value={heading.name}
-                              onChange={(e) => handleSubCategoryChange(idx, hIdx, "name", e.target.value)}
-                              className="h-8 text-xs"
-                            />
-                          </div>
-                          <div className="w-24">
-                            <label className="text-[10px] font-bold text-muted-foreground block mb-1">FULL MARKS</label>
-                            <Input
-                              type="number"
-                              value={heading.fullMarks}
-                              onKeyDown={(e) => { if (e.key === "-" || e.key === "e" || e.key === "E") e.preventDefault(); }}
-                              onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                              onChange={(e) => handleSubCategoryChange(idx, hIdx, "fullMarks", e.target.value)}
-                              className="h-8 text-xs"
-                            />
-                          </div>
-                          <div className="w-24">
-                            <label className="text-[10px] font-bold text-muted-foreground block mb-1">PASS MARKS</label>
-                            <Input
-                              type="number"
-                              value={heading.passMarks || 0}
-                              onKeyDown={(e) => { if (e.key === "-" || e.key === "e" || e.key === "E") e.preventDefault(); }}
-                              onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                              onChange={(e) => handleSubCategoryChange(idx, hIdx, "passMarks", e.target.value)}
-                              className="h-8 text-xs"
-                            />
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                            onClick={() => handleRemoveSubCategory(idx, hIdx)}
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-                      ))}
-
-                      <div className="pt-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-xs border-dashed text-muted-foreground hover:text-foreground"
-                          onClick={() => handleAddSubCategory(idx)}
-                        >
-                          <Plus className="w-3.5 h-3.5 mr-1" /> Add Sub Category
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             ))}
 
-            {/* Calculations summaries */}
+            {/* NEB v2 summary: total CH is derived from components */}
             <div className="bg-primary/5 rounded-xl border border-primary/20 p-4 space-y-2 mt-4 text-sm">
               <div className="flex justify-between items-center">
                 <span className="font-semibold text-foreground flex items-center gap-1.5">
@@ -613,29 +514,22 @@ export default function SecondarySubjectConfigPage() {
                 </span>
               </div>
               <div className="flex justify-between items-center border-t border-border/80 pt-2 mt-2">
-                <span className="font-semibold text-foreground">Credit Hours:</span>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    step="1"
-                    min="1"
-                    value={creditHours || ""}
-                    onKeyDown={(e) => { if (e.key === "-" || e.key === "e" || e.key === "E") e.preventDefault(); }}
-                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      if (v === "" || v === "-") {
-                        setCreditHours("");
-                      } else {
-                        const n = Number(v);
-                        setCreditHours(isNaN(n) ? creditHours : String(Math.max(0, n)));
-                      }
-                    }}
-                    className="w-20 h-8 font-bold text-center"
-                  />
-                  <span className="font-extrabold text-primary text-base">CH</span>
-                </div>
+                <span className="font-semibold text-foreground">Total Credit Hours (all components):</span>
+                <span className="font-extrabold text-primary text-base">
+                  {components.reduce((sum, comp) => sum + (Number(comp.creditHour) || 0), 0)} CH
+                </span>
               </div>
+              <div className="space-y-1 pt-1">
+                {components.map((comp, i) => (
+                  <div key={i} className="flex justify-between text-xs text-muted-foreground">
+                    <span>{comp.type}</span>
+                    <span className="font-semibold text-foreground">{Number(comp.creditHour) || 0} CH </span>
+                  </div>
+                ))}
+              </div>
+              {/* <p className="text-[10px] text-muted-foreground pt-1">
+                NEB : Subject GPA = Σ(component GP × component CH) ÷ Σ(component CH)
+              </p> */}
             </div>
           </div>
 

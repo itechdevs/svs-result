@@ -28,7 +28,8 @@ interface GradeSheetProps {
 }
 
 // ── Logo SVG (used when no image is available) ──────────────────────────────
-function LogoSVG() {
+function LogoSVG({ abbrev }: { abbrev?: string }) {
+  const label = abbrev || SCHOOL_CONFIG.abbrev;
   return (
     <svg
       viewBox="0 0 100 100"
@@ -68,7 +69,7 @@ function LogoSVG() {
         fontWeight="900"
         fill="#1f5e9d"
       >
-        {SCHOOL_CONFIG.abbrev}
+        {label}
       </text>
     </svg>
   );
@@ -116,7 +117,9 @@ function SchoolHeader({ result }: { result: StudentResult }) {
             justifyContent: "center",
           }}
         >
-          <LogoSVG />
+          <LogoSVG abbrev={result.schoolName
+            ? result.schoolName.split(' ').map((w: string) => w[0]).join('').slice(0, 4).toUpperCase()
+            : undefined} />
         </div>
       </div>
 
@@ -422,7 +425,11 @@ export default function GradeSheet({
               <GradeTable subjects={result.subjects} />
 
               {/* GPA + Rank strip */}
-              <GPASummary gpa={result.gpa} rank={result.rank} />
+              <GPASummary
+                gpa={result.gpa}
+                rank={result.rank}
+                hasNG={result.hasNG ?? result.subjects.some(s => s.finalGrade === 'NG')}
+              />
 
               {/* Notes + Intervals */}
               <GradeLegend />

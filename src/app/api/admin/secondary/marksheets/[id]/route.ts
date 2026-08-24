@@ -38,8 +38,8 @@ export const GET = withHandler(
             subjectResults: {
               include: {
                 subjectConfig: {
-                  select: {
-                    id: true,
+                  include: {
+                    components: true,
                     syncedSubject: {
                       select: {
                         id: true,
@@ -64,8 +64,8 @@ export const GET = withHandler(
             subjectResults: {
               include: {
                 subjectConfig: {
-                  select: {
-                    id: true,
+                  include: {
+                    components: true,
                     syncedSubject: {
                       select: {
                         id: true,
