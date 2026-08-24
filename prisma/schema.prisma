@@ -1203,39 +1203,39 @@ model SecondaryMarksheet {
 
 model SchoolInformation {
   id                    String   @id @default("school-config")
-  schoolName            String
-  shortName             String?
-  schoolCode            String?
-  registrationNumber    String?
+  schoolName            String   @map("school_name")
+  shortName             String?  @map("short_name")
+  schoolCode            String?  @map("school_code")
+  registrationNumber    String?  @map("registration_number")
   address               String?
-  addressFull           String?
+  addressFull           String?  @map("address_full")
   municipality          String?
   district              String?
   province              String?
   country               String   @default("Nepal")
   phone                 String?
-  alternativePhone      String?
+  alternativePhone      String?  @map("alternative_phone")
   email                 String?
-  emailAlt              String?
+  emailAlt              String?  @map("email_alt")
   website               String?
-  logoUrl               String?
-  faviconUrl            String?
-  principalName         String?
-  principalContact      String?
-  principalSignatureUrl String?
-  schoolStampUrl        String?
-  headerText            String?
-  footerText            String?
-  reportCardHeader      String?
-  marksheetHeader       String?
-  certificateHeader     String?
-  establishedYear       Int?
-  schoolType            String?
-  managementType        String?
+  logoUrl               String?  @map("logo_url")
+  faviconUrl            String?  @map("favicon_url")
+  principalName         String?  @map("principal_name")
+  principalContact      String?  @map("principal_contact")
+  principalSignatureUrl String?  @map("principal_signature_url")
+  schoolStampUrl        String?  @map("school_stamp_url")
+  headerText            String?  @map("header_text")
+  footerText            String?  @map("footer_text")
+  reportCardHeader      String?  @map("report_card_header")
+  marksheetHeader       String?  @map("marksheet_header")
+  certificateHeader     String?  @map("certificate_header")
+  establishedYear       Int?     @map("established_year")
+  schoolType            String?  @map("school_type")
+  managementType        String?  @map("management_type")
   abbrev                String?
-  updatedBy             String? // User.id of the ADMIN who last updated
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  updatedBy             String?  @map("updated_by") // User.id of the ADMIN who last updated
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
 
   @@map("school_information")
 }

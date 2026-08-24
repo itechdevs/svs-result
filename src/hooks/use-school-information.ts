@@ -1,14 +1,18 @@
 /**
  * useSchoolInformation
  *
- * File-based configuration hook.
- * Returns school information directly from src/constants/index.ts (SCHOOL_CONFIG).
- * No database or API calls — update the constants file and redeploy to change values.
+ * DB-backed hook for the single-row SchoolInformation configuration.
+ * Reads via GET /api/admin/school-information (auto-seeded from
+ * SCHOOL_CONFIG on first access). Admin-only mutations:
+ *  - update(data)            → PUT
+ *  - uploadImage({file,type})→ POST /upload (stores file in public/school/)
+ *  - removeImage(type)       → DELETE /upload
  */
 
 "use client";
 
-import { SCHOOL_CONFIG } from "@/constants";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiClient } from "@/lib/api-client";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 export interface SchoolInfo {
@@ -52,59 +56,72 @@ export type UpdateSchoolInfoInput = Partial<
   Omit<SchoolInfo, "id" | "createdAt" | "updatedAt">
 >;
 
-// ─── Static school data built from SCHOOL_CONFIG ───────────────────────────────
-const SCHOOL_INFO_FROM_CONFIG: SchoolInfo = {
-  id: "file-config",
-  schoolName: SCHOOL_CONFIG.name,
-  shortName: SCHOOL_CONFIG.nameShort,
-  schoolCode: null,
-  registrationNumber: null,
-  address: SCHOOL_CONFIG.address,
-  addressFull: SCHOOL_CONFIG.addressFull,
-  municipality: null,
-  district: null,
-  province: null,
-  country: "Nepal",
-  phone: SCHOOL_CONFIG.phone,
-  alternativePhone: null,
-  email: SCHOOL_CONFIG.email,
-  emailAlt: SCHOOL_CONFIG.emailAlt,
-  website: SCHOOL_CONFIG.website,
-  logoUrl: SCHOOL_CONFIG.logo,
-  faviconUrl: null,
-  principalName: null,
-  principalContact: null,
-  principalSignatureUrl: null,
-  schoolStampUrl: null,
-  headerText: null,
-  footerText: null,
-  reportCardHeader: null,
-  marksheetHeader: null,
-  certificateHeader: null,
-  establishedYear: null,
-  schoolType: null,
-  managementType: null,
-  abbrev: SCHOOL_CONFIG.abbrev,
-  updatedBy: null,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-};
+type ImageKind = "logo" | "signature" | "stamp" | "favicon";
+
+const SCHOOL_INFO_ENDPOINT = "/admin/school-information";
+
+async function fetchSchoolInfo(): Promise<SchoolInfo> {
+  return apiClient.get(SCHOOL_INFO_ENDPOINT);
+}
 
 // ─── Hook ──────────────────────────────────────────────────────────────────────
 export function useSchoolInformation() {
+  const queryClient = useQueryClient();
+
+  const { data, isLoading, isError } = useQuery<SchoolInfo>({
+    queryKey: SCHOOL_INFO_QUERY_KEY,
+    queryFn: fetchSchoolInfo,
+    staleTime: 30 * 1000,
+    // Sync other open tabs/pages when they regain focus
+    // (the global provider disables this by default)
+    refetchOnWindowFocus: true,
+  });
+
+  // Write the server response straight into the cache so every mounted
+  // consumer (sidebar, navbar, documents) updates instantly.
+  const applyResult = (school: SchoolInfo) =>
+    queryClient.setQueryData(SCHOOL_INFO_QUERY_KEY, school);
+
+  const update = useMutation<SchoolInfo, Error, UpdateSchoolInfoInput>({
+    mutationFn: async (values) => apiClient.put(SCHOOL_INFO_ENDPOINT, values),
+    onSuccess: applyResult,
+  });
+
+  const uploadImage = useMutation<SchoolInfo, Error, { file: File; type: ImageKind }>({
+    mutationFn: async ({ file, type }) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("type", type);
+      return apiClient.post(`${SCHOOL_INFO_ENDPOINT}/upload`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+    },
+    onSuccess: applyResult,
+  });
+
+  const removeImage = useMutation<SchoolInfo, Error, ImageKind>({
+    mutationFn: async (type) =>
+      apiClient.delete(`${SCHOOL_INFO_ENDPOINT}/upload?type=${type}`),
+    onSuccess: applyResult,
+  });
+
   return {
-    school: SCHOOL_INFO_FROM_CONFIG,
-    isLoading: false,
-    isError: false,
-    // No-op stubs — kept for API compatibility so no other file needs to change
-    update: async (_data: UpdateSchoolInfoInput) => SCHOOL_INFO_FROM_CONFIG,
-    isUpdating: false,
-    uploadImage: async (_args: { file: File; type: "logo" | "signature" | "stamp" | "favicon" }) => SCHOOL_CONFIG.logo,
-    isUploading: false,
-    removeImage: async (_type: "logo" | "signature" | "stamp" | "favicon") => { },
-    isRemoving: false,
+    school: data ?? null,
+    isLoading,
+    isError,
+    update: update.mutateAsync,
+    isUpdating: update.isPending,
+    uploadImage: async (args: { file: File; type: ImageKind }) => {
+      await uploadImage.mutateAsync(args);
+      return "";
+    },
+    isUploading: uploadImage.isPending,
+    removeImage: async (type: ImageKind) => {
+      await removeImage.mutateAsync(type);
+    },
+    isRemoving: removeImage.isPending,
   };
 }
 
-// ─── Query key (kept for compatibility) ────────────────────────────────────────
+// ─── Query key ────────────────────────────────────────────────────────────────
 export const SCHOOL_INFO_QUERY_KEY = ["school-information"] as const;

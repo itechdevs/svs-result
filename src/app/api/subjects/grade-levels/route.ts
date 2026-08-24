@@ -52,7 +52,15 @@ export const GET = withHandler(async (req: NextRequest) => {
       orderBy: [{ name: "asc" }, { section: "asc" }],
     });
 
-    const classSections = classrooms.map((c) => {
+    const classSectionsMap = new Map<
+      string,
+      { gradeLevel: string; section: string; displayName: string }
+    >();
+    for (const c of classrooms) {
+      // Deduplicate identical classroom name+section rows (can occur when
+      // repeated syncs create duplicate active classrooms).
+      const key = `${c.name}::${c.section}`;
+      if (classSectionsMap.has(key)) continue;
       // Avoid duplicating the section when it's already part of the classroom name
       // e.g. "Penguin - B" + "B" → "Penguin - B"  (not "Penguin - B B")
       //      "1"           + "A" → "1 - A"
@@ -60,12 +68,13 @@ export const GET = withHandler(async (req: NextRequest) => {
       const displayName = sectionEmbedded
         ? c.name
         : `${c.name} - ${c.section}`;
-      return {
+      classSectionsMap.set(key, {
         gradeLevel: c.name,
         section: c.section,
         displayName,
-      };
-    });
+      });
+    }
+    const classSections = Array.from(classSectionsMap.values());
 
     classSections.sort((a, b) => {
       const gradeCmp = compareGradeLevels(a.gradeLevel, b.gradeLevel, dbMap);

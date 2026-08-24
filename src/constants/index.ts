@@ -46,6 +46,7 @@ export const ROUTES = {
   ADMIN_RESULT_COMPILATION: "/admin/result-compilation",
   ADMIN_SYNC: "/admin/sync",
   ADMIN_SYNCED_STUDENTS: "/admin/synced-students",
+  ADMIN_SCHOOL_INFORMATION: "/admin/school-information",
   ADMIN_SECONDARY_SUBJECT_CONFIG: "/admin/secondary/subject-config",
   ADMIN_SECONDARY_TERM_WEIGHTS: "/admin/secondary/term-weights",
   ADMIN_SECONDARY_RESULT_COMPILATION: "/admin/secondary/result-compilation",
@@ -79,4 +80,3 @@ export const RATE_LIMIT = {
   PUBLIC_API_REQUESTS: 60, // requests
   PUBLIC_API_WINDOW: 60, // seconds
 } as const;
-

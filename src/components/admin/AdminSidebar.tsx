@@ -2,8 +2,6 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { SCHOOL_CONFIG } from "@/lib/constants";
-import { useSchoolInformation } from "@/hooks/use-school-information";
 import { cn } from "@/lib/utils";
 import {
   LayoutGrid,
@@ -19,6 +17,7 @@ import {
   School,
   FlaskConical,
   Users,
+  Building,
 } from "lucide-react";
 import { ROUTES } from "@/lib/constants";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -68,17 +67,6 @@ type NavItem = NavItemLink | NavSubSection;
 
 function isSubSection(item: NavItem): item is NavSubSection {
   return "section" in item && item.section === true;
-}
-
-/** Dynamic school abbreviation label shown in the sidebar header */
-function SidebarAbbrevLabel() {
-  const { school } = useSchoolInformation();
-  const abbrev = school?.abbrev || school?.shortName || SCHOOL_CONFIG.abbrev;
-  return (
-    <p className="text-[11px] font-semibold text-sidebar-foreground/60 whitespace-nowrap mt-0.5">
-      {abbrev} Results
-    </p>
-  );
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -152,6 +140,11 @@ const NAV_ITEMS: NavItem[] = [
     label: "Teacher Allocation",
     href: ROUTES.ADMIN_ALLOCATIONS,
     icon: Grid2X2,
+  },
+  {
+    label: "School Information",
+    href: ROUTES.ADMIN_SCHOOL_INFORMATION,
+    icon: Building,
   },
 ];
 
@@ -518,29 +511,9 @@ export function AdminSidebar() {
         isCollapsed ? "w-[72px]" : "w-[260px]",
       )}
     >
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div
-        className={cn(
-          "pt-5 pb-3 border-b border-sidebar-border flex items-center justify-between shrink-0",
-          isCollapsed ? "px-2 text-center" : "px-5",
-        )}
-      >
-        <div className={cn("flex items-center gap-2.5", isCollapsed && "justify-center w-full")}>
-          {!isCollapsed && (
-            <div className="flex flex-col">
-              <p className="text-[10px] font-bold text-sidebar-foreground/35 uppercase tracking-[0.14em] whitespace-nowrap">
-                Admin Portal
-              </p>
-              <SidebarAbbrevLabel />
-            </div>
-          )}
-          {isCollapsed && (
-            <p className="text-[9px] font-bold text-sidebar-foreground/40 uppercase tracking-[0.12em]">
-              AP
-            </p>
-          )}
-        </div>
-        {isMobile && (
+      {/* ── Header (mobile close button only) ─────────────────────────────── */}
+      {isMobile && (
+        <div className="pt-4 pb-2 px-3 flex justify-end shrink-0">
           <button
             onClick={() => setOpenMobile(false)}
             className="p-1.5 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors"
@@ -548,8 +521,8 @@ export function AdminSidebar() {
           >
             <X className="w-3.5 h-3.5" />
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* ── Navigation ─────────────────────────────────────────────────────── */}
       <nav

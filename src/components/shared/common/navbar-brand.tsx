@@ -11,7 +11,8 @@ interface NavbarBrandProps {
 
 export function NavbarBrand({ dashboardHref }: NavbarBrandProps) {
   const { school } = useSchoolInformation();
-  const displayName = SCHOOL_CONFIG.nameShort || SCHOOL_CONFIG.name;
+  const displayName =
+    school?.shortName || school?.schoolName || SCHOOL_CONFIG.nameShort;
   const logo = school?.logoUrl || SCHOOL_CONFIG.logo;
 
   return (

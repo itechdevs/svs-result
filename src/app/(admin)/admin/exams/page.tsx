@@ -154,6 +154,18 @@ export default function ExamsPage() {
     }
     return map;
   }, [gradeLevels]);
+
+  // One entry per classroom name — sections share the same gradeLevel value,
+  // and duplicate values in a Radix Select corrupt the displayed label.
+  const uniqueGradeLevels = useMemo(() => {
+    if (!gradeLevels) return [];
+    const seen = new Set<string>();
+    return gradeLevels.filter((item) => {
+      if (seen.has(item.gradeLevel)) return false;
+      seen.add(item.gradeLevel);
+      return true;
+    });
+  }, [gradeLevels]);
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editingExam, setEditingExam] = useState<any>(null);
@@ -621,8 +633,11 @@ export default function ExamsPage() {
                     <SelectValue placeholder="Select grade level" />
                   </SelectTrigger>
                   <SelectContent>
-                    {gradeLevels?.map((item) => (
-                      <SelectItem key={item.gradeLevel} value={item.gradeLevel}>
+                    {uniqueGradeLevels.map((item, idx) => (
+                      <SelectItem
+                        key={`${item.gradeLevel}-${idx}`}
+                        value={item.gradeLevel}
+                      >
                         {item.displayName}
                       </SelectItem>
                     ))}
@@ -709,13 +724,9 @@ export default function ExamsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Grade Levels</SelectItem>
-                {/* {JSON.stringify(gradeLevels)} */}
-                {gradeLevels?.map((item) => (
+                {uniqueGradeLevels.map((item, idx) => (
                   <SelectItem
-                    key={
-                      item.displayName ||
-                      `${item.gradeLevel}-${item.section || ""}`
-                    }
+                    key={`${item.gradeLevel}-${idx}`}
                     value={item.gradeLevel}
                   >
                     {item.displayName || item.gradeLevel}
