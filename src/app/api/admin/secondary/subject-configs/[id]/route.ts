@@ -22,7 +22,6 @@ export const PUT = withHandler(
       where: { id },
       data: {
         ...(body.isActive !== undefined && { isActive: body.isActive }),
-        ...(body.creditHours !== undefined && { creditHours: body.creditHours }),
       },
     });
 

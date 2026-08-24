@@ -434,6 +434,9 @@ export const secondaryComponentTypeSchema = z.enum([
 export const secondarySubjectComponentSchema = z.object({
   id: z.string().cuid().optional(), // optional for creates, required for updates
   type: secondaryComponentTypeSchema,
+  // NEB v2: credit hour is per-component, not per-subject
+  // e.g. English Theory = 2 CH, English Practical = 1 CH
+  creditHour: z.number().positive().default(1),
   fullMarks: z.number().positive(),
   passMarks: z.number().nonnegative(),
   displayOrder: z.number().int().min(0).default(0),
@@ -444,7 +447,7 @@ export const createSecondarySubjectConfigSchema = z.object({
   syncedSubjectId: z.string().cuid(),
   academicYearId: z.string().cuid(),
   gradeLevel: z.string(),
-  creditHours: z.number().int().positive(),
+  // creditHours removed from subject level — now Σ(component.creditHour)
   components: z.array(secondarySubjectComponentSchema).min(1),
 });
 
@@ -544,6 +547,7 @@ export const secondaryMarksheetSchema = z
     message: "Must provide either termResultId or annualResultId",
   });
 
+
 // ─── Observation Categories ───────────────────────────────────────────────────
 
 export const createObservationCategorySchema = z.object({
@@ -590,3 +594,45 @@ export const updateObservationItemSchema = z.object({
     .optional(),
   displayOrder: z.number().int().min(0).optional(),
 });
+
+// ─── School Information ──────────────────────────────────────────────────────
+
+const nullableText = (max: number) =>
+  z
+    .union([z.string().trim().max(max), z.null()])
+    .optional()
+    .transform((v) => (v === "" ? null : v));
+
+export const schoolInformationSchema = z.object({
+  schoolName: z.string().trim().min(1, "School name is required").max(200),
+  shortName: nullableText(200),
+  abbrev: nullableText(20),
+  schoolCode: nullableText(50),
+  registrationNumber: nullableText(100),
+  address: nullableText(500),
+  addressFull: nullableText(1000),
+  municipality: nullableText(200),
+  district: nullableText(200),
+  province: nullableText(200),
+  country: z.string().trim().min(1, "Country is required").max(100),
+  phone: nullableText(20),
+  alternativePhone: nullableText(20),
+  email: nullableText(200),
+  emailAlt: nullableText(200),
+  website: nullableText(200),
+  principalName: nullableText(200),
+  principalContact: nullableText(20),
+  headerText: nullableText(500),
+  footerText: nullableText(500),
+  reportCardHeader: nullableText(1000),
+  marksheetHeader: nullableText(1000),
+  certificateHeader: nullableText(1000),
+  establishedYear: z.number().int().min(1800).max(3000).nullish(),
+  schoolType: nullableText(100),
+  managementType: nullableText(100),
+});
+
+export const updateSchoolInformationSchema =
+  schoolInformationSchema.partial();
+
+export type SchoolInformationInput = z.infer<typeof schoolInformationSchema>;

@@ -4,8 +4,24 @@
 // Add every shared constant here.
 // ─────────────────────────────────────────────────────────────
 
+// ── School Configuration ──────────────────────────────────────
+// Change these values when deploying for a different school.
+export const SCHOOL_CONFIG = {
+  name: "Sanskar Vatika School",
+  nameShort: "Sanskar Vatika School",
+  abbrev: "SVS",
+  address: "Dhalpa, Phayekhanagar, Kirtipur, Kathmandu, Nepal",
+  addressFull: "Dhalpa, Phayekhanagar, Kirtipur, Kathmandu, Nepal",
+  phone: "9802009272",
+  email: "sanskarvschool@gmail.com",
+  emailAlt: "sanskarvschool@gmail.com",
+  website: "www.svskirtipur.edu.np",
+  logo: "https://dashboard.svskirtipur.edu.np/logo.png",
+  favicon: "https://dashboard.svskirtipur.edu.np/logo.png",
+} as const;
+
 // ── App ──────────────────────────────────────────────────────
-export const APP_NAME = "SVS Result" as const;
+export const APP_NAME = SCHOOL_CONFIG.nameShort;
 export const APP_DESCRIPTION = "Result Management System" as const;
 
 // ── Auth ─────────────────────────────────────────────────────
@@ -30,6 +46,7 @@ export const ROUTES = {
   ADMIN_RESULT_COMPILATION: "/admin/result-compilation",
   ADMIN_SYNC: "/admin/sync",
   ADMIN_SYNCED_STUDENTS: "/admin/synced-students",
+  ADMIN_SCHOOL_INFORMATION: "/admin/school-information",
   ADMIN_SECONDARY_SUBJECT_CONFIG: "/admin/secondary/subject-config",
   ADMIN_SECONDARY_TERM_WEIGHTS: "/admin/secondary/term-weights",
   ADMIN_SECONDARY_RESULT_COMPILATION: "/admin/secondary/result-compilation",
@@ -62,19 +79,4 @@ export const CACHE_TTL = {
 export const RATE_LIMIT = {
   PUBLIC_API_REQUESTS: 60, // requests
   PUBLIC_API_WINDOW: 60, // seconds
-} as const;
-
-// ── School Configuration ──────────────────────────────────────
-// Change these values when deploying for a different school.
-export const SCHOOL_CONFIG = {
-  name: "Sanskar Vatika School",
-  nameShort: "Sanskar Vatika School",
-  abbrev: "SVS",
-  address: "Dhalpa, Phayekhanagar, Kirtipur, Kathmandu, Nepal",
-  addressFull: "Dhalpa, Phayekhanagar, Kirtipur, Kathmandu, Nepal",
-  phone: "9802009272",
-  email: "sanskarvschool@gmail.com",
-  emailAlt: "sanskarvschool@gmail.com",
-  website: "www.svskirtipur.edu.np",
-  logo: "https://dashboard.svskirtipur.edu.np/logo.png",
 } as const;

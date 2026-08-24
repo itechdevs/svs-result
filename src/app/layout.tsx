@@ -7,6 +7,7 @@ import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
 import { APP_NAME, APP_DESCRIPTION } from "@/lib/constants";
+import { SCHOOL_CONFIG } from "@/constants";
 import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NextTopLoader from "nextjs-toploader";
@@ -45,6 +46,10 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
+  },
+  icons: {
+    icon: SCHOOL_CONFIG.favicon || "/favicon.ico",
+    shortcut: SCHOOL_CONFIG.favicon || "/favicon.ico",
   },
 };
 
@@ -91,9 +96,9 @@ export default function RootLayout({
                 <NextTopLoader />
                 {children}
                 <Toaster />
-                <SonnerToaster 
-                  position="top-right" 
-                  richColors 
+                <SonnerToaster
+                  position="top-right"
+                  richColors
                   closeButton
                   duration={2500}
                   visibleToasts={3}

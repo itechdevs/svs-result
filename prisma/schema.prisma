@@ -932,7 +932,7 @@ model SecondarySubjectConfig {
   syncedSubjectId String
   academicYearId  String
   gradeLevel      String // "Grade 6"…"Grade 10"
-  creditHours     Int // totalFullMarks / 25
+  // creditHours removed: now computed as Σ(component.creditHour) at calc time
   isActive        Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -951,6 +951,10 @@ model SecondarySubjectComponent {
   id              String                 @id @default(cuid())
   subjectConfigId String
   type            SecondaryComponentType
+  // NEB v2: each component carries its own credit hour weight.
+  // e.g. English Theory = 2, English Practical = 1
+  // e.g. Math Theory    = 3, Math Practical    = 2
+  creditHour      Decimal                @db.Decimal(4, 2) @default(1)
   fullMarks       Decimal                @db.Decimal(6, 2)
   passMarks       Decimal                @db.Decimal(6, 2)
   displayOrder    Int                    @default(0)
@@ -962,7 +966,10 @@ model SecondarySubjectComponent {
   componentMarks    SecondaryComponentMark[]
   practicalHeadings SecondaryPracticalHeading[]
 
-  @@unique([subjectConfigId, type])
+  // NOT unique on type alone — a subject may have Theory-1 + Theory-2
+  // Uniqueness is enforced by (subjectConfigId, type, displayOrder)
+  @@unique([subjectConfigId, type, displayOrder])
+  @@index([subjectConfigId])
   @@map("secondary_subject_components")
 }
 
@@ -1186,4 +1193,49 @@ model SecondaryMarksheet {
   generatedBy   User                   @relation("SecGeneratedBy", fields: [generatedById], references: [id], onDelete: Restrict)
 
   @@map("secondary_marksheets")
+}
+
+// =============================================================================
+// SCHOOL INFORMATION (single-row configuration)
+// id is always 'school-config' to enforce one row.
+// To add multi-school support: remove the default id and adjust the API.
+// =============================================================================
+
+model SchoolInformation {
+  id                    String   @id @default("school-config")
+  schoolName            String   @map("school_name")
+  shortName             String?  @map("short_name")
+  schoolCode            String?  @map("school_code")
+  registrationNumber    String?  @map("registration_number")
+  address               String?
+  addressFull           String?  @map("address_full")
+  municipality          String?
+  district              String?
+  province              String?
+  country               String   @default("Nepal")
+  phone                 String?
+  alternativePhone      String?  @map("alternative_phone")
+  email                 String?
+  emailAlt              String?  @map("email_alt")
+  website               String?
+  logoUrl               String?  @map("logo_url")
+  faviconUrl            String?  @map("favicon_url")
+  principalName         String?  @map("principal_name")
+  principalContact      String?  @map("principal_contact")
+  principalSignatureUrl String?  @map("principal_signature_url")
+  schoolStampUrl        String?  @map("school_stamp_url")
+  headerText            String?  @map("header_text")
+  footerText            String?  @map("footer_text")
+  reportCardHeader      String?  @map("report_card_header")
+  marksheetHeader       String?  @map("marksheet_header")
+  certificateHeader     String?  @map("certificate_header")
+  establishedYear       Int?     @map("established_year")
+  schoolType            String?  @map("school_type")
+  managementType        String?  @map("management_type")
+  abbrev                String?
+  updatedBy             String?  @map("updated_by") // User.id of the ADMIN who last updated
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@map("school_information")
 }

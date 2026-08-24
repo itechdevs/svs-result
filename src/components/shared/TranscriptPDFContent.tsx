@@ -6,6 +6,8 @@ import { MergedScore } from '@/lib/transcript-utils';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { GradeSheetPDF } from '@/components/shared/GradeSheetPDF';
 
+import { useSchoolInformation } from '@/hooks/use-school-information';
+
 interface Props {
   student: Student;
   mergedScoresList: MergedScore[];
@@ -14,6 +16,8 @@ interface Props {
 }
 
 export default function TranscriptPDFContent({ student, mergedScoresList, gpa, rank }: Props) {
+  const { school } = useSchoolInformation();
+
   return (
     <PDFDownloadLink
       document={
@@ -22,6 +26,7 @@ export default function TranscriptPDFContent({ student, mergedScoresList, gpa, r
           mergedScoresList={mergedScoresList}
           gpa={gpa}
           rank={rank}
+          schoolInfo={school}
         />
       }
       fileName={`GradeSheet_${student.name}_${student.rollNo}.pdf`}

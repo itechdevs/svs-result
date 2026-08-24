@@ -1,10 +1,8 @@
-import Link from "next/link";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { UserMenu } from "@/components/common/user-menu";
-import { APP_NAME, ROUTES } from "@/lib/constants";
-import { Button } from "@/components/ui/button";
-// import { Bell } from "lucide-react";
+import { ROUTES } from "@/lib/constants";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { NavbarBrand } from "./navbar-brand";
 
 interface NavbarProps {
   user: {
@@ -23,9 +21,7 @@ export function Navbar({ user }: NavbarProps) {
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 items-center px-6">
         <SidebarTrigger className="mr-4" />
-        <Link href={dashboardHref} className="mr-6 flex items-center space-x-2 font-semibold">
-          <span>{APP_NAME}</span>
-        </Link>
+        <NavbarBrand dashboardHref={dashboardHref} />
 
         <div className="flex-1" />
 

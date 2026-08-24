@@ -58,6 +58,9 @@ function FieldErrorMessage({ id, message }: { id: string; message?: string }) {
 // ─── LoginForm ────────────────────────────────────────────────────────────────
 
 function LoginForm() {
+  const schoolName = SCHOOL_CONFIG.nameShort;
+  const schoolLogo = SCHOOL_CONFIG.logo;
+
   const emailId = useId();
   const passwordId = useId();
   const emailErrorId = `${emailId}-error`;
@@ -150,8 +153,8 @@ function LoginForm() {
       <div className="px-8 pt-8 pb-6 text-center">
         <div className="flex justify-center mb-5">
           <img
-            src={SCHOOL_CONFIG.logo}
-            alt={`${SCHOOL_CONFIG.abbrev} School Logo`}
+            src={schoolLogo}
+            alt={`${schoolName} Logo`}
             className="h-16 w-auto object-contain"
           />
         </div>

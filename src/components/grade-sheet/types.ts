@@ -35,6 +35,7 @@ export interface StudentResult {
   issueDateAD: string
   gpa: number
   rank: number
+  hasNG?: boolean
   subjects: Subject[]
   examName?: string
   dateOfBirth?: string

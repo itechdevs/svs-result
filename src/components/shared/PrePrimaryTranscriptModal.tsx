@@ -9,6 +9,7 @@
  */
 
 import React from 'react';
+import { useSchoolInformation } from '@/hooks/use-school-information';
 import PrePrimaryGradeSheet, {
     buildPrePrimaryData,
     StudentObservationEntry,
@@ -41,6 +42,8 @@ interface Props {
 }
 
 export default function PrePrimaryTranscriptModal({ student, onClose }: Props) {
+    const { school } = useSchoolInformation();
+    
     if (!student) return null;
 
     const data = buildPrePrimaryData({
@@ -65,6 +68,7 @@ export default function PrePrimaryTranscriptModal({ student, onClose }: Props) {
         attendance: student.attendance,
         observationResults: student.observationResults,
         customRemark: student.customRemark,
+        schoolInfo: school,
     });
 
     return (

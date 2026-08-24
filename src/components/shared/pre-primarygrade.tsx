@@ -293,6 +293,8 @@ export function buildPrePrimaryData(params: {
   observationResults?: StudentObservationEntry[];
   /** Class teacher's custom remark for this student */
   customRemark?: string | null;
+  /** Centralized school info */
+  schoolInfo?: any;
 }): PrePrimaryGradeSheetData {
   const {
     syncedStudent,
@@ -306,6 +308,7 @@ export function buildPrePrimaryData(params: {
     attendance = "",
     observationResults = [],
     customRemark = null,
+    schoolInfo,
   } = params;
 
   // ── Pass observation results straight through — no keyword mapping ────────
@@ -404,10 +407,11 @@ export function buildPrePrimaryData(params: {
   }
 
   return {
-    schoolName: SCHOOL_CONFIG.name,
-    schoolAddress: SCHOOL_CONFIG.addressFull,
-    schoolEmail: SCHOOL_CONFIG.email,
-    schoolWebsite: SCHOOL_CONFIG.website,
+    schoolName: schoolInfo?.schoolName || SCHOOL_CONFIG.name,
+    schoolAddress: schoolInfo?.addressFull || schoolInfo?.address || SCHOOL_CONFIG.addressFull,
+    schoolEmail: schoolInfo?.email || SCHOOL_CONFIG.email,
+    schoolWebsite: schoolInfo?.website || SCHOOL_CONFIG.website,
+    schoolLogo: schoolInfo?.logoUrl || SCHOOL_CONFIG.logo,
     academicYear: academicYear?.name || "",
     evaluationName: exam?.name || "FIRST TERM EXAM",
     studentName: syncedStudent?.name || "",
@@ -621,7 +625,7 @@ export default function PrePrimaryGradeSheet({
           }}
         >
           <img
-            src={SCHOOL_CONFIG.logo}
+            src={data.schoolLogo || SCHOOL_CONFIG.logo}
             alt=""
             aria-hidden="true"
             style={{

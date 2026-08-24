@@ -53,8 +53,8 @@ export function SchoolHeader({ data }: { data: PrePrimaryGradeSheetData }) {
         }}
       >
         <img
-          src={SCHOOL_CONFIG.logo}
-          alt={`${SCHOOL_CONFIG.nameShort} Logo`}
+          src={data.schoolLogo || SCHOOL_CONFIG.logo}
+          alt={`${data.schoolName || SCHOOL_CONFIG.nameShort} Logo`}
           width={80}
           height={80}
           style={{

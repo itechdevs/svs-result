@@ -20,12 +20,18 @@ export const POST = withHandler(
     
     if (results.length === 0) return badRequest("No unpublished annual results found for this academic year.");
 
+    // Defensive: verify the user actually exists in DB before writing publishedById.
+    const publishingUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { id: true },
+    });
+
     const updated = await prisma.secondaryAnnualResult.updateMany({
       where: { academicYearId: body.academicYearId, isPublished: false },
       data: {
         isPublished: true,
         publishedAt: new Date(),
-        publishedById: user.id,
+        publishedById: publishingUser?.id ?? null,
       },
     });
 

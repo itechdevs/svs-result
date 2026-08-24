@@ -78,6 +78,147 @@ const headerCell: React.CSSProperties = {
 
 export default function GradeTable({ subjects }: GradeTableProps) {
   const sorted = [...subjects].sort((a, b) => a.name.localeCompare(b.name));
+
+  // Auto-detect component mode: any subject has practical credit hours or GP
+  const hasComponents = sorted.some(
+    (s) => (s.creditHourInternal ?? 0) > 0 || (s.gpInternal ?? 0) > 0
+  );
+
+  if (hasComponents) {
+    const totalCH = sorted.reduce(
+      (sum, s) => sum + (s.creditHourTheory ?? 0) + (s.creditHourInternal ?? 0),
+      0
+    );
+
+    return (
+      <table
+        style={{
+          width: "100%",
+          tableLayout: "fixed",
+          borderCollapse: "collapse",
+          fontSize: "11px",
+          marginBottom: "0",
+          fontFamily: "Arial, sans-serif",
+        }}
+      >
+        <colgroup>
+          <col style={{ width: "27%" }} />
+          <col style={{ width: "12%" }} />
+          <col style={{ width: "14%" }} />
+          <col style={{ width: "12%" }} />
+          <col style={{ width: "14%" }} />
+          <col style={{ width: "21%" }} />
+        </colgroup>
+        <thead>
+          <tr style={{ background: "#ffffff" }}>
+            <th style={{ ...headerCell, textAlign: "left", paddingLeft: "8px" }}>SUBJECTS</th>
+            <th style={headerCell}>CREDIT<br />HOUR</th>
+            <th style={headerCell}>GRADE<br />POINT</th>
+            <th style={headerCell}>GRADE</th>
+            <th style={headerCell}>FINAL<br />GRADE</th>
+            <th style={headerCell}>REMARKS</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((subject, idx) => {
+            const evenBg = idx % 2 === 0 ? "#ffffff" : "#f8fbff";
+            const thCH = subject.creditHourTheory ?? 0;
+            const prCH = subject.creditHourInternal ?? 0;
+            const hasTh = thCH > 0;
+            const hasPr = prCH > 0;
+            const thGP = subject.gpTheory ?? 0;
+            const prGP = subject.gpInternal ?? 0;
+            const thGrade = subject.gradeTheory || "—";
+            const prGrade = subject.gradeInternal || "—";
+            const finalGrade = subject.finalGrade;
+            const remarks = subject.remarks;
+
+            return (
+              <React.Fragment key={`subj-${idx}`}>
+                {hasTh && (
+                  <tr style={{ background: evenBg }}>
+                    <td style={{ ...subjectCell, fontSize: "10px" }}>{subject.name.toUpperCase()} (TH)</td>
+                    <td style={centerCell}>{thCH}</td>
+                    <td style={centerCell}>{thGP != null && thGP > 0 ? formatNum(thGP, 2) : '—'}</td>
+                    <td style={centerCell}>{thGrade}</td>
+                    {/* FINAL GRADE — spans TH+PR rows, full border, centered */}
+                    <td
+                      rowSpan={hasPr ? 2 : 1}
+                      style={{
+                        border: "0.5px solid #4a7aa8",
+                        padding: "0 8px",
+                        textAlign: "center",
+                        verticalAlign: "middle",
+                        fontWeight: 900,
+                        fontSize: "12px",
+                        color: finalGrade === 'NG' ? "#c0392b" : "#1f5e9d",
+                        fontFamily: "Arial, sans-serif",
+                        background: evenBg,
+                      }}
+                    >
+                      {finalGrade}
+                    </td>
+                    {/* REMARKS — spans TH+PR rows, full border, centered */}
+                    <td
+                      rowSpan={hasPr ? 2 : 1}
+                      style={{
+                        border: "0.5px solid #4a7aa8",
+                        padding: "0 8px",
+                        textAlign: "center",
+                        verticalAlign: "middle",
+                        fontWeight: 800,
+                        fontSize: "10.5px",
+                        color: "#1f5e9d",
+                        fontFamily: "Arial, sans-serif",
+                        background: evenBg,
+                      }}
+                    >
+                      {remarks}
+                    </td>
+                  </tr>
+                )}
+                {hasPr && (
+                  <tr style={{ background: evenBg }}>
+                    <td style={{ ...subjectCell, fontSize: "10px" }}>{subject.name.toUpperCase()} (PR)</td>
+                    <td style={centerCell}>{prCH}</td>
+                    <td style={centerCell}>{prGP != null && prGP > 0 ? formatNum(prGP, 2) : '—'}</td>
+                    <td style={centerCell}>{prGrade}</td>
+                    {/* FINAL GRADE and REMARKS are spanned from TH row — do NOT render here */}
+                    {!hasTh && (
+                      <>
+                        <td style={{ border: "0.5px solid #4a7aa8", padding: "0 8px", textAlign: "center", verticalAlign: "middle", fontWeight: 900, fontSize: "12px", color: finalGrade === 'NG' ? "#c0392b" : "#1f5e9d", fontFamily: "Arial, sans-serif", background: evenBg }}>{finalGrade}</td>
+                        <td style={{ border: "0.5px solid #4a7aa8", padding: "0 8px", textAlign: "center", verticalAlign: "middle", fontWeight: 800, fontSize: "10.5px", color: "#1f5e9d", fontFamily: "Arial, sans-serif", background: evenBg }}>{remarks}</td>
+                      </>
+                    )}
+                  </tr>
+                )}
+                {!hasTh && !hasPr && (
+                  <tr style={{ background: evenBg }}>
+                    <td style={{ ...subjectCell, fontSize: "10.5px" }}>{subject.name.toUpperCase()}</td>
+                    <td style={centerCell}>{(subject.creditHourTheory ?? 0) + (subject.creditHourInternal ?? 0)}</td>
+                    <td style={centerCell}>{thGP != null && thGP > 0 ? formatNum(thGP, 2) : '—'}</td>
+                    <td style={centerCell}>{thGrade}</td>
+                    <td style={{ ...centerCell, fontWeight: 900, fontSize: "12px", color: finalGrade === 'NG' ? "#c0392b" : "#1f5e9d" }}>{finalGrade}</td>
+                    <td style={{ ...remarksCell, fontSize: "10.5px" }}>{remarks}</td>
+                  </tr>
+                )}
+              </React.Fragment>
+            );
+          })}
+          {/* Total Credit Hours footer */}
+          <tr style={{ background: "#eef4ff" }}>
+            <td style={{ ...subjectCell, fontWeight: 900, fontSize: "11px", color: "#1f5e9d" }}>TOTAL</td>
+            <td style={{ ...centerCell, fontWeight: 900, fontSize: "12px", color: "#1f5e9d" }}>{totalCH}</td>
+            <td colSpan={4} style={{ ...cell, textAlign: "center", color: "#94a3b8", fontSize: "10px", fontStyle: "italic" }}>
+
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    );
+  }
+
+  // ── Standard Mode: single row per subject, no CH column ──────────────────
   return (
     <table
       style={{
@@ -137,7 +278,7 @@ export default function GradeTable({ subjects }: GradeTableProps) {
           }
 
           return (
-            <tr key={subject.name} style={{ background: evenBg }}>
+            <tr key={`subj-${idx}`} style={{ background: evenBg }}>
               <td style={subjectCell}>{subject.name}</td>
               <td style={centerCell}>{formatNum(gp, 2)}</td>
               <td style={centerCell}>{grade}</td>

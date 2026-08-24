@@ -45,12 +45,6 @@ export const POST = withHandler(
   async (req: NextRequest) => {
     const body = createSecondarySubjectConfigSchema.parse(await req.json());
 
-    // Validate for duplicate component types
-    const types = body.components.map((c) => c.type);
-    if (new Set(types).size !== types.length) {
-      throw new Error("Duplicate component types are not allowed.");
-    }
-
     // Validate for duplicate heading names inside practical components
     for (const comp of body.components) {
       if (comp.type === "PRACTICAL" && comp.practicalHeadings) {
@@ -77,14 +71,12 @@ export const POST = withHandler(
           },
         },
         update: {
-          creditHours: body.creditHours,
           isActive: true,
         },
         create: {
           syncedSubjectId: body.syncedSubjectId,
           academicYearId: body.academicYearId,
           gradeLevel: body.gradeLevel,
-          creditHours: body.creditHours,
         },
       });
 
@@ -99,6 +91,8 @@ export const POST = withHandler(
           data: {
             subjectConfigId: config.id,
             type: comp.type,
+            // NEB v2: store the per-component credit hour
+            creditHour: comp.creditHour ?? 1,
             fullMarks: comp.fullMarks,
             passMarks: comp.passMarks,
             displayOrder: comp.displayOrder,
