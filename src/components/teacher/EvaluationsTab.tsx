@@ -641,7 +641,17 @@ export default function EvaluationsTab({
                     setCurrentTab("mark-entry", {
                       class: evalPlan.gradeLevel || "",
                       subject: evalPlan.subject || "",
+                      ...(selectedSection ? { section: selectedSection } : {}),
                       eval: evalPlan.title,
+                      // Disambiguate plans that share the same title (e.g. First Term
+                      // vs Second Term "E.V.S Writing"): pass the representative
+                      // template id, unit, and full template list so mark-entry can
+                      // select the exact group instead of merging by title alone.
+                      plan: evalPlan.id,
+                      ...(evalPlan.unit ? { unit: evalPlan.unit } : {}),
+                      ...((evalPlan.templateIds ?? []).length > 0
+                        ? { templates: (evalPlan.templateIds ?? []).join(",") }
+                        : {}),
                     });
                   }}
                   className={cn(

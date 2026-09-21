@@ -1,5 +1,6 @@
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { UserMenu } from "@/components/common/user-menu";
+import { AppSwitcher } from "@/components/app-switcher";
 import { ROUTES } from "@/lib/constants";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { NavbarBrand } from "./navbar-brand";
@@ -26,6 +27,7 @@ export function Navbar({ user }: NavbarProps) {
         <div className="flex-1" />
 
         <div className="flex items-center gap-2">
+          <AppSwitcher />
           {/* <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
             <Bell className="h-5 w-5" />
             <span className="sr-only">Notifications</span>
