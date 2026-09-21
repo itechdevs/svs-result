@@ -63,6 +63,11 @@ export default function MarkEntryOverviewTable() {
   const selectedSection = searchParams.get("section") ?? "";
   const selectedSubject = searchParams.get("subject") ?? "";
   const selectedEvalPlan = searchParams.get("eval") ?? "";
+  // Optional disambiguators for plans that share the same title across terms
+  // (e.g. First Term vs Second Term "E.V.S Writing"). Forwarded by EvaluationsTab.
+  const selectedPlanId = searchParams.get("plan") ?? "";
+  const selectedTemplatesParam = searchParams.get("templates") ?? "";
+  const selectedUnit = searchParams.get("unit") ?? "";
 
   const studentClassFilter = selectedSection
     ? `${selectedClass} - ${selectedSection}`
@@ -128,14 +133,62 @@ export default function MarkEntryOverviewTable() {
 
   const evaluations = useMemo(() => {
     if (!selectedEvalPlan) return [];
-    return allSubjectTemplates.filter((t) => {
-      const evalTitleMatch = t.name.match(/^\[([^\]]+)\]\[/);
+    const parseEval = (name: string) => {
+      const evalTitleMatch = name.match(/^\[([^\]]+)\]\[/);
       const rawEvalPart = evalTitleMatch ? evalTitleMatch[1] : "";
-      const evalTitle = rawEvalPart.split("|")[0];
+      const [evalTitle = "", unitTitle = ""] = rawEvalPart.split("|");
       const planTitle = evalTitle || selectedSubject;
+      return { evalTitle, unitTitle, planTitle };
+    };
+
+    const byTitle = allSubjectTemplates.filter((t) => {
+      const { planTitle } = parseEval(t.name);
       return planTitle === selectedEvalPlan;
     });
-  }, [allSubjectTemplates, selectedEvalPlan, selectedSubject]);
+    if (byTitle.length === 0) return [];
+
+    // 1) Exact template list — most precise (survives renames of siblings).
+    if (selectedTemplatesParam) {
+      const wanted = new Set(
+        selectedTemplatesParam.split(",").map((s) => s.trim()).filter(Boolean),
+      );
+      const exact = byTitle.filter((t) => wanted.has(t.id));
+      // Fall back to title match only if the URL is stale (e.g. criteria
+      // added/removed after the link was created).
+      if (exact.length > 0) return exact;
+    }
+
+    // 2) Representative plan id — resolve its gradeConfigId, then select the
+    // whole group (same grouping key as the evaluations list:
+    // gradeConfigId + syncedSubjectId + evalTitle).
+    if (selectedPlanId) {
+      const planTemplate =
+        byTitle.find((t) => t.id === selectedPlanId) ??
+        allSubjectTemplates.find((t) => t.id === selectedPlanId) ??
+        templatesData.find((t: any) => t.id === selectedPlanId);
+      const gradeConfigId = (planTemplate as any)?.gradeConfigId;
+      if (planTemplate && gradeConfigId) {
+        const { evalTitle: planEvalTitle } = parseEval(planTemplate.name);
+        const group = byTitle.filter(
+          (t) =>
+            (t as any).gradeConfigId === gradeConfigId &&
+            parseEval(t.name).evalTitle === planEvalTitle,
+        );
+        if (group.length > 0) return group;
+      }
+    }
+
+    // 3) Unit title — distinguishes First Term vs Second Term duplicates.
+    if (selectedUnit) {
+      const unitGroup = byTitle.filter(
+        (t) => parseEval(t.name).unitTitle === selectedUnit,
+      );
+      if (unitGroup.length > 0) return unitGroup;
+    }
+
+    // 4) Legacy fallback: title only (old bookmarks / dashboard links).
+    return byTitle;
+  }, [allSubjectTemplates, templatesData, selectedEvalPlan, selectedSubject, selectedPlanId, selectedTemplatesParam, selectedUnit]);
 
   // Push current evaluations to the shared context so it fetches & syncs DB results.
   // Use a ref to compare by ID string — avoids infinite loop from useMemo creating new
@@ -194,6 +247,19 @@ export default function MarkEntryOverviewTable() {
       return sortDir === "asc" ? cmp : -cmp;
     });
   }, [classStudents, sortField, sortDir]);
+
+  // Unit title(s) of the resolved group — shown so teachers can tell apart
+  // same-title plans (e.g. First Term vs Second Term "E.V.S Writing").
+  const resolvedUnits = useMemo(() => {
+    const units = new Set<string>();
+    for (const t of evaluations) {
+      const m = t.name.match(/^\[([^\]]+)\]\[/);
+      const raw = m ? m[1] : "";
+      const [, unitTitle = ""] = raw.split("|");
+      if (unitTitle) units.add(unitTitle);
+    }
+    return [...units];
+  }, [evaluations]);
 
   const handleMarkChange = (
     studentId: string,
@@ -306,7 +372,7 @@ export default function MarkEntryOverviewTable() {
             <h1 className="text-base sm:text-lg font-bold text-foreground">Marks Entry</h1>
             <p className="text-xs text-muted-foreground mt-0.5 truncate">
               {selectedSubject
-                ? `${selectedClass} · ${selectedSubject} · ${selectedEvalPlan}`
+                ? `${selectedClass} · ${selectedSubject} · ${selectedEvalPlan}${resolvedUnits.length === 1 ? ` · ${resolvedUnits[0]}` : ""}`
                 : 'Select a class, subject, and evaluation plan to view the mark entry table.'}
             </p>
           </div>
@@ -337,7 +403,8 @@ export default function MarkEntryOverviewTable() {
                   {selectedSubject}
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
-                  {selectedClass} · {selectedEvalPlan} · {classStudents.length}{" "}
+                  {selectedClass} · {selectedEvalPlan}
+                  {resolvedUnits.length === 1 ? ` · ${resolvedUnits[0]}` : ""} · {classStudents.length}{" "}
                   student{classStudents.length !== 1 ? "s" : ""}
                   {totalPages > 1 && ` · Page ${page} of ${totalPages}`}
                 </p>

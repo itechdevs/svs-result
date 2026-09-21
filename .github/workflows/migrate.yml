@@ -1,0 +1,36 @@
+# Manual DB job migrated from svsresult .gitlab-ci.yml (run-migrations was
+# `when: manual` in GitLab). Run from the Actions tab -> "Database Migration".
+#
+# Required repository secrets: VPS_HOST, VPS_USERNAME, VPS_SSH_KEY
+# Optional secrets: VPS_PORT (default 22), VPS_PROJECT_DIR (default "svsresult")
+
+name: Database Migration
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  run-migrations:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Start ssh-agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Run prisma migrate deploy
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USERNAME: ${{ secrets.VPS_USERNAME }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_PROJECT_DIR: ${{ secrets.VPS_PROJECT_DIR }}
+        run: |
+          set -e
+          PORT="${VPS_PORT:-22}"
+          PROJECT_DIR="${VPS_PROJECT_DIR:-svsresult}"
+          ssh -p "$PORT" -o StrictHostKeyChecking=accept-new \
+            "$VPS_USERNAME@$VPS_HOST" \
+            "cd /var/www/$PROJECT_DIR && docker compose exec -T web-service npx prisma migrate deploy"

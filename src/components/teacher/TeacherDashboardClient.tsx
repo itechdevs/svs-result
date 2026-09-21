@@ -322,10 +322,15 @@ export default function DashboardPage() {
                       : ev.name;
                   const gradeLevel = ev.gradeConfig?.gradeLevel ?? "";
                   const subjectName = ev.syncedSubject?.name ?? "";
+                  const section = ev.syncedSubject?.section ?? "";
                   const query = new URLSearchParams({
                     class: gradeLevel,
                     subject: subjectName,
+                    ...(section ? { section } : {}),
                     eval: evalTitle,
+                    // Pass the template id so mark-entry can resolve the exact
+                    // plan group instead of merging same-title plans.
+                    plan: ev.id,
                   });
                   return (
                     <tr

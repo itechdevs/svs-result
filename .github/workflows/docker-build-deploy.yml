@@ -1,0 +1,116 @@
+# Migrated from svsresult .gitlab-ci.yml — same flow on GitHub Actions + GHCR.
+#
+# GitLab jobs covered:
+#   build-image     -> jobs.build-image below
+#   deploy-to-vps   -> jobs.deploy-to-vps below
+# (run-migrations lives in migrate.yml as a manual workflow.)
+#
+# Required repository secrets:
+#   VPS_HOST, VPS_USERNAME, VPS_SSH_KEY
+# Optional secrets:
+#   VPS_PORT (default 22), VPS_PROJECT_DIR (default: "svsresult")
+#
+# Flow: push to main/master -> build image -> push to GHCR -> SSH to VPS ->
+#       copy docker-compose.yaml -> ensure .env + IMAGE_NAME -> pull & up -d
+
+name: Build & Deploy
+
+on:
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute lowercase image name
+        run: echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,}:latest" >> "$GITHUB_ENV"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE_NAME }}
+
+  deploy-to-vps:
+    needs: build-image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute lowercase image name
+        run: echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,}:latest" >> "$GITHUB_ENV"
+
+      - name: Start ssh-agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Deploy over SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USERNAME: ${{ secrets.VPS_USERNAME }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_PROJECT_DIR: ${{ secrets.VPS_PROJECT_DIR }}
+        run: |
+          set -e
+          PORT="${VPS_PORT:-22}"
+          PROJECT_DIR="${VPS_PROJECT_DIR:-svsresult}"
+          SSH="ssh -p $PORT -o StrictHostKeyChecking=accept-new"
+          SCP="scp -P $PORT -o StrictHostKeyChecking=accept-new"
+
+          $SSH "$VPS_USERNAME@$VPS_HOST" "mkdir -p /var/www/$PROJECT_DIR"
+          $SCP docker-compose.yaml "$VPS_USERNAME@$VPS_HOST:/var/www/$PROJECT_DIR/docker-compose.yaml"
+
+          $SSH "$VPS_USERNAME@$VPS_HOST" "test -f /var/www/$PROJECT_DIR/.env || cat > /var/www/$PROJECT_DIR/.env << 'ENVEOF'
+          # Placeholder .env — fill in real values on the VPS, then redeploy
+          DATABASE_URL=postgresql://postgres:postgres@postgres:5432/svsresult
+          NEXTAUTH_SECRET=
+          NEXTAUTH_URL=https://result.svs.edu.np
+          AUTH_URL=https://result.svs.edu.np
+          AUTH_SECRET=
+          EXTERNAL_API_URL=
+          EXTERNAL_API_KEY=
+          CRON_SECRET=
+          SYNC_SERVICE_SECRET=
+          AUTO_SYNC_ENABLED=false
+          AUTO_SYNC_INTERVAL_MINUTES=30
+          SMTP_USER=
+          SMTP_PASS=
+          POSTGRES_USER=postgres
+          POSTGRES_PASSWORD=postgres
+          POSTGRES_DB=svsresult
+          R2_ACCOUNT_ID=
+          R2_ACCESS_KEY_ID=
+          R2_SECRET_ACCESS_KEY=
+          R2_BUCKET=
+          POSTGRES_SERVICE=postgres
+          APP_SERVICE=web-service
+          ENVEOF"
+
+          $SSH "$VPS_USERNAME@$VPS_HOST" "set -e; \
+            sed -i '/^IMAGE_NAME=/d' /var/www/$PROJECT_DIR/.env; \
+            echo \"IMAGE_NAME=$IMAGE_NAME\" >> /var/www/$PROJECT_DIR/.env"
+
+          $SSH "$VPS_USERNAME@$VPS_HOST" "set -e; \
+            echo '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin && \
+            cd /var/www/$PROJECT_DIR && \
+            IMAGE_NAME=$IMAGE_NAME docker compose pull && \
+            IMAGE_NAME=$IMAGE_NAME docker compose up -d"
