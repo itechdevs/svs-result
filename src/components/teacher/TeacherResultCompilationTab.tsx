@@ -39,11 +39,17 @@ import {
   SelectValue,
 } from '@/components/shared/ui/select';
 import { Button } from '@/components/ui/button';
+import {
+  getEvaluationGroupKey,
+  parseEvaluationName,
+} from '@/lib/evaluation-grouping';
 import { toast } from 'sonner';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface EvalPlanGroup {
+  /** Stable identity: gradeConfig + subject + exam + title + unit + batch */
+  key: string;
   planTitle: string;   // e.g. "Science Unit 1"
   unitTitle: string;   // e.g. "Unit1"
   templates: EvaluationTemplate[];
@@ -71,10 +77,9 @@ interface Props {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getPlanTitle(name: string, subjectName: string): { planTitle: string; unitTitle: string } {
-  const newFmt = name.match(/^\[([^\]]+)\]\[/);
-  if (newFmt) {
-    const [evalTitle, unitTitle = ''] = newFmt[1].split('|');
-    return { planTitle: evalTitle.trim(), unitTitle: unitTitle.trim() };
+  const { evalTitle, unitTitle } = parseEvaluationName(name);
+  if (evalTitle) {
+    return { planTitle: evalTitle, unitTitle };
   }
   // Legacy or simple format — use subject name as plan title
   return { planTitle: subjectName, unitTitle: '' };
@@ -112,9 +117,9 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
   const classQuery = selectedSection
     ? `${selectedClass} - ${selectedSection}`
     : selectedClass;
-  // Selected plan titles (not template IDs)
-  const [selectedPlanTitles, setSelectedPlanTitles] = useState<string[]>([]);
-  // Expanded plan titles (for showing sub-outcomes)
+  // Selected plan keys (stable group identity, not template IDs or titles)
+  const [selectedPlanKeys, setSelectedPlanKeys] = useState<string[]>([]);
+  // Expanded plan keys (for showing sub-outcomes)
   const [expandedPlans, setExpandedPlans] = useState<Set<string>>(new Set());
 
   const createCompilation = useCreateTeacherCompilation();
@@ -134,7 +139,7 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
     if (prevYear.current !== selectedAcademicYear) {
       prevYear.current = selectedAcademicYear;
       setSelectedExam('');
-      setSelectedPlanTitles([]);
+      setSelectedPlanKeys([]);
     }
   }, [selectedAcademicYear]);
 
@@ -232,16 +237,19 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
     return map;
   }, [resultsData]);
 
-  // Group templates by evaluation plan title
+  // Group templates by evaluation plan (full plan identity: subject + exam +
+  // title + unit + batch — so a fresh evaluation saved with the same title
+  // appears as its own selectable plan instead of merging).
   const evalPlanGroups = useMemo((): EvalPlanGroup[] => {
     const map = new Map<string, EvalPlanGroup>();
     for (const t of filteredTemplates) {
       const { planTitle, unitTitle } = getPlanTitle(t.name, selectedSubject);
-      // Use a composite key to prevent merging templates from different
-      // SyncedSubject records that share the same plan title.
-      const compositeKey = `${t.syncedSubjectId}::${planTitle}`;
+      // Full grouping key prevents merging distinct plans that share the
+      // same visible title (different term/unit, or a fresh re-save).
+      const compositeKey = getEvaluationGroupKey(t);
       if (!map.has(compositeKey)) {
         map.set(compositeKey, {
+          key: compositeKey,
           planTitle,
           unitTitle,
           templates: [],
@@ -286,12 +294,12 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
   const selectedTemplateIds = useMemo(() => {
     const ids: string[] = [];
     for (const group of evalPlanGroups) {
-      if (selectedPlanTitles.includes(group.planTitle)) {
+      if (selectedPlanKeys.includes(group.key)) {
         group.templates.forEach((t) => ids.push(t.id));
       }
     }
     return ids;
-  }, [evalPlanGroups, selectedPlanTitles]);
+  }, [evalPlanGroups, selectedPlanKeys]);
 
   // Students for selected class
   const filteredStudents = useMemo(
@@ -318,10 +326,10 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
 
   // Compiled results per student
   const compiledResults = useMemo((): CompiledStudentResult[] => {
-    if (selectedPlanTitles.length === 0 || filteredStudents.length === 0) return [];
+    if (selectedPlanKeys.length === 0 || filteredStudents.length === 0) return [];
 
     const selectedGroups = evalPlanGroups.filter((g) =>
-      selectedPlanTitles.includes(g.planTitle),
+      selectedPlanKeys.includes(g.key),
     );
 
     return filteredStudents.map((student) => {
@@ -355,7 +363,7 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
           ? (groupObtained / group.totalFullMarks) * 100
           : null;
 
-        planMarks[group.planTitle] = {
+        planMarks[group.key] = {
           obtained: groupHasMarks ? groupObtained : null,
           full: group.totalFullMarks,
           passed: groupHasMarks ? !groupFailed : null,
@@ -400,19 +408,19 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
         hasReExam,
       };
     });
-  }, [selectedPlanTitles, filteredStudents, evalPlanGroups, marksLookup]);
+  }, [selectedPlanKeys, filteredStudents, evalPlanGroups, marksLookup]);
 
-  const togglePlan = (planTitle: string) =>
-    setSelectedPlanTitles((prev) =>
-      prev.includes(planTitle) ? prev.filter((p) => p !== planTitle) : [...prev, planTitle],
+  const togglePlan = (planKey: string) =>
+    setSelectedPlanKeys((prev) =>
+      prev.includes(planKey) ? prev.filter((p) => p !== planKey) : [...prev, planKey],
     );
 
-  const toggleExpand = (planTitle: string, e: React.MouseEvent) => {
+  const toggleExpand = (planKey: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setExpandedPlans((prev) => {
       const next = new Set(prev);
-      if (next.has(planTitle)) next.delete(planTitle);
-      else next.add(planTitle);
+      if (next.has(planKey)) next.delete(planKey);
+      else next.add(planKey);
       return next;
     });
   };
@@ -462,7 +470,23 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
     );
   }, [existingCompilations, subjectObj, classQuery, selectedAcademicYear, selectedExam]);
 
-  const activeGroups = evalPlanGroups.filter((g) => selectedPlanTitles.includes(g.planTitle));
+  const activeGroups = evalPlanGroups.filter((g) => selectedPlanKeys.includes(g.key));
+
+  // Titles shared by more than one plan (same visible title, distinct
+  // term/unit/save) — those headers/cards get a unit suffix so teachers can
+  // tell the fresh evaluation apart from the previous one.
+  const duplicateTitles = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const g of evalPlanGroups) counts.set(g.planTitle, (counts.get(g.planTitle) ?? 0) + 1);
+    return new Set(
+      [...counts.entries()].filter(([, n]) => n > 1).map(([t]) => t),
+    );
+  }, [evalPlanGroups]);
+
+  const groupLabel = (g: EvalPlanGroup) =>
+    duplicateTitles.has(g.planTitle) && g.unitTitle
+      ? `${g.planTitle} (${g.unitTitle})`
+      : g.planTitle;
 
   // ─── Render ────────────────────────────────────────────────────────────────
 
@@ -527,7 +551,7 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
             </label>
             <Select
               value={selectedExam}
-              onValueChange={(v) => { setSelectedExam(v); setSelectedPlanTitles([]); }}
+              onValueChange={(v) => { setSelectedExam(v); setSelectedPlanKeys([]); }}
             >
               <SelectTrigger className="w-full text-sm">
                 <SelectValue placeholder="Select exam..." />
@@ -599,14 +623,14 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
             </h3>
             <button
               onClick={() => {
-                const allPlanTitles = evalPlanGroups.map((g) => g.planTitle);
-                setSelectedPlanTitles(
-                  allPlanTitles.length === selectedPlanTitles.length ? [] : allPlanTitles,
+                const allPlanKeys = evalPlanGroups.map((g) => g.key);
+                setSelectedPlanKeys(
+                  allPlanKeys.length === selectedPlanKeys.length ? [] : allPlanKeys,
                 );
               }}
               className="text-xs font-semibold text-primary hover:underline"
             >
-              {selectedPlanTitles.length === evalPlanGroups.length && evalPlanGroups.length > 0
+              {selectedPlanKeys.length === evalPlanGroups.length && evalPlanGroups.length > 0
                 ? 'Deselect All'
                 : 'Select All'}
             </button>
@@ -620,13 +644,13 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {evalPlanGroups.map((group) => {
-              const isSelected = selectedPlanTitles.includes(group.planTitle);
-              const isExpanded = expandedPlans.has(group.planTitle);
+              const isSelected = selectedPlanKeys.includes(group.key);
+              const isExpanded = expandedPlans.has(group.key);
 
               return (
                 <div
-                  key={group.planTitle}
-                  onClick={() => togglePlan(group.planTitle)}
+                  key={group.key}
+                  onClick={() => togglePlan(group.key)}
                   className={cn(
                     'bg-card border rounded-xl overflow-hidden cursor-pointer hover:shadow-md transition-all',
                     isSelected ? 'border-primary ring-2 ring-primary' : 'border-border',
@@ -643,12 +667,12 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
                           <BookOpen className="w-4 h-4 text-muted-foreground shrink-0" />
                         )}
                         <span className="font-bold text-sm text-foreground line-clamp-2 leading-snug">
-                          {group.planTitle}
+                          {groupLabel(group)}
                         </span>
                       </div>
                       {/* Expand/Collapse toggle */}
                       <button
-                        onClick={(e) => toggleExpand(group.planTitle, e)}
+                        onClick={(e) => toggleExpand(group.key, e)}
                         className="shrink-0 p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                         title={isExpanded ? 'Hide outcomes' : 'Show outcomes'}
                       >
@@ -797,11 +821,11 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
                   </th>
                   {activeGroups.map((g) => (
                     <th
-                      key={g.planTitle}
+                      key={g.key}
                       className="border border-border px-3 py-2 text-center font-bold text-[11px] text-primary bg-primary/5"
                       colSpan={3}
                     >
-                      {g.planTitle}
+                      {groupLabel(g)}
                     </th>
                   ))}
                   {/* No Total column header */}
@@ -833,7 +857,7 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
                 {/* Row 2 — Per-plan sub-headers */}
                 <tr className="bg-muted/20">
                   {activeGroups.map((g) => (
-                    <React.Fragment key={g.planTitle}>
+                    <React.Fragment key={g.key}>
                       <th className="border border-border px-3 py-1.5 text-center text-[9px] font-bold text-muted-foreground uppercase">
                         Obtained
                       </th>
@@ -857,9 +881,9 @@ export default function TeacherResultCompilationTab({ onBack }: Props) {
                       {result.studentName}
                     </td>
                     {activeGroups.map((g) => {
-                      const pm = result.planMarks[g.planTitle];
+                      const pm = result.planMarks[g.key];
                       return (
-                        <React.Fragment key={g.planTitle}>
+                        <React.Fragment key={g.key}>
                           <td className="border border-border px-3 py-2 text-center font-mono font-bold text-foreground">
                             {pm?.obtained !== null && pm?.obtained !== undefined
                               ? formatNum(pm.obtained, 2)

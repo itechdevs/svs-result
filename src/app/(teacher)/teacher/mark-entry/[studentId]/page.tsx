@@ -7,6 +7,10 @@ import { useEvaluationTemplates } from '@/hooks/use-evaluations';
 import DetailedMarkEntryView from '@/components/teacher/DetailedMarkEntryView';
 import { Student, EvaluationPlan } from '@/types/academic';
 import { useMarksContext } from '@/contexts/marks-context';
+import {
+  findGroupSiblings,
+  parseEvaluationName,
+} from '@/lib/evaluation-grouping';
 import { CheckCircle, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -39,24 +43,12 @@ export default function StudentMarkEntryPage() {
   // Find the base template clicked from the overview
   const baseTemplate = templatesData.find((t) => t.id === evalId);
 
-  // Find all templates in the same evaluation group
+  // Find all templates in the same evaluation group (same grade config +
+  // subject + exam + title + unit + batch, so same-title fresh evaluations
+  // stay separate).
   const groupTemplates = useMemo(() => {
     if (!baseTemplate) return [];
-
-    const newFormatMatch = baseTemplate.name.match(/^\[([^\]]+)\]\[/);
-    const rawEvalPart = newFormatMatch ? newFormatMatch[1] : '';
-    const [evalTitle] = rawEvalPart.split('|');
-
-    return templatesData.filter((t) => {
-      if (t.gradeConfigId !== baseTemplate.gradeConfigId) return false;
-      if (t.syncedSubjectId !== baseTemplate.syncedSubjectId) return false;
-      if (evalTitle)
-        return (
-          t.name.startsWith(`[${evalTitle}|`) ||
-          t.name.startsWith(`[${evalTitle}][`)
-        );
-      return !t.name.match(/^\[[^\]]+\]\[/);
-    });
+    return findGroupSiblings(baseTemplate, templatesData);
   }, [baseTemplate, templatesData]);
 
   // Sync group templates into the shared context so DB results are fetched
@@ -105,9 +97,7 @@ export default function StudentMarkEntryPage() {
   const evaluation: EvaluationPlan | undefined = useMemo(() => {
     if (!baseTemplate || groupTemplates.length === 0) return undefined;
 
-    const newFormatMatch = baseTemplate.name.match(/^\[([^\]]+)\]\[/);
-    const rawEvalPart = newFormatMatch ? newFormatMatch[1] : '';
-    const [evalTitle, unitTitle = ''] = rawEvalPart.split('|');
+    const { evalTitle, unitTitle } = parseEvaluationName(baseTemplate.name);
 
     const totalFullMarks = groupTemplates.reduce(
       (s, t) => s + Number(t.fullMarks),

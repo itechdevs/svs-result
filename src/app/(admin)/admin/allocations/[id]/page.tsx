@@ -7,6 +7,10 @@ import { useEvaluationTemplates } from '@/hooks/use-evaluations';
 import TeacherEvaluationsViewTab from '@/components/admin/TeacherEvaluationsViewTab';
 import { AnimatePresence, motion } from 'motion/react';
 import { Allocation, EvaluationPlan } from '@/types/academic';
+import {
+  groupEvaluationTemplates,
+  parseEvaluationName,
+} from '@/lib/evaluation-grouping';
 
 export default function TeacherAllocationsDetailPage() {
   const params = useParams();
@@ -52,24 +56,16 @@ export default function TeacherAllocationsDetailPage() {
     const subjectIdSet = new Set(syncedTeacher.subjects.map(s => s.id));
     const teacherTemplates = templatesData.filter(t => subjectIdSet.has(t.syncedSubjectId));
 
-    // Group by gradeConfigId + syncedSubjectId + evalTitle (same pattern as teacher's evaluations page)
-    const groups = new Map<string, typeof teacherTemplates>();
-    for (const t of teacherTemplates) {
-      const evalTitleMatch = t.name.match(/^\[([^\]]+)\]\[/);
-      const rawEvalPart = evalTitleMatch ? evalTitleMatch[1] : '__legacy__';
-      const evalTitle = rawEvalPart.split('|')[0];
-      const key = `${t.gradeConfigId}::${t.syncedSubjectId}::${evalTitle}`;
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key)!.push(t);
-    }
+    // Group by gradeConfigId + syncedSubjectId + examId + evalTitle + unitTitle
+    // + batchId (same pattern as teacher's evaluations page) so a fresh
+    // evaluation saved with the same title stays a separate card.
+    const groups = groupEvaluationTemplates(teacherTemplates);
 
     return Array.from(groups.entries()).map(([, group]) => {
       const first = group[0];
       const subjectName = first.syncedSubject?.name ?? 'Unknown';
       const gradeLevel = first.syncedSubject?.gradeLevel ?? first.gradeConfig?.gradeLevel ?? '';
-      const evalTitleMatch = first.name.match(/^\[([^\]]+)\]\[/);
-      const rawEvalPart = evalTitleMatch ? evalTitleMatch[1] : '';
-      const [evalTitle, unitTitle = ''] = rawEvalPart.split('|');
+      const { evalTitle, unitTitle } = parseEvaluationName(first.name);
       const totalFullMarks = group.reduce((s, t) => s + Number(t.fullMarks), 0);
       const totalPassMarks = group.reduce((s, t) => s + Number(t.passMarks), 0);
 

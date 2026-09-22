@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { badRequest, noContent, notFound, ok } from "@/lib/response";
+import { badRequest, forbidden, noContent, notFound, ok } from "@/lib/response";
 import { withHandler } from "@/lib/handlers";
 import { updateEvaluationTemplateSchema } from "@/lib/schemas";
 
@@ -156,6 +156,17 @@ export const DELETE = withHandler(
     // Teachers can only delete their own subject's templates
     if (user.role === "TEACHER" && !existing.syncedSubject.teachers.some(t => t.user?.id === user.id)) {
       return notFound("Evaluation template not found");
+    }
+
+    // Published evaluations are locked — any non-DRAFT student result means
+    // marks were submitted, so the template can no longer be deleted.
+    const publishedCount = await prisma.studentEvaluationResult.count({
+      where: { evaluationTemplateId: params.id, deletedAt: null, status: { not: "DRAFT" } },
+    });
+    if (publishedCount > 0) {
+      return forbidden(
+        "This evaluation has been published and can no longer be deleted.",
+      );
     }
 
     await prisma.evaluationTemplate.update({

@@ -7,6 +7,10 @@ import { useEvaluationTemplates } from '@/hooks/use-evaluations';
 import DetailedMarkEntryView from '@/components/teacher/DetailedMarkEntryView';
 import { Student, EvaluationPlan } from '@/types/academic';
 import { useMarksContext } from '@/contexts/marks-context';
+import {
+  findGroupSiblings,
+  parseEvaluationName,
+} from '@/lib/evaluation-grouping';
 import SanskarLoader from '@/components/shared/SanskarLoader';
 
 export default function AdminStudentMarkEntryPage() {
@@ -36,16 +40,7 @@ export default function AdminStudentMarkEntryPage() {
 
   const groupTemplates = useMemo(() => {
     if (!baseTemplate) return [];
-    const newFormatMatch = baseTemplate.name.match(/^\[([^\]]+)\]\[/);
-    const rawEvalPart = newFormatMatch ? newFormatMatch[1] : '';
-    const [evalTitle] = rawEvalPart.split('|');
-    return templatesData.filter((t) => {
-      if (t.gradeConfigId !== baseTemplate.gradeConfigId) return false;
-      if (t.syncedSubjectId !== baseTemplate.syncedSubjectId) return false;
-      if (evalTitle)
-        return t.name.startsWith(`[${evalTitle}|`) || t.name.startsWith(`[${evalTitle}][`);
-      return !t.name.match(/^\[[^\]]+\]\[/);
-    });
+    return findGroupSiblings(baseTemplate, templatesData);
   }, [baseTemplate, templatesData]);
 
   useEffect(() => {
@@ -83,9 +78,7 @@ export default function AdminStudentMarkEntryPage() {
 
   const evaluation: EvaluationPlan | undefined = useMemo(() => {
     if (!baseTemplate || groupTemplates.length === 0) return undefined;
-    const newFormatMatch = baseTemplate.name.match(/^\[([^\]]+)\]\[/);
-    const rawEvalPart = newFormatMatch ? newFormatMatch[1] : '';
-    const [evalTitle, unitTitle = ''] = rawEvalPart.split('|');
+    const { evalTitle, unitTitle } = parseEvaluationName(baseTemplate.name);
     const totalFullMarks = groupTemplates.reduce((s, t) => s + Number(t.fullMarks), 0);
     const totalPassMarks = groupTemplates.reduce((s, t) => s + Number(t.passMarks), 0);
     return {

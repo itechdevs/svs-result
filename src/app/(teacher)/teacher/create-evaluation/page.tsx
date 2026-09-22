@@ -8,6 +8,11 @@ import { useProfile } from "@/hooks/use-profile";
 import { useExams } from "@/hooks/use-exams";
 import { useAcademicYears } from "@/hooks/use-academic-config";
 import CreateEvaluationTab from "@/components/teacher/CreateEvaluationTab";
+import {
+  buildEvaluationName,
+  findDuplicateEvaluationNames,
+  generateEvaluationBatchId,
+} from "@/lib/evaluation-grouping";
 import { toast } from "sonner";
 
 interface OutcomeRow {
@@ -135,13 +140,32 @@ export default function CreateEvaluationPage() {
     );
 
     const doCreate = async () => {
+      // One batch id per Save click: every template created here shares it,
+      // so re-saving the SAME visible title later forms a fresh, separate
+      // evaluation plan instead of merging into this one.
+      const batchId = generateEvaluationBatchId();
+      const names = flatOutcomes.map((item) =>
+        buildEvaluationName(
+          newEvalTitle,
+          newSubjectTitle,
+          batchId,
+          item.taskType,
+          item.name,
+        ),
+      );
+      const dupes = findDuplicateEvaluationNames(names);
+      if (dupes.length > 0) {
+        throw new Error(
+          `Duplicate criteria: "${dupes[0]}" appears ${names.filter((n) => n === dupes[0]).length} times. Each criteria (task type + outcome name) must be unique within the evaluation.`,
+        );
+      }
       for (const [i, item] of flatOutcomes.entries()) {
-        // Name format: [EvalTitle|UnitTitle][TaskType] OutcomeName
+        // Name format: [EvalTitle|UnitTitle|batchId][TaskType] OutcomeName
         await createPlan.mutateAsync({
           syncedSubjectId: subject.id,
           gradeLevel: selectedClass,
           examId: selectedExamId || undefined,
-          name: `[${newEvalTitle}|${newSubjectTitle}][${item.taskType}] ${item.name}`,
+          name: names[i],
           fullMarks: item.max,
           passMarks: item.pass,
           weightage,

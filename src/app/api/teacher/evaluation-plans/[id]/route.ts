@@ -1,7 +1,8 @@
 import { Decimal } from "@prisma/client/runtime/library";
+import { Prisma } from "@prisma/client";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { forbidden, noContent, notFound, ok } from "@/lib/response";
+import { conflict, forbidden, noContent, notFound, ok } from "@/lib/response";
 import { withHandler } from "@/lib/handlers";
 import { updateEvaluationTemplateSchema } from "@/lib/schemas";
 
@@ -48,10 +49,20 @@ export const PATCH = withHandler(
         : Promise.resolve(null),
     ]);
 
+    // Published evaluations are locked — any non-DRAFT student result means
+    // marks were submitted to admin, so the plan can no longer be edited.
+    if (existingResults.some((r) => r.status !== "DRAFT")) {
+      return forbidden(
+        "This evaluation has been published and can no longer be edited.",
+      );
+    }
+
     // ── Execute all mutations in a single transaction for atomicity ─────────
     let resetCount = 0;
 
-    const updated = await prisma.$transaction(async (tx) => {
+    let updated;
+    try {
+      updated = await prisma.$transaction(async (tx) => {
       // 1) Reset submitted results to DRAFT and cap marks if needed
       const hasNonDraftResults = existingResults.some(r => r.status !== "DRAFT");
 
@@ -137,7 +148,20 @@ export const PATCH = withHandler(
       });
 
       return updatedTemplate;
-    });
+      });
+    } catch (err) {
+      // Renaming to a name another criteria in this subject already uses
+      // (same task type + outcome name) violates the unique constraint.
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2002"
+      ) {
+        return conflict(
+          "Another criteria in this evaluation already uses this task type and outcome name. Each criteria name must be unique.",
+        );
+      }
+      throw err;
+    }
 
     const message = resetCount > 0
       ? `Evaluation updated. ${resetCount} student mark(s) were returned to DRAFT. Please review marks and re-submit.`
@@ -163,6 +187,17 @@ export const DELETE = withHandler(
 
     if (user.role === "TEACHER" && !existing.syncedSubject.teachers.some(t => t.user?.id === user.id)) {
       return forbidden("You are not assigned to this subject");
+    }
+
+    // Published evaluations are locked — any non-DRAFT student result means
+    // marks were submitted to admin, so the plan can no longer be deleted.
+    const publishedCount = await prisma.studentEvaluationResult.count({
+      where: { evaluationTemplateId: params.id, deletedAt: null, status: { not: "DRAFT" } },
+    });
+    if (publishedCount > 0) {
+      return forbidden(
+        "This evaluation has been published and can no longer be deleted.",
+      );
     }
 
     await prisma.evaluationTemplate.update({

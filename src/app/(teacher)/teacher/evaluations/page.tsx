@@ -12,6 +12,10 @@ import EvaluationsTab from "@/components/teacher/EvaluationsTab";
 import { AnimatePresence, motion } from "motion/react";
 import { EvaluationPlan } from "@/types/academic";
 import { BookOpen } from "lucide-react";
+import {
+  groupEvaluationTemplates,
+  parseEvaluationName,
+} from "@/lib/evaluation-grouping";
 
 import TeacherEvaluationsSkeleton from "@/components/teacher/TeacherEvaluationsSkeleton";
 
@@ -86,16 +90,11 @@ export default function TeacherEvaluationsPage() {
       );
     }
 
-    // Group by gradeConfigId+syncedSubjectId+evalTitle → one card per distinct evaluation plan
-    const groups = new Map<string, typeof templates>();
-    for (const t of templates) {
-      const evalTitleMatch = t.name.match(/^\[([^\]]+)\]\[/);
-      const rawEvalPart = evalTitleMatch ? evalTitleMatch[1] : "__legacy__";
-      const evalTitle = rawEvalPart.split("|")[0];
-      const key = `${t.gradeConfigId}::${t.syncedSubjectId}::${evalTitle}`;
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key)!.push(t);
-    }
+    // Group by gradeConfigId + syncedSubjectId + examId + evalTitle + unitTitle
+    // + batchId → one card per distinct evaluation plan. The batchId (stamped
+    // once per "Save Evaluation Plan" click) keeps a brand-new evaluation
+    // saved with the SAME visible title as a fresh, separate card.
+    const groups = groupEvaluationTemplates(templates);
 
     return Array.from(groups.entries()).map(([, group]) => {
       const first = group[0];
@@ -103,9 +102,7 @@ export default function TeacherEvaluationsPage() {
       const gradeLevel =
         first.syncedSubject?.gradeLevel ?? first.gradeConfig?.gradeLevel ?? "";
       const academicYear = first.gradeConfig?.academicYear?.name ?? "";
-      const evalTitleMatch = first.name.match(/^\[([^\]]+)\]\[/);
-      const rawEvalPart = evalTitleMatch ? evalTitleMatch[1] : "";
-      const [evalTitle, unitTitle = ""] = rawEvalPart.split("|");
+      const { evalTitle, unitTitle } = parseEvaluationName(first.name);
       const totalFullMarks = group.reduce((s, t) => s + Number(t.fullMarks), 0);
       const totalPassMarks = group.reduce((s, t) => s + Number(t.passMarks), 0);
       const anyActive = group.some((t) => t.isActive);

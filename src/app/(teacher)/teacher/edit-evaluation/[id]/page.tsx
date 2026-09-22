@@ -4,11 +4,20 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import CreateEvaluationTab from '@/components/teacher/CreateEvaluationTab';
 import { AnimatePresence } from 'motion/react';
-import { useEvaluationTemplate, useEvaluationTemplates } from '@/hooks/use-evaluations';
+import { useEvaluationTemplate, useEvaluationTemplates, useStudentEvaluationResults } from '@/hooks/use-evaluations';
+import {
+  buildEvaluationName,
+  findDuplicateEvaluationNames,
+  findGroupSiblings,
+  generateEvaluationBatchId,
+  parseEvaluationName,
+} from '@/lib/evaluation-grouping';
 import { useExams } from '@/hooks/use-exams';
 import { useAcademicYears } from '@/hooks/use-academic-config';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { Button } from '@/components/ui/button';
+import { Lock } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface OutcomeRow { name: string; date: string; max: number; pass: number; templateId?: string; }
@@ -36,6 +45,7 @@ export default function EditEvaluationPage() {
 
   const { data: template, isLoading: isTemplateLoading } = useEvaluationTemplate(id);
   const { data: allTemplates = [], isLoading: isTemplatesLoading } = useEvaluationTemplates();
+  const { data: resultsData = [], isLoading: isResultsLoading } = useStudentEvaluationResults({ limit: 5000 });
   const { data: academicYears } = useAcademicYears();
 
   const [selectedAcademicYearId, setSelectedAcademicYearId] = useState('');
@@ -67,11 +77,21 @@ export default function EditEvaluationPage() {
   const [targetMarks, setTargetMarks] = useState(55);
   const [newOutcomes, setNewOutcomes] = useState<TaskGroup[]>([]);
 
-  const isLoading = isTemplateLoading || isTemplatesLoading;
+  const isLoading = isTemplateLoading || isTemplatesLoading || isResultsLoading;
+
+  // Published plans (any non-DRAFT student result in this plan's group) are
+  // locked — the form is not offered and the API also rejects updates.
+  const isPublished = useMemo(() => {
+    if (!template || allTemplates.length === 0) return false;
+    const ids = new Set(findGroupSiblings(template, allTemplates).map((t) => t.id));
+    return resultsData.some(
+      (r) => ids.has(r.evaluationTemplateId) && r.status !== 'DRAFT',
+    );
+  }, [template, allTemplates, resultsData]);
 
   // Track original DB state for diffing on save
   const originalTemplateIds = useRef<Set<string>>(new Set());
-  const groupMeta = useRef<{ gradeConfigId: string; syncedSubjectId: string; gradeLevel: string } | null>(null);
+  const groupMeta = useRef<{ gradeConfigId: string; syncedSubjectId: string; gradeLevel: string; batchId: string } | null>(null);
   const initialized = useRef(false);
 
   useEffect(() => {
@@ -79,16 +99,11 @@ export default function EditEvaluationPage() {
     if (initialized.current) return;
     if (allTemplates.length === 0) return;
 
-    const newFormatMatch = template.name.match(/^\[([^\]]+)\]\[/);
-    const rawEvalPart = newFormatMatch ? newFormatMatch[1] : '';
-    const [evalTitle, unitTitle = ''] = rawEvalPart.split('|');
+    const { evalTitle, unitTitle, batchId } = parseEvaluationName(template.name);
 
-    const group = allTemplates.filter(t => {
-      if (t.gradeConfigId !== template.gradeConfigId) return false;
-      if (t.syncedSubjectId !== template.syncedSubjectId) return false;
-      if (evalTitle) return t.name.startsWith(`[${evalTitle}|`) || t.name.startsWith(`[${evalTitle}][`);
-      return !t.name.match(/^\[[^\]]+\]\[/);
-    });
+    // Resolve ONLY this plan's templates (same grade config + subject + exam
+    // + title + unit + batch) so same-title fresh evaluations stay separate.
+    const group = findGroupSiblings(template, allTemplates);
 
     const resolvedGroup = group.length > 0 ? group : [template];
 
@@ -98,6 +113,9 @@ export default function EditEvaluationPage() {
       gradeConfigId: template.gradeConfigId,
       syncedSubjectId: template.syncedSubjectId,
       gradeLevel: template.syncedSubject?.gradeLevel ?? template.gradeConfig?.gradeLevel ?? '',
+      // Legacy plans have no batch — stamp one now so this plan separates
+      // from any same-title duplicates when it is saved.
+      batchId: batchId || generateEvaluationBatchId(),
     };
 
     setNewEvalTitle(evalTitle || template.syncedSubject?.name || template.name);
@@ -145,7 +163,7 @@ export default function EditEvaluationPage() {
 
   const handleUpdate = async () => {
     if (!groupMeta.current) return;
-    const { gradeConfigId, syncedSubjectId, gradeLevel } = groupMeta.current;
+    const { gradeConfigId, syncedSubjectId, gradeLevel, batchId } = groupMeta.current;
 
     const flatOutcomes = newOutcomes.flatMap(tg =>
       tg.outcomes.map(o => ({ ...o, taskType: tg.taskType }))
@@ -177,6 +195,27 @@ export default function EditEvaluationPage() {
     // IDs that were in DB but removed from UI → delete them
     const toDelete = [...originalTemplateIds.current].filter(tid => !survivingIds.has(tid));
 
+    // Block duplicate criteria names BEFORE any API call: two rows building
+    // the same stored template name would otherwise collide on the DB unique
+    // constraint (one PATCH fails with a 500 and earlier renames are left
+    // half-applied).
+    const newNames = flatOutcomes.map((outcome) =>
+      buildEvaluationName(
+        newEvalTitle,
+        newSubjectTitle,
+        batchId,
+        outcome.taskType,
+        outcome.name,
+      ),
+    );
+    const dupes = findDuplicateEvaluationNames(newNames);
+    if (dupes.length > 0) {
+      toast.error(
+        `Duplicate criteria: "${dupes[0]}" appears ${newNames.filter((n) => n === dupes[0]).length} times. Each criteria (task type + outcome name) must be unique within the evaluation.`,
+      );
+      return;
+    }
+
     const doUpdate = async () => {
       // 1. DELETE removed criteria
       for (const tid of toDelete) {
@@ -185,7 +224,10 @@ export default function EditEvaluationPage() {
       // 2. UPDATE existing + CREATE new criteria
       let newIdx = 0;
       for (const [i, outcome] of flatOutcomes.entries()) {
-        const newName = `[${newEvalTitle}|${newSubjectTitle}][${outcome.taskType}] ${outcome.name}`;
+        // Preserve this plan's batchId so the edited plan keeps its own
+        // group even when the visible title matches another evaluation.
+        // (Already duplicate-checked above.)
+        const newName = newNames[i];
 
         if (outcome.templateId) {
           // UPDATE existing record — preserve original weightage
@@ -228,6 +270,23 @@ export default function EditEvaluationPage() {
 
   if (isLoading) {
     return <SanskarLoader variant="skeleton" />;
+  }
+
+  if (isPublished) {
+    return (
+      <div className="bg-card rounded-xl border border-border shadow-sm p-12 text-center space-y-4">
+        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto">
+          <Lock className="w-6 h-6 text-muted-foreground" />
+        </div>
+        <h2 className="text-lg font-bold text-foreground">Evaluation Locked</h2>
+        <p className="text-sm text-muted-foreground max-w-md mx-auto">
+          This evaluation has been published and can no longer be edited.
+        </p>
+        <Button onClick={() => router.push(backUrl)} className="font-bold text-xs">
+          Back to Evaluations
+        </Button>
+      </div>
+    );
   }
 
   return (

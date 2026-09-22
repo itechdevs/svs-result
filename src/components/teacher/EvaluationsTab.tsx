@@ -446,6 +446,8 @@ export default function EvaluationsTab({
           }
 
           const evalPlan = item.data;
+          // Published plans are locked — no edits allowed.
+          const canEdit = evalPlan.status !== "Published";
           return (
             <div
               key={evalPlan.id}
@@ -497,6 +499,7 @@ export default function EvaluationsTab({
                       {evalPlan.subject}
                     </span>
 
+                    {(canEdit || onDelete) && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -508,13 +511,8 @@ export default function EvaluationsTab({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        {canEdit ? (
                         <DropdownMenuItem asChild>
-                          {/* {evalPlan.status === "Published" ? (
-                            <div className="flex items-center gap-2 text-muted-foreground opacity-50 cursor-not-allowed w-full">
-                              <Pencil className="w-3.5 h-3.5" />
-                              Edit
-                            </div>
-                          ) : ( */}
                           <Link
                             href={`/teacher/edit-evaluation/${evalPlan.subEvaluations?.[0]?.id ?? evalPlan.id}${suffix}`}
                             className="flex items-center gap-2 cursor-pointer w-full"
@@ -522,9 +520,14 @@ export default function EvaluationsTab({
                             <Pencil className="w-3.5 h-3.5" />
                             Edit
                           </Link>
-                          {/* )} */}
                         </DropdownMenuItem>
-                        {onDelete && (
+                        ) : (
+                          <div className="flex items-center gap-2 px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                            <Lock className="w-3.5 h-3.5" />
+                            Locked (Published)
+                          </div>
+                        )}
+                        {canEdit && onDelete && (
                           <>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -538,6 +541,7 @@ export default function EvaluationsTab({
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
+                    )}
                   </div>
                 </div>
 

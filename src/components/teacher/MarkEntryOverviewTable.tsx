@@ -29,6 +29,10 @@ import { useMarksContext } from "@/contexts/marks-context";
 import { toast } from "sonner";
 import MarkEntrySkeleton from "@/components/teacher/MarkEntrySkeleton";
 import {
+  getEvaluationGroupKey,
+  parseEvaluationName,
+} from "@/lib/evaluation-grouping";
+import {
   calcStudentGrade,
   calcResultStatus,
   calcReExamStatus,
@@ -134,10 +138,10 @@ export default function MarkEntryOverviewTable() {
   const evaluations = useMemo(() => {
     if (!selectedEvalPlan) return [];
     const parseEval = (name: string) => {
-      const evalTitleMatch = name.match(/^\[([^\]]+)\]\[/);
-      const rawEvalPart = evalTitleMatch ? evalTitleMatch[1] : "";
-      const [evalTitle = "", unitTitle = ""] = rawEvalPart.split("|");
-      const planTitle = evalTitle || selectedSubject;
+      const { evalTitle, unitTitle, planTitle } = parseEvaluationName(
+        name,
+        selectedSubject,
+      );
       return { evalTitle, unitTitle, planTitle };
     };
 
@@ -160,19 +164,17 @@ export default function MarkEntryOverviewTable() {
 
     // 2) Representative plan id — resolve its gradeConfigId, then select the
     // whole group (same grouping key as the evaluations list:
-    // gradeConfigId + syncedSubjectId + evalTitle).
+    // gradeConfigId + syncedSubjectId + examId + evalTitle + unitTitle +
+    // batchId, so same-title fresh evaluations stay separate).
     if (selectedPlanId) {
       const planTemplate =
         byTitle.find((t) => t.id === selectedPlanId) ??
         allSubjectTemplates.find((t) => t.id === selectedPlanId) ??
         templatesData.find((t: any) => t.id === selectedPlanId);
-      const gradeConfigId = (planTemplate as any)?.gradeConfigId;
-      if (planTemplate && gradeConfigId) {
-        const { evalTitle: planEvalTitle } = parseEval(planTemplate.name);
+      if (planTemplate) {
+        const planKey = getEvaluationGroupKey(planTemplate as any);
         const group = byTitle.filter(
-          (t) =>
-            (t as any).gradeConfigId === gradeConfigId &&
-            parseEval(t.name).evalTitle === planEvalTitle,
+          (t) => getEvaluationGroupKey(t as any) === planKey,
         );
         if (group.length > 0) return group;
       }
@@ -253,9 +255,7 @@ export default function MarkEntryOverviewTable() {
   const resolvedUnits = useMemo(() => {
     const units = new Set<string>();
     for (const t of evaluations) {
-      const m = t.name.match(/^\[([^\]]+)\]\[/);
-      const raw = m ? m[1] : "";
-      const [, unitTitle = ""] = raw.split("|");
+      const { unitTitle } = parseEvaluationName(t.name);
       if (unitTitle) units.add(unitTitle);
     }
     return [...units];

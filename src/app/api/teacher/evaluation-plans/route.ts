@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { badRequest, created, forbidden } from "@/lib/response";
+import { badRequest, conflict, created, forbidden } from "@/lib/response";
 import { withHandler } from "@/lib/handlers";
 
 const createPlanSchema = z.object({
@@ -97,7 +98,20 @@ export const POST = withHandler(async (req: NextRequest, { user }) => {
       syncedSubject: { select: { id: true, name: true, gradeLevel: true } },
       gradeConfig: { select: { id: true, gradeLevel: true } },
     },
+  }).catch((err) => {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2002"
+    ) {
+      return null;
+    }
+    throw err;
   });
+  if (!template) {
+    return conflict(
+      "A criteria with this task type and outcome name already exists in this evaluation. Each criteria name must be unique.",
+    );
+  }
 
   return created(template, "Evaluation plan created");
 });

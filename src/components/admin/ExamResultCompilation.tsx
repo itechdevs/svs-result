@@ -41,6 +41,7 @@ import ExamResultCompilationSkeleton from "./ExamResultCompilationSkeleton";
 import type { PrePrimaryStudentData } from "@/components/shared/PrePrimaryTranscriptModal";
 import type { StudentObservationEntry } from "@/components/shared/pre-primarygrade";
 import { formatToBSDateString } from "@/lib/bs-calendar";
+import { getEvaluationGroupKey } from "@/lib/evaluation-grouping";
 
 const TranscriptModal = dynamic(
   () => import("@/components/shared/TranscriptModal"),
@@ -475,17 +476,13 @@ export default function ExamResultCompilation({
         ).filter((t) => submittedIds.has(t.id));
         if (subjectTemplates.length === 0) continue;
 
-        // Group templates by evaluation plan (mirrors teacher view getPlanTitle logic)
+        // Group templates by evaluation plan (full plan identity: subject +
+        // exam + title + unit + batch — mirrors the teacher evaluations list,
+        // so a fresh evaluation saved with the same title is averaged as its
+        // own plan instead of merging into the previous one)
         const planGroupsForSubject = new Map<string, typeof subjectTemplates>();
         for (const t of subjectTemplates) {
-          const newFmt = (t.name as string).match(/^\[([^\]]+)\]\[/);
-          let planKey: string;
-          if (newFmt) {
-            const [evalTitle] = newFmt[1].split('|');
-            planKey = evalTitle.trim();
-          } else {
-            planKey = t.id; // legacy: each template is its own group
-          }
+          const planKey = getEvaluationGroupKey(t);
           if (!planGroupsForSubject.has(planKey)) planGroupsForSubject.set(planKey, []);
           planGroupsForSubject.get(planKey)!.push(t);
         }

@@ -7,6 +7,10 @@ import { useEvaluationTemplates } from '@/hooks/use-evaluations';
 import ReExamDetailedView from '@/components/admin/ReExamDetailedView';
 import { AnimatePresence } from 'motion/react';
 import { Student, EvaluationPlan } from '@/types/academic';
+import {
+  findGroupSiblings,
+  parseEvaluationName,
+} from '@/lib/evaluation-grouping';
 import SanskarLoader from '@/components/shared/SanskarLoader';
 
 export default function TeacherReExamDetailPage() {
@@ -35,16 +39,9 @@ export default function TeacherReExamDetailPage() {
     const baseTemplate = templatesData.find(t => t.id === evalId);
     if (!baseTemplate) return undefined;
 
-    const newFormatMatch = baseTemplate.name.match(/^\[([^\]]+)\]\[/);
-    const rawEvalPart = newFormatMatch ? newFormatMatch[1] : '';
-    const [evalTitle, unitTitle = ''] = rawEvalPart.split('|');
+    const { evalTitle, unitTitle } = parseEvaluationName(baseTemplate.name);
 
-    const group = templatesData.filter(t => {
-      if (t.gradeConfigId !== baseTemplate.gradeConfigId) return false;
-      if (t.syncedSubjectId !== baseTemplate.syncedSubjectId) return false;
-      if (evalTitle) return t.name.startsWith(`[${evalTitle}|`) || t.name.startsWith(`[${evalTitle}][`);
-      return !t.name.match(/^\[[^\]]+\]\[/);
-    });
+    const group = findGroupSiblings(baseTemplate, templatesData);
 
     const resolvedGroup = group.length > 0 ? group : [baseTemplate];
     const totalFullMarks = resolvedGroup.reduce((s, t) => s + Number(t.fullMarks), 0);
